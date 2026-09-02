@@ -395,7 +395,7 @@ if 'datos_instalaciones' in st.session_state:
         # SECCIÓN DE GRÁFICAS ANALÍTICAS AVANZADAS (ARRIBA DE LA TABLA)
         # ==========================================
         st.markdown("---")
-        st.subheader("📈 Análisis Gráfico de Operaciones y Avances")
+        st.markdown("##### Instalados vs Meta Total (Top 10) / Productividad Diaria")
 
         # Top 10 colonias para visualizaciones limpias
         df_top10 = df_merged.sort_values(by='Med_Inst', ascending=False).head(10)
@@ -404,7 +404,7 @@ if 'datos_instalaciones' in st.session_state:
         gcol1, gcol2 = st.columns(2)
 
         with gcol1:
-            st.markdown("##### 🏢 Instalados vs Meta Total (Top 10)")
+            st.markdown("##### Instalados vs Meta Total (Top 10)")
             fig_bar_comp = px.bar(
                 df_top10,
                 x='Colonia',
@@ -423,7 +423,7 @@ if 'datos_instalaciones' in st.session_state:
             st.plotly_chart(fig_bar_comp, use_container_width=True)
 
         with gcol2:
-            st.markdown("##### ⚡ Productividad Diaria (Instalaciones Hoy)")
+            st.markdown("##### Productividad Diaria (Instalaciones Hoy)")
             if not df_top10_hoy.empty:
                 fig_hoy = px.bar(
                     df_top10_hoy,
@@ -448,7 +448,7 @@ if 'datos_instalaciones' in st.session_state:
         gcol3, gcol4 = st.columns(2)
 
         with gcol3:
-            st.markdown("##### 🎯 Porcentaje de Avance por Colonia (Top 10)")
+            st.markdown("##### Porcentaje de Avance por Colonia (Top 10)")
             df_avance_top = df_merged.sort_values(by='Porcentaje_Avance_Num', ascending=False).head(10)
             fig_avance = px.bar(
                 df_avance_top,
@@ -471,7 +471,7 @@ if 'datos_instalaciones' in st.session_state:
             st.plotly_chart(fig_avance, use_container_width=True)
 
         with gcol4:
-            st.markdown("##### 🗺️ Distribución de Medidores Instalados por Polígono")
+            st.markdown("##### Distribución de Medidores Instalados por Polígono")
             df_poligono = df_merged.groupby('Poligono')[['Med_Inst', 'Med_Tot']].sum().reset_index()
             fig_poly = px.pie(
                 df_poligono,
@@ -500,7 +500,7 @@ if 'datos_instalaciones' in st.session_state:
         st.info("Conectando con la base de datos para mostrar el desglose de metas por colonia...")
 
     st.markdown("---")
-    st.subheader("📋 Detalle General de Registros")
+    st.subheader("Detalle General de Registros")
     
     busqueda = st.text_input("🔍 Buscar por cliente, predio, colonia o serie de medidor:")
     
@@ -513,7 +513,7 @@ if 'datos_instalaciones' in st.session_state:
     st.dataframe(df_filtrado, use_container_width=True)
 
     st.divider()
-    st.subheader("👁️ Vista Detallada por Registro y Fotografías")
+    st.subheader("Vista Detallada por Registro y Fotografías")
     
     if not df_filtrado.empty:
         opciones_select = []
@@ -532,7 +532,7 @@ if 'datos_instalaciones' in st.session_state:
             col1, col2 = st.columns(2)
             
             with col1:
-                st.markdown("### 📋 Información del Servicio")
+                st.markdown("### Información del Servicio")
                 st.write(f"**Predio:** {registro.get('predio')}")
                 st.write(f"**Cliente:** {registro.get('nombreCliente')}")
                 st.write(f"**Colonia:** {registro.get('colonia')}")
@@ -545,7 +545,7 @@ if 'datos_instalaciones' in st.session_state:
                 st.write(f"**Lectura Anterior:** {registro.get('lecturaAnterior')} | **Actual:** {registro.get('lecturaActual')}")
 
             with col2:
-                st.markdown("### 📸 Evidencias Fotográficas")
+                st.markdown("### Evidencias Fotográficas")
                 fotos = {
                     "Foto Medidor Anterior": registro.get('fotoMedidorAnterior'),
                     "Foto Fachada": registro.get('fotoFachada'),
