@@ -165,6 +165,9 @@ custom_style = """
 """
 st.markdown(custom_style, unsafe_allow_html=True)
 
+# Título principal en la parte superior
+st.title("📊 Registro de instalacion medidores Miaa")
+
 # Logo en la barra lateral
 st.sidebar.image(
     "https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg", 
