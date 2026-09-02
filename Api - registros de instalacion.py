@@ -2,13 +2,14 @@ import streamlit as st
 import requests
 import json
 import pandas as pd
+from sqlalchemy import create_engine
 
 st.set_page_config(page_title="Gestor de Medidores MIAA", page_icon="💧", layout="wide")
 
 st.title("💧 Consulta de Instalación de Medidores - MIAA")
 
 # Campos de entrada en la barra lateral
-st.sidebar.header("Credenciales de Acceso")
+st.sidebar.header("Credenciales de Acceso API")
 usuario = st.sidebar.text_input("Usuario", value="pedro.templos@miaa.mx")
 password = st.sidebar.text_input("Contraseña", type="password", value="Pedro0208")
 
@@ -46,6 +47,20 @@ if st.sidebar.button("Consultar API"):
                 st.error(f"Error de autenticación (Código {res_login.status_code})")
         except Exception as e:
             st.error(f"Ocurrió un error de conexión: {e}")
+
+# Función para cargar las metas de medidores desde la base de datos MySQL
+@st.cache_data(ttl=600)
+def cargar_metas_db():
+    try:
+        # Codificamos el caracter '&' de la contraseña como '%26' para la cadena de conexión
+        connection_string = "mysql+pymysql://miaamx_telemetria2:bWkrw1Uum1O%26@miaa.mx/miaamx_telemetria2"
+        engine = create_engine(connection_string)
+        query = "SELECT Colonia_ATL, Usuarios_nueva_instalacion, Poligono_de_instalacion FROM Diccionario_instalacion_medidores"
+        df_metas = pd.read_sql(query, con=engine)
+        return df_metas
+    except Exception as e:
+        st.error(f"Error al conectar con la base de datos MySQL: {e}")
+        return pd.DataFrame()
 
 # Si ya tenemos datos en la sesión, procesamos y mostramos el dashboard superior y las tablas
 if 'datos_instalaciones' in st.session_state:
@@ -93,38 +108,63 @@ if 'datos_instalaciones' in st.session_state:
         if len(fechas_unicas) > 0:
             promedio_dia = round(total_instalaciones / len(fechas_unicas), 1)
 
+    # Cargar metas desde la base de datos
+    df_metas = cargar_metas_db()
+    total_meta_global = df_metas['Usuarios_nueva_instalacion'].sum() if not df_metas.empty and 'Usuarios_nueva_instalacion' in df_metas.columns else 0
+
     # Tarjetas de indicadores
     m1, m2, m3, m4 = st.columns(4)
     with m1:
-        st.metric(label="Total Instalados", value=total_instalaciones)
+        st.metric(label="Total Instalados (API)", value=total_instalaciones)
     with m2:
-        st.metric(label="Promedio por Día", value=promedio_dia)
+        st.metric(label="Meta Total (BD)", value=total_meta_global)
     with m3:
+        st.metric(label="Promedio por Día", value=promedio_dia)
+    with m4:
         colonias_unicas = df['colonia'].nunique() if 'colonia' in df.columns else 0
         st.metric(label="Colonias Atendidas", value=colonias_unicas)
-    with m4:
-        niveles_unicos = df['nivel'].nunique() if 'nivel' in df.columns else 0
-        st.metric(label="Niveles Tarifarios", value=niveles_unicos)
 
-    # Resumen agrupado por Colonia (Preparado para cruzar con la base de datos de metas totales)
-    if 'colonia' in df.columns:
-        st.markdown("##### 📌 Avance de Instalación por Colonia")
+    # Resumen cruzado por Colonia con la base de datos
+    if 'colonia' in df.columns and not df_metas.empty:
+        st.markdown("##### 📌 Avance de Instalación por Colonia (Cruce con Base de Datos)")
         
-        # Agrupamos lo instalado actual desde la API
-        df_resumen_colonia = df.groupby('colonia').agg(
+        # Normalizar nombres para hacer el cruce correcto
+        df['colonia_norm'] = df['colonia'].astype(str).str.strip().str.upper()
+        df_metas['colonia_norm'] = df_metas['Colonia_ATL'].astype(str).str.strip().str.upper()
+        
+        # Agrupar instalaciones reales de la API
+        df_resumen_api = df.groupby('colonia_norm').agg(
+            Colonia_Real=('colonia', 'first'),
             Med_Inst=('predio', 'count'),
             Nivel_Tarifario=('nivel', lambda x: ', '.join(x.dropna().unique()[:2]))
         ).reset_index()
         
-        # Columna temporal vacía para los medidores totales (pendiente de BD)
-        df_resumen_colonia['Med_Tot'] = "Pendiente (BD)"
-        df_resumen_colonia['%_Avance'] = "Pendiente (BD)"
+        # Unir con la tabla del diccionario en la BD
+        df_merged = pd.merge(
+            df_metas,
+            df_resumen_api,
+            on='colonia_norm',
+            how='left'
+        )
         
-        # Reordenar columnas para que coincida con tu esquema deseado
-        df_resumen_colonia = df_resumen_colonia[['colonia', 'Med_Tot', 'Med_Inst', '%_Avance', 'Nivel_Tarifario']]
-        df_resumen_colonia.columns = ['Colonia', 'Med. Tot.', 'Med. Inst.', '% Avance', 'Nivel Tarifario']
+        df_merged['Med_Inst'] = df_merged['Med_Inst'].fillna(0).astype(int)
+        df_merged['Med_Tot'] = df_merged['Usuarios_nueva_instalacion'].fillna(0).astype(int)
+        df_merged['Poligono'] = df_merged['Poligono_de_instalacion'].fillna(0).astype(int)
+        df_merged['Colonia'] = df_merged['Colonia_ATL'].fillna(df_merged['Colonia_Real'])
+        df_merged['Nivel_Tarifario'] = df_merged['Nivel_Tarifario'].fillna("N/D")
         
-        st.dataframe(df_resumen_colonia, use_container_width=True)
+        # Calcular porcentaje de avance
+        df_merged['%_Avance'] = df_merged.apply(
+            lambda row: f"{round((row['Med_Inst'] / row['Med_Tot']) * 100, 1)}%" if row['Med_Tot'] > 0 else "0%", 
+            axis=1
+        )
+        
+        df_tabla_final = df_merged[['Colonia', 'Med_Tot', 'Med_Inst', '%_Avance', 'Poligono', 'Nivel_Tarifario']]
+        df_tabla_final.columns = ['Colonia', 'Med. Tot.', 'Med. Inst.', '% Avance', 'Polígono', 'Nivel Tarifario']
+        
+        st.dataframe(df_tabla_final, use_container_width=True)
+    elif 'colonia' in df.columns:
+        st.info("Conectando con la base de datos para mostrar el desglose de metas por colonia...")
 
     st.markdown("---")
     st.subheader("📋 Detalle General de Registros")
