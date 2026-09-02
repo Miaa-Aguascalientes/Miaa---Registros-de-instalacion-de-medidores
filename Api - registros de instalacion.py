@@ -10,7 +10,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilos CSS avanzados con animaciones, efectos hover y movimiento fluido
+# Estilos CSS avanzados con animaciones, efectos hover y centrado de métricas
 custom_style = """
     <style>
     /* Ocultar barra superior, menú y footer de Streamlit */
@@ -68,7 +68,7 @@ custom_style = """
         100% { box-shadow: 0 0 5px rgba(0, 168, 204, 0.2); }
     }
 
-    /* Tarjetas de Métricas con movimiento al pasar el cursor y brillo animado */
+    /* Tarjetas de Métricas con movimiento al pasar el cursor, brillo y contenido centrado */
     [data-testid="stMetric"] {
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.08);
@@ -76,6 +76,15 @@ custom_style = """
         border-radius: 12px;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         animation: pulseGlow 4s infinite;
+        text-align: center;
+    }
+
+    [data-testid="stMetric"] > div {
+        align-items: center !important;
+    }
+
+    [data-testid="stMetricValue"] {
+        justify-content: center !important;
     }
 
     [data-testid="stMetric"]:hover {
@@ -221,9 +230,16 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df = pd.DataFrame([data])
 
-    # Formatear columnas de fecha
+    # Formatear columnas de fecha y asegurar tipo datetime para ordenamiento
+    col_fecha_ref = 'fechaInstalacion' if 'fechaInstalacion' in df.columns else ('fechaRegistro' if 'fechaRegistro' in df.columns else None)
+    
+    if col_fecha_ref:
+        df['fecha_dt'] = pd.to_datetime(df[col_fecha_ref], errors='coerce')
+    else:
+        df['fecha_dt'] = pd.NaT
+
     for col in df.columns:
-        if 'fecha' in col.lower():
+        if 'fecha' in col.lower() and col != 'fecha_dt':
             df[col] = pd.to_datetime(df[col], errors='coerce').dt.strftime('%Y-%m-%d %H:%M').fillna(df[col])
 
     # Detectar columna de personal externo
@@ -250,7 +266,7 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df_filtrado_personal = df.copy()
 
-    columnas_to_hide = ['uuid', 'Tipo_Personal'] + [col for col in df.columns if 'foto' in col.lower()]
+    columnas_to_hide = ['uuid', 'Tipo_Personal', 'fecha_dt'] + [col for col in df.columns if 'foto' in col.lower()]
     df_display = df_filtrado_personal.drop(columns=[c for c in columnas_to_hide if c in df_filtrado_personal.columns], errors='ignore')
 
     # ==========================================
@@ -266,33 +282,31 @@ if 'datos_instalaciones' in st.session_state:
     total_miaa = len(df_miaa_all)
     total_externo = len(df_externo_all)
     
-    col_fecha_ref = 'fechaInstalacion' if 'fechaInstalacion' in df.columns else ('fechaRegistro' if 'fechaRegistro' in df.columns else None)
-    
     # Promedio General del filtro actual
     promedio_dia = 0
     if col_fecha_ref and not df_filtrado_personal.empty:
-        fechas_unicas = pd.to_datetime(df_filtrado_personal[col_fecha_ref].str[:10], errors='coerce').dropna().unique()
+        fechas_unicas = df_filtrado_personal['fecha_dt'].dt.date.dropna().unique()
         if len(fechas_unicas) > 0:
             promedio_dia = round(total_instalaciones / len(fechas_unicas), 1)
 
     # Promedio Específico para MIAA
     promedio_miaa = 0
     if col_fecha_ref and not df_miaa_all.empty:
-        fechas_miaa = pd.to_datetime(df_miaa_all[col_fecha_ref].str[:10], errors='coerce').dropna().unique()
+        fechas_miaa = df_miaa_all['fecha_dt'].dt.date.dropna().unique()
         if len(fechas_miaa) > 0:
             promedio_miaa = round(total_miaa / len(fechas_miaa), 1)
 
     # Promedio Específico para Personal Externo
     promedio_externo = 0
     if col_fecha_ref and not df_externo_all.empty:
-        fechas_externo = pd.to_datetime(df_externo_all[col_fecha_ref].str[:10], errors='coerce').dropna().unique()
+        fechas_externo = df_externo_all['fecha_dt'].dt.date.dropna().unique()
         if len(fechas_externo) > 0:
             promedio_externo = round(total_externo / len(fechas_externo), 1)
 
     df_metas = cargar_metas_db()
     total_meta_global = df_metas['Usuarios_nueva_instalacion'].sum() if not df_metas.empty and 'Usuarios_nueva_instalacion' in df_metas.columns else 0
 
-    # 7 Columnas para mostrar por separado los totales instalados y sus promedios diarios correspondientes
+    # 7 Columnas con títulos y números perfectamente centrados
     m1, m2, m3, m4, m5, m6, m7 = st.columns(7)
     with m1:
         st.metric(label="Total Registros", value=total_instalaciones)
@@ -310,14 +324,16 @@ if 'datos_instalaciones' in st.session_state:
         st.metric(label="Meta Total (BD)", value=total_meta_global)
 
     if 'colonia' in df.columns and not df_metas.empty:
-        st.markdown("##### 📌 Avance de Instalación por Colonia (Cruce con Base de Datos)")
+        st.markdown("##### 📌 Avance de Instalación por Colonia (Ordenado por actividad más reciente)")
         
         df_filtrado_personal['colonia_norm'] = df_filtrado_personal['colonia'].astype(str).str.strip().str.upper()
         df_metas['colonia_norm'] = df_metas['Colonia_ATL'].astype(str).str.strip().str.upper()
         
+        # Agregamos la fecha máxima de instalación por colonia para ordenar de la más reciente a la más antigua
         df_resumen_api = df_filtrado_personal.groupby('colonia_norm').agg(
             Colonia_Real=('colonia', 'first'),
             Med_Inst=('predio', 'count'),
+            Ultima_Fecha=('fecha_dt', 'max'),
             Nivel_Tarifario=('nivel', lambda x: ', '.join(x.dropna().unique()[:2]))
         ).reset_index()
         
@@ -334,6 +350,9 @@ if 'datos_instalaciones' in st.session_state:
         df_merged['Colonia'] = df_merged['Colonia_ATL'].fillna(df_merged['Colonia_Real'])
         df_merged['Nivel_Tarifario'] = df_merged['Nivel_Tarifario'].fillna("N/D")
         
+        # Ordenar por la fecha de instalación más reciente arriba (na_position='last' para mandar las que no tienen instalaciones al final)
+        df_merged = df_merged.sort_values(by='Ultima_Fecha', ascending=False, na_position='last')
+        
         df_merged['%_Avance'] = df_merged.apply(
             lambda row: f"{round((row['Med_Inst'] / row['Med_Tot']) * 100, 1)}%" if row['Med_Tot'] > 0 else "0%", 
             axis=1
@@ -342,7 +361,7 @@ if 'datos_instalaciones' in st.session_state:
         df_tabla_final = df_merged[['Colonia', 'Med_Tot', 'Med_Inst', '%_Avance', 'Poligono', 'Nivel_Tarifario']]
         df_tabla_final.columns = ['Colonia', 'Med. Tot.', 'Med. Inst.', '% Avance', 'Polígono', 'Nivel Tarifario']
         
-        st.dataframe(df_tabla_final, use_container_width=True)
+        st.dataframe(df_tabla_final, use_container_width=True, hide_index=True)
     elif 'colonia' in df.columns:
         st.info("Conectando con la base de datos para mostrar el desglose de metas por colonia...")
 
