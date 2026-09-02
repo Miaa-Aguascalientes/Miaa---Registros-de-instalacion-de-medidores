@@ -404,13 +404,30 @@ if 'datos_instalaciones' in st.session_state:
 
         with gcol1:
             st.markdown("##### Instalados vs Meta Total (Top 10)")
+            # Preparamos un DataFrame derretido para formatear el hover limpio y claro en el gráfico de barras agrupadas
+            df_top10_melted = df_top10.melt(
+                id_vars=['Colonia'], 
+                value_vars=['Med_Tot', 'Med_Inst'],
+                var_name='Tipo_Medidor', 
+                value_name='Cantidad'
+            )
+            df_top10_melted['Tipo_Medidor'] = df_top10_melted['Tipo_Medidor'].map({
+                'Med_Tot': 'Meta Total', 
+                'Med_Inst': 'Medidores Instalados'
+            })
+            
             fig_bar_comp = px.bar(
-                df_top10,
+                df_top10_melted,
                 x='Colonia',
-                y=['Med_Tot', 'Med_Inst'],
+                y='Cantidad',
+                color='Tipo_Medidor',
                 barmode='group',
-                labels={'value': 'Número de Medidores', 'variable': 'Métrica'},
-                color_discrete_map={'Med_Tot': '#3498db', 'Med_Inst': '#2ecc71'}
+                labels={'Cantidad': 'Número de Medidores', 'Tipo_Medidor': 'Concepto', 'Colonia': 'Colonia'},
+                color_discrete_map={'Meta Total': '#3498db', 'Medidores Instalados': '#2ecc71'},
+                custom_data=['Colonia', 'Tipo_Medidor', 'Cantidad']
+            )
+            fig_bar_comp.update_traces(
+                hovertemplate="<b>Colonia:</b> %{customdata[0]}<br><b>%{customdata[1]}:</b> %{customdata[2]:,}<extra></extra>"
             )
             fig_bar_comp.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)',
@@ -431,7 +448,11 @@ if 'datos_instalaciones' in st.session_state:
                     orientation='h',
                     labels={'Inst_Hoy': 'Instalaciones Realizadas Hoy', 'Colonia': 'Colonia'},
                     color='Inst_Hoy',
-                    color_continuous_scale='Tealgrn'
+                    color_continuous_scale='Tealgrn',
+                    custom_data=['Colonia', 'Inst_Hoy']
+                )
+                fig_hoy.update_traces(
+                    hovertemplate="<b>Colonia:</b> %{customdata[0]}<br><b>Instalados Hoy:</b> %{customdata[1]:,}<extra></extra>"
                 )
                 fig_hoy.update_layout(
                     plot_bgcolor='rgba(0,0,0,0)',
@@ -457,7 +478,13 @@ if 'datos_instalaciones' in st.session_state:
                 labels={'Porcentaje_Avance_Num': 'Avance (%)', 'Colonia': 'Colonia'},
                 text='%_Avance',
                 color='Porcentaje_Avance_Num',
-                color_continuous_scale='Viridis'
+                color_continuous_scale='Viridis',
+                custom_data=['Colonia', 'Porcentaje_Avance_Num', 'Med_Inst', 'Med_Tot']
+            )
+            fig_avance.update_traces(
+                hovertemplate="<b>Colonia:</b> %{customdata[0]}<br><b>Avance:</b> %{customdata[1]}%<br><b>Instalados / Meta:</b> %{customdata[2]:,} / %{customdata[3]:,}<extra></extra>",
+                texttemplate='%{text}', 
+                textposition='outside'
             )
             fig_avance.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)',
@@ -466,7 +493,6 @@ if 'datos_instalaciones' in st.session_state:
                 yaxis={'categoryorder': 'total ascending'},
                 margin=dict(t=20, b=20, l=20, r=20)
             )
-            fig_avance.update_traces(texttemplate='%{text}', textposition='outside')
             st.plotly_chart(fig_avance, use_container_width=True)
 
         with gcol4:
@@ -477,7 +503,11 @@ if 'datos_instalaciones' in st.session_state:
                 names='Poligono',
                 values='Med_Inst',
                 hole=0.4,
-                color_discrete_sequence=px.colors.sequential.RdBu
+                color_discrete_sequence=px.colors.sequential.RdBu,
+                custom_data=['Poligono', 'Med_Inst', 'Med_Tot']
+            )
+            fig_poly.update_traces(
+                hovertemplate="<b>Polígono:</b> %{customdata[0]}<br><b>Medidores Instalados:</b> %{customdata[1]:,}<br><b>Meta Total:</b> %{customdata[2]:,}<extra></extra>"
             )
             fig_poly.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)',
