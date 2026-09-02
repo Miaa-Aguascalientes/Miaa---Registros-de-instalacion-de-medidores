@@ -10,7 +10,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilos CSS avanzados para eliminar márgenes superiores y subir título y logotipo al máximo
+# Estilos CSS avanzados con animaciones, efectos hover y movimiento fluido
 custom_style = """
     <style>
     /* Ocultar barra superior, menú y footer de Streamlit */
@@ -18,12 +18,13 @@ custom_style = """
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    /* Forzar que la barra lateral permanezca siempre abierta y visible */
+    /* Forzar que la barra lateral permanezca siempre abierta, visible y con animación sutil de entrada */
     [data-testid="stSidebar"] {
         min-width: 300px !important;
         max-width: 400px !important;
         transform: none !important;
         visibility: visible !important;
+        animation: slideInLeft 0.6s ease-out;
     }
     
     [data-testid="collapsedControl"] {
@@ -32,24 +33,110 @@ custom_style = """
 
     /* Subir el contenido del área principal eliminando el espacio superior */
     .block-container {
-        padding-top: 1rem !important;
+        padding-top: 0.8rem !important;
         margin-top: 0px !important;
+        animation: fadeIn 0.8s ease-in-out;
     }
 
     /* Subir el logotipo de la barra lateral al borde superior */
     [data-testid="stSidebar"] div[data-testid="stImage"] {
         margin-top: -35px !important;
         padding-top: 0px !important;
+        transition: transform 0.3s ease;
     }
     
-    [data-testid="stSidebar"] div[data-testid="stImage"] img {
-        margin-top: 0px !important;
+    [data-testid="stSidebar"] div[data-testid="stImage"]:hover {
+        transform: scale(1.02);
+    }
+
+    /* ==========================================
+       ANIMACIONES Y MOVIMIENTO ("VIDA" UI)
+       ========================================== */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideInLeft {
+        from { opacity: 0; transform: translateX(-20px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+
+    @keyframes pulseGlow {
+        0% { box-shadow: 0 0 5px rgba(0, 168, 204, 0.2); }
+        50% { box-shadow: 0 0 20px rgba(0, 168, 204, 0.6); }
+        100% { box-shadow: 0 0 5px rgba(0, 168, 204, 0.2); }
+    }
+
+    /* Tarjetas de Métricas con movimiento al pasar el cursor y brillo animado */
+    [data-testid="stMetric"] {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 15px;
+        border-radius: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: pulseGlow 4s infinite;
+    }
+
+    [data-testid="stMetric"]:hover {
+        transform: translateY(-5px) scale(1.02);
+        border-color: #00a8cc;
+        box-shadow: 0 8px 25px rgba(0, 168, 204, 0.3);
+    }
+
+    /* Efecto dinámico en tablas */
+    [data-testid="stDataFrame"] {
+        border-radius: 10px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    [data-testid="stDataFrame"]:hover {
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Botones con transición fluida */
+    .stButton>button, .stDownloadButton>button {
+        transition: all 0.3s ease !important;
+        border-radius: 8px !important;
+    }
+
+    .stButton>button:hover, .stDownloadButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 168, 204, 0.4);
+    }
+
+    /* Indicador de estado en vivo (Punto Pulsante) */
+    .live-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        background-color: #2ecc71;
+        border-radius: 50%;
+        margin-right: 8px;
+        box-shadow: 0 0 0 rgba(46, 204, 113, 0.4);
+        animation: livePulse 2s infinite;
+    }
+
+    @keyframes livePulse {
+        0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7);
+        }
+        70% {
+            transform: scale(1);
+            box-shadow: 0 0 0 8px rgba(46, 204, 113, 0);
+        }
+        100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(46, 204, 113, 0);
+        }
     }
     </style>
 """
 st.markdown(custom_style, unsafe_allow_html=True)
 
-# Logo en la barra lateral (subido al máximo)
+# Logo en la barra lateral
 st.sidebar.image(
     "https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg", 
     use_container_width=True
@@ -110,7 +197,7 @@ if 'datos_instalaciones' not in st.session_state:
         if resultado_api:
             st.session_state['datos_instalaciones'] = resultado_api
         else:
-            st.error("No se pudieron cargar los datos de la API. Verifica tus credenciales en los secretos.")
+            st.error("No se pudieron cargar los datos de la API. Verifica tus secretos.")
 
 # Si ya tenemos datos en la sesión, procesamos y mostramos el dashboard superior y las tablas
 if 'datos_instalaciones' in st.session_state:
@@ -152,6 +239,7 @@ if 'datos_instalaciones' in st.session_state:
     # FILTRO EN BARRA LATERAL (Personal Externo / MIAA)
     # ==========================================
     st.sidebar.markdown("---")
+    st.sidebar.markdown("<p style='font-size: 14px; color: #2ecc71; margin-bottom: 5px;'><span class='live-indicator'></span>Sistema en Línea (MIAA)</p>", unsafe_allow_html=True)
     st.sidebar.header("Filtros Operativos")
     filtro_personal = st.sidebar.selectbox("Tipo de Personal", ["Todos", "Personal MIAA", "Personal Externo"])
 
