@@ -496,22 +496,31 @@ if 'datos_instalaciones' in st.session_state:
 
         with gcol4:
             st.markdown("##### Distribución de Medidores Instalados por Polígono")
-            df_poligono = df_merged.groupby('Poligono').agg(
+            
+            # Filtro estricto para asegurar únicamente polígonos del 1 al 31 y evitar IDs fantasma
+            df_poligono = df_merged.dropna(subset=['Poligono']).copy()
+            df_poligono['Poligono'] = pd.to_numeric(df_poligono['Poligono'], errors='coerce')
+            df_poligono = df_poligono[df_poligono['Poligono'].between(1, 31)]
+
+            df_poligono = df_poligono.groupby('Poligono', as_index=False).agg(
                 Med_Inst=('Med_Inst', 'sum')
-            ).reset_index()
-            df_poligono['Poligono_Label'] = "Polígono " + df_poligono['Poligono'].astype(str)
+            )
+            
+            # Convertimos a string plano para evitar comas de miles automáticas de Plotly
+            df_poligono['Poligono_Str'] = df_poligono['Poligono'].astype(int).astype(str)
 
             fig_poly = px.pie(
                 df_poligono,
-                names='Poligono_Label',
+                names='Poligono_Str',
                 values='Med_Inst',
                 hole=0.4,
                 color_discrete_sequence=px.colors.sequential.RdBu,
-                custom_data=['Poligono_Label', 'Med_Inst']
+                custom_data=['Poligono_Str', 'Med_Inst']
             )
-            # Tooltip actualizado: solo muestra el nombre del polígono y cuántos medidores instalados tiene
+            
+            # Hover limpio exactamente como lo pediste: número del polígono arriba y medidores instalados abajo
             fig_poly.update_traces(
-                hovertemplate="<b>%{customdata[0]}</b><br><b>Instalados:</b> %{customdata[1]:,}<extra></extra>"
+                hovertemplate="<b>%{customdata[0]}</b><br>Instalados: %{customdata[1]:,}<extra></extra>"
             )
             fig_poly.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)',
