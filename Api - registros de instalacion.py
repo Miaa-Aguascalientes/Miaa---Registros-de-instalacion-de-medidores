@@ -503,7 +503,6 @@ if 'datos_instalaciones' in st.session_state:
         with gcol4:
             st.markdown("##### Distribución de Medidores Instalados por Polígono")
             
-            # Usamos los registros individuales para agrupar exactamente los polígonos del 1 al 31
             df_poligono_raw = df_con_poligono.dropna(subset=['Poligono']).copy()
             df_poligono_raw = df_poligono_raw[df_poligono_raw['Poligono'].between(1, 31)]
 
@@ -511,21 +510,22 @@ if 'datos_instalaciones' in st.session_state:
                 Med_Inst=('predio', 'count')
             )
             
-            # Convertimos a string plano para evitar comas automáticas
-            df_poligono_grouped['Poligono_Str'] = df_poligono_grouped['Poligono'].astype(int).astype(str)
+            # Textos limpios y formateados por separado para evitar aglutinamientos
+            df_poligono_grouped['Poligono_Label'] = "Polígono " + df_poligono_grouped['Poligono'].astype(int).astype(str)
+            df_poligono_grouped['Instalados_Fmt'] = df_poligono_grouped['Med_Inst'].apply(lambda x: f"{x:,}")
 
             fig_poly = px.pie(
                 df_poligono_grouped,
-                names='Poligono_Str',
+                names='Poligono_Label',
                 values='Med_Inst',
                 hole=0.4,
                 color_discrete_sequence=px.colors.sequential.RdBu,
-                custom_data=['Poligono_Str', 'Med_Inst']
+                custom_data=['Poligono_Label', 'Instalados_Fmt']
             )
             
-            # Hover completamente separado con etiquetas claras para evitar que se junten
+            # Hover completamente separado en líneas distintas (<br>)
             fig_poly.update_traces(
-                hovertemplate="<b>Polígono: %{customdata[0]}</b><br><b>Instalados:</b> %{customdata[1]:,}<extra></extra>"
+                hovertemplate="<b>%{customdata[0]}</b><br>Instalados: <b>%{customdata[1]}</b><extra></extra>"
             )
             fig_poly.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)',
