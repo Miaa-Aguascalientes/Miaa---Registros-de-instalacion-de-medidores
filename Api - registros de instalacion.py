@@ -10,15 +10,29 @@ st.set_page_config(
     layout="wide"
 )
 
-# Ocultar la barra superior (Header), el menú desplegable y el pie de página de Streamlit
-hide_streamlit_style = """
+# Ocultar barra superior y forzar que la barra lateral NUNCA se oculte (siempre visible)
+custom_style = """
     <style>
+    /* Ocultar barra superior, menú y footer de Streamlit */
     header[data-testid="stHeader"] {visibility: hidden;}
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+
+    /* Forzar que la barra lateral permanezca siempre abierta y visible */
+    [data-testid="stSidebar"] {
+        min-width: 300px !important;
+        max-width: 400px !important;
+        transform: none !important;
+        visibility: visible !important;
+    }
+    
+    /* Ocultar el botón de contraer/expandir la barra lateral si aparece */
+    [data-testid="collapsedControl"] {
+        display: none !important;
+    }
     </style>
 """
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+st.markdown(custom_style, unsafe_allow_html=True)
 
 # Logo en la barra lateral
 st.sidebar.image(
