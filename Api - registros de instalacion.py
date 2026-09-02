@@ -10,7 +10,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Ocultar barra superior y forzar que la barra lateral NUNCA se oculte (siempre visible)
+# Estilos CSS avanzados para eliminar márgenes superiores y subir título y logotipo al máximo
 custom_style = """
     <style>
     /* Ocultar barra superior, menú y footer de Streamlit */
@@ -26,15 +26,30 @@ custom_style = """
         visibility: visible !important;
     }
     
-    /* Ocultar el botón de contraer/expandir la barra lateral si aparece */
     [data-testid="collapsedControl"] {
         display: none !important;
+    }
+
+    /* Subir el contenido del área principal eliminando el espacio superior */
+    .block-container {
+        padding-top: 1rem !important;
+        margin-top: 0px !important;
+    }
+
+    /* Subir el logotipo de la barra lateral al borde superior */
+    [data-testid="stSidebar"] div[data-testid="stImage"] {
+        margin-top: -35px !important;
+        padding-top: 0px !important;
+    }
+    
+    [data-testid="stSidebar"] div[data-testid="stImage"] img {
+        margin-top: 0px !important;
     }
     </style>
 """
 st.markdown(custom_style, unsafe_allow_html=True)
 
-# Logo en la barra lateral
+# Logo en la barra lateral (subido al máximo)
 st.sidebar.image(
     "https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg", 
     use_container_width=True
