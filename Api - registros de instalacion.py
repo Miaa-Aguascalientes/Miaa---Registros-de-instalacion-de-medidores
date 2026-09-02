@@ -10,7 +10,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilos CSS avanzados con animaciones, efectos hover y centrado de métricas
+# Estilos CSS avanzados con animaciones, efectos hover y centrado completo de métricas (títulos y números)
 custom_style = """
     <style>
     /* Ocultar barra superior, menú y footer de Streamlit */
@@ -83,8 +83,23 @@ custom_style = """
         align-items: center !important;
     }
 
+    /* Centrar tanto los títulos (labels) como los valores (values) de las métricas */
+    [data-testid="stMetricLabel"] {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+
+    [data-testid="stMetricLabel"] > div {
+        text-align: center !important;
+        justify-content: center !important;
+    }
+
     [data-testid="stMetricValue"] {
         justify-content: center !important;
+        display: flex !important;
+        width: 100% !important;
     }
 
     [data-testid="stMetric"]:hover {
