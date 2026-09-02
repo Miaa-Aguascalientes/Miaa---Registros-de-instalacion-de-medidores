@@ -6,6 +6,16 @@ from sqlalchemy import create_engine
 
 st.set_page_config(page_title="Gestor de Medidores MIAA", page_icon="💧", layout="wide")
 
+# Ocultar la barra superior (Header), el menú desplegable y el pie de página de Streamlit
+hide_streamlit_style = """
+    <style>
+    header[data-testid="stHeader"] {visibility: hidden;}
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    </style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 st.title("💧 Consulta de Instalación de Medidores - MIAA")
 
 url_login = "https://prelec.miaa.mx/auth/v2/login"
@@ -18,7 +28,6 @@ def cargar_datos_api():
         usuario = st.secrets["api"]["usuario"]
         password = st.secrets["api"]["password"]
         
-        # 1. Petición de Login
         res_login = requests.post(
             url_login, 
             json={"username": usuario, "password": password}, 
@@ -30,7 +39,6 @@ def cargar_datos_api():
             token = data_login.get("token") or data_login.get("access_token")
             
             if token:
-                # 2. Petición al endpoint protegido
                 res_inst = requests.get(
                     url_instalaciones, 
                     headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
