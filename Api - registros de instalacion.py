@@ -508,30 +508,25 @@ if 'datos_instalaciones' in st.session_state:
 
             df_poligono_grouped = df_poligono_raw.groupby('Poligono', as_index=False).agg(
                 Med_Inst=('predio', 'count')
-            )
+            ).sort_values(by='Med_Inst', ascending=False)
             
-            # Textos limpios y formateados por separado para evitar aglutinamientos
-            df_poligono_grouped['Poligono_Label'] = "Polígono " + df_poligono_grouped['Poligono'].astype(int).astype(str)
-            df_poligono_grouped['Instalados_Fmt'] = df_poligono_grouped['Med_Inst'].apply(lambda x: f"{x:,}")
+            labels_list = [f"Polígono {int(p)}" for p in df_poligono_grouped['Poligono']]
+            values_list = df_poligono_grouped['Med_Inst'].tolist()
 
-            fig_poly = px.pie(
-                df_poligono_grouped,
-                names='Poligono_Label',
-                values='Med_Inst',
+            # Usamos go.Pie nativo para controlar perfectamente el hovertemplate por separado
+            fig_poly = go.Figure(go.Pie(
+                labels=labels_list,
+                values=values_list,
                 hole=0.4,
-                color_discrete_sequence=px.colors.sequential.RdBu,
-                custom_data=['Poligono_Label', 'Instalados_Fmt']
-            )
+                hovertemplate="<b>%{label}</b><br>Instalados: <b>%{value:,}</b><extra></extra>"
+            ))
             
-            # Hover completamente separado en líneas distintas (<br>)
-            fig_poly.update_traces(
-                hovertemplate="<b>%{customdata[0]}</b><br>Instalados: <b>%{customdata[1]}</b><extra></extra>"
-            )
             fig_poly.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)',
                 paper_bgcolor='rgba(0,0,0,0)',
                 font_color='#ffffff',
-                margin=dict(t=20, b=20, l=20, r=20)
+                margin=dict(t=20, b=20, l=20, r=20),
+                legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5)
             )
             st.plotly_chart(fig_poly, use_container_width=True)
 
