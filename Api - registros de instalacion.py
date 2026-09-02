@@ -70,11 +70,11 @@ custom_style = """
         100% { box-shadow: 0 0 5px rgba(0, 168, 204, 0.2); }
     }
 
-    /* Tarjetas de Métricas con movimiento al pasar el cursor, brillo y contenido centrado */
+    /* Tarjetas de Métricas con altura reducida y padding menor */
     [data-testid="stMetric"] {
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 15px;
+        padding: 6px 10px !important;
         border-radius: 12px;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         animation: pulseGlow 4s infinite;
@@ -83,14 +83,16 @@ custom_style = """
 
     [data-testid="stMetric"] > div {
         align-items: center !important;
+        gap: 2px !important;
     }
 
-    /* Centrar tanto los títulos (labels) como los valores (values) de las métricas */
+    /* Centrar tanto los títulos (labels) como los valores (values) de las métricas y reducir el tamaño de los números */
     [data-testid="stMetricLabel"] {
         width: 100% !important;
         display: flex !important;
         justify-content: center !important;
         text-align: center !important;
+        font-size: 13px !important;
     }
 
     [data-testid="stMetricLabel"] > div {
@@ -102,6 +104,7 @@ custom_style = """
         justify-content: center !important;
         display: flex !important;
         width: 100% !important;
+        font-size: 26px !important;
     }
 
     [data-testid="stMetric"]:hover {
@@ -167,8 +170,6 @@ st.sidebar.image(
     "https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg", 
     use_container_width=True
 )
-
-st.title("💧 Consulta de Instalación de Medidores - MIAA")
 
 url_login = "https://prelec.miaa.mx/auth/v2/login"
 url_instalaciones = "https://prelec.miaa.mx/msvc-tecnica/medidores/instalaciones"
@@ -320,7 +321,7 @@ if 'datos_instalaciones' in st.session_state:
     df_metas = cargar_metas_db()
     total_meta_global = df_metas['Usuarios_nueva_instalacion'].sum() if not df_metas.empty and 'Usuarios_nueva_instalacion' in df_metas.columns else 0
 
-    # 7 Columnas con títulos y números perfectamente centrados
+    # 7 Columnas con títulos y números perfectamente centrados y altura compacta
     m1, m2, m3, m4, m5, m6, m7 = st.columns(7)
     with m1:
         st.metric(label="Total Registros", value=total_instalaciones)
@@ -475,7 +476,7 @@ if 'datos_instalaciones' in st.session_state:
             st.plotly_chart(fig_poly, use_container_width=True)
 
         # ==========================================
-        # TABLA PRINCIPAL DE AVANCE POR COLONIA (SIN LÍNEA NI TÍTULO REDUNDANTE)
+        # TABLA PRINCIPAL DE AVANCE POR COLONIA
         # ==========================================
         df_tabla_final = df_merged[['Colonia', 'Med_Tot', 'Med_Inst', 'Inst_Hoy', '%_Avance', 'Poligono', 'Nivel_Tarifario']]
         df_tabla_final.columns = ['Colonia', 'Med. Tot.', 'Med. Inst.', 'Inst. Hoy', '% Avance', 'Polígono', 'Nivel Tarifario']
