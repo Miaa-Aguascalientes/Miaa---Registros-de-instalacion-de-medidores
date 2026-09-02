@@ -40,6 +40,14 @@ custom_style = """
         animation: fadeIn 0.8s ease-in-out;
     }
 
+    /* Estilo personalizado para hacer el título principal más chico */
+    .custom-main-title {
+        font-size: 1.8rem !important;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        margin-top: 0rem;
+    }
+
     /* Subir el logotipo de la barra lateral al borde superior */
     [data-testid="stSidebar"] div[data-testid="stImage"] {
         margin-top: -35px !important;
@@ -165,8 +173,8 @@ custom_style = """
 """
 st.markdown(custom_style, unsafe_allow_html=True)
 
-# Título principal en la parte superior
-st.title("📊 Registro de instalacion medidores Miaa")
+# Título principal con tamaño personalizado más chico mediante HTML
+st.markdown("<h1 class='custom-main-title'>📊 Registro de instalacion medidores Miaa</h1>", unsafe_allow_html=True)
 
 # Logo en la barra lateral
 st.sidebar.image(
