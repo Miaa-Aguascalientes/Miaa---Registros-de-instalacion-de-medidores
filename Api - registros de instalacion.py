@@ -4,7 +4,11 @@ import json
 import pandas as pd
 from sqlalchemy import create_engine
 
-st.set_page_config(page_title="Gestor de Medidores MIAA", page_icon="💧", layout="wide")
+st.set_page_config(
+    page_title="Gestor de Medidores MIAA", 
+    page_icon="https://www.miaa.mx/favicon.ico", 
+    layout="wide"
+)
 
 # Ocultar la barra superior (Header), el menú desplegable y el pie de página de Streamlit
 hide_streamlit_style = """
@@ -15,6 +19,12 @@ hide_streamlit_style = """
     </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
+# Logo en la barra lateral
+st.sidebar.image(
+    "https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg", 
+    use_container_width=True
+)
 
 st.title("💧 Consulta de Instalación de Medidores - MIAA")
 
@@ -112,6 +122,7 @@ if 'datos_instalaciones' in st.session_state:
     # ==========================================
     # FILTRO EN BARRA LATERAL (Personal Externo / MIAA)
     # ==========================================
+    st.sidebar.markdown("---")
     st.sidebar.header("Filtros Operativos")
     filtro_personal = st.sidebar.selectbox("Tipo de Personal", ["Todos", "Personal MIAA", "Personal Externo"])
 
