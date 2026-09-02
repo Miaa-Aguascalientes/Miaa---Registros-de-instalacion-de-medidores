@@ -395,7 +395,6 @@ if 'datos_instalaciones' in st.session_state:
         # SECCIÓN DE GRÁFICAS ANALÍTICAS AVANZADAS (ARRIBA DE LA TABLA)
         # ==========================================
         st.markdown("---")
-        st.markdown("##### Instalados vs Meta Total (Top 10) / Productividad Diaria")
 
         # Top 10 colonias para visualizaciones limpias
         df_top10 = df_merged.sort_values(by='Med_Inst', ascending=False).head(10)
