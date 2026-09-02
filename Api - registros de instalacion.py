@@ -352,14 +352,23 @@ if 'datos_instalaciones' in st.session_state:
         st.metric(label="Meta Total (BD)", value=total_meta_global)
 
     if 'colonia' in df.columns and not df_metas.empty:
-        df_filtrado_personal['colonia_norm'] = df_filtrado_personal['colonia'].astype(str).str.strip().str.upper()
-        df_metas['colonia_norm'] = df_metas['Colonia_ATL'].astype(str).str.strip().str.upper()
+        df_metas_clean = df_metas.drop_duplicates(subset=['Colonia_ATL']).copy()
         
-        # Fecha actual para filtrar medidores instalados hoy
+        df_filtrado_personal['colonia_norm'] = df_filtrado_personal['colonia'].astype(str).str.strip().str.upper()
+        df_metas_clean['colonia_norm'] = df_metas_clean['Colonia_ATL'].astype(str).str.strip().str.upper()
+        
+        # Mapeo directo de polígonos a los registros individuales para evitar duplicaciones y conteos inflados
+        df_con_poligono = pd.merge(
+            df_filtrado_personal,
+            df_metas_clean[['colonia_norm', 'Poligono_de_instalacion', 'Usuarios_nueva_instalacion']],
+            on='colonia_norm',
+            how='left'
+        )
+        df_con_poligono['Poligono'] = df_con_poligono['Poligono_de_instalacion'].fillna(0).astype(int)
+        
         hoy_date = pd.Timestamp.today().normalize()
         
-        # Agregación incluyendo el conteo de instalaciones de hoy y la última fecha para ordenar de mayor a menor instalación hoy
-        df_resumen_api = df_filtrado_personal.groupby('colonia_norm').agg(
+        df_resumen_api = df_con_poligono.groupby('colonia_norm').agg(
             Colonia_Real=('colonia', 'first'),
             Med_Inst=('predio', 'count'),
             Inst_Hoy=('fecha_dt', lambda x: (pd.to_datetime(x).dt.normalize() == hoy_date).sum()),
@@ -368,7 +377,7 @@ if 'datos_instalaciones' in st.session_state:
         ).reset_index()
         
         df_merged = pd.merge(
-            df_metas,
+            df_metas_clean,
             df_resumen_api,
             on='colonia_norm',
             how='left'
@@ -381,14 +390,12 @@ if 'datos_instalaciones' in st.session_state:
         df_merged['Colonia'] = df_merged['Colonia_ATL'].fillna(df_merged['Colonia_Real'])
         df_merged['Nivel_Tarifario'] = df_merged['Nivel_Tarifario'].fillna("N/D")
         
-        # Ordenar principal por Inst_Hoy descendente (más instalados hoy arriba) y secundario por Med_Inst descendente
         df_merged = df_merged.sort_values(by=['Inst_Hoy', 'Med_Inst', 'Ultima_Fecha'], ascending=[False, False, False], na_position='last')
         
         df_merged['Porcentaje_Avance_Num'] = df_merged.apply(
             lambda row: round((row['Med_Inst'] / row['Med_Tot']) * 100, 1) if row['Med_Tot'] > 0 else 0.0, 
             axis=1
         )
-        
         df_merged['%_Avance'] = df_merged['Porcentaje_Avance_Num'].astype(str) + "%"
 
         # ==========================================
@@ -396,7 +403,6 @@ if 'datos_instalaciones' in st.session_state:
         # ==========================================
         st.markdown("---")
 
-        # Top 10 colonias para visualizaciones limpias
         df_top10 = df_merged.sort_values(by='Med_Inst', ascending=False).head(10)
         df_top10_hoy = df_merged[df_merged['Inst_Hoy'] > 0].sort_values(by='Inst_Hoy', ascending=False).head(10)
 
@@ -497,20 +503,19 @@ if 'datos_instalaciones' in st.session_state:
         with gcol4:
             st.markdown("##### Distribución de Medidores Instalados por Polígono")
             
-            # Filtro estricto para asegurar únicamente polígonos del 1 al 31 y evitar IDs fantasma
-            df_poligono = df_merged.dropna(subset=['Poligono']).copy()
-            df_poligono['Poligono'] = pd.to_numeric(df_poligono['Poligono'], errors='coerce')
-            df_poligono = df_poligono[df_poligono['Poligono'].between(1, 31)]
+            # Usamos los registros individuales para agrupar exactamente los polígonos del 1 al 31
+            df_poligono_raw = df_con_poligono.dropna(subset=['Poligono']).copy()
+            df_poligono_raw = df_poligono_raw[df_poligono_raw['Poligono'].between(1, 31)]
 
-            df_poligono = df_poligono.groupby('Poligono', as_index=False).agg(
-                Med_Inst=('Med_Inst', 'sum')
+            df_poligono_grouped = df_poligono_raw.groupby('Poligono', as_index=False).agg(
+                Med_Inst=('predio', 'count')
             )
             
-            # Convertimos a string plano para evitar comas de miles automáticas de Plotly
-            df_poligono['Poligono_Str'] = df_poligono['Poligono'].astype(int).astype(str)
+            # Convertimos a string plano para evitar comas automáticas
+            df_poligono_grouped['Poligono_Str'] = df_poligono_grouped['Poligono'].astype(int).astype(str)
 
             fig_poly = px.pie(
-                df_poligono,
+                df_poligono_grouped,
                 names='Poligono_Str',
                 values='Med_Inst',
                 hole=0.4,
@@ -518,9 +523,9 @@ if 'datos_instalaciones' in st.session_state:
                 custom_data=['Poligono_Str', 'Med_Inst']
             )
             
-            # Hover limpio exactamente como lo pediste: número del polígono arriba y medidores instalados abajo
+            # Hover completamente separado con etiquetas claras para evitar que se junten
             fig_poly.update_traces(
-                hovertemplate="<b>%{customdata[0]}</b><br>Instalados: %{customdata[1]:,}<extra></extra>"
+                hovertemplate="<b>Polígono: %{customdata[0]}</b><br><b>Instalados:</b> %{customdata[1]:,}<extra></extra>"
             )
             fig_poly.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)',
