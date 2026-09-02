@@ -287,11 +287,8 @@ if 'datos_instalaciones' in st.session_state:
     df_display = df_filtrado_personal.drop(columns=[c for c in columnas_to_hide if c in df_filtrado_personal.columns], errors='ignore')
 
     # ==========================================
-    # DASHBOARD SUPERIOR
+    # DASHBOARD SUPERIOR (Métricas)
     # ==========================================
-    st.markdown("---")
-    st.subheader("📊 Dashboard Principal - Resumen Operativo")
-    
     total_instalaciones = len(df_filtrado_personal)
     df_miaa_all = df[df['Tipo_Personal'] == "Personal MIAA"]
     df_externo_all = df[df['Tipo_Personal'] == "Personal Externo"]
@@ -478,11 +475,8 @@ if 'datos_instalaciones' in st.session_state:
             st.plotly_chart(fig_poly, use_container_width=True)
 
         # ==========================================
-        # TABLA PRINCIPAL DE AVANCE POR COLONIA (AHORA DEBAJO DE LAS GRÁFICAS)
+        # TABLA PRINCIPAL DE AVANCE POR COLONIA (SIN LÍNEA NI TÍTULO REDUNDANTE)
         # ==========================================
-        st.markdown("---")
-        st.markdown("##### 📌 Avance de Instalación por Colonia (Ordenado por mayor actividad el día de hoy)")
-        
         df_tabla_final = df_merged[['Colonia', 'Med_Tot', 'Med_Inst', 'Inst_Hoy', '%_Avance', 'Poligono', 'Nivel_Tarifario']]
         df_tabla_final.columns = ['Colonia', 'Med. Tot.', 'Med. Inst.', 'Inst. Hoy', '% Avance', 'Polígono', 'Nivel Tarifario']
         
