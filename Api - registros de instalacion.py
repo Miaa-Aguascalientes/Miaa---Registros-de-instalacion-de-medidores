@@ -260,29 +260,51 @@ if 'datos_instalaciones' in st.session_state:
     st.subheader("📊 Dashboard Principal - Resumen Operativo")
     
     total_instalaciones = len(df_filtrado_personal)
-    total_miaa = len(df[df['Tipo_Personal'] == "Personal MIAA"])
-    total_externo = len(df[df['Tipo_Personal'] == "Personal Externo"])
+    df_miaa_all = df[df['Tipo_Personal'] == "Personal MIAA"]
+    df_externo_all = df[df['Tipo_Personal'] == "Personal Externo"]
+    
+    total_miaa = len(df_miaa_all)
+    total_externo = len(df_externo_all)
     
     col_fecha_ref = 'fechaInstalacion' if 'fechaInstalacion' in df.columns else ('fechaRegistro' if 'fechaRegistro' in df.columns else None)
+    
+    # Promedio General del filtro actual
     promedio_dia = 0
     if col_fecha_ref and not df_filtrado_personal.empty:
         fechas_unicas = pd.to_datetime(df_filtrado_personal[col_fecha_ref].str[:10], errors='coerce').dropna().unique()
         if len(fechas_unicas) > 0:
             promedio_dia = round(total_instalaciones / len(fechas_unicas), 1)
 
+    # Promedio Específico para MIAA
+    promedio_miaa = 0
+    if col_fecha_ref and not df_miaa_all.empty:
+        fechas_miaa = pd.to_datetime(df_miaa_all[col_fecha_ref].str[:10], errors='coerce').dropna().unique()
+        if len(fechas_miaa) > 0:
+            promedio_miaa = round(total_miaa / len(fechas_miaa), 1)
+
+    # Promedio Específico para Personal Externo
+    promedio_externo = 0
+    if col_fecha_ref and not df_externo_all.empty:
+        fechas_externo = pd.to_datetime(df_externo_all[col_fecha_ref].str[:10], errors='coerce').dropna().unique()
+        if len(fechas_externo) > 0:
+            promedio_externo = round(total_externo / len(fechas_externo), 1)
+
     df_metas = cargar_metas_db()
     total_meta_global = df_metas['Usuarios_nueva_instalacion'].sum() if not df_metas.empty and 'Usuarios_nueva_instalacion' in df_metas.columns else 0
 
-    m1, m2, m3, m4, m5 = st.columns(5)
+    # 6 Columnas para mostrar de forma limpia el desglose completo de promedios y totales
+    m1, m2, m3, m4, m5, m6 = st.columns(6)
     with m1:
         st.metric(label="Total Registros", value=total_instalaciones)
     with m2:
-        st.metric(label="👨‍💼 Personal MIAA", value=total_miaa)
+        st.metric(label="Promedio / Día (Filtro)", value=promedio_dia)
     with m3:
-        st.metric(label="👷 Personal Externo", value=total_externo)
+        st.metric(label="👨‍💼 Prom. MIAA / Día", value=promedio_miaa)
     with m4:
-        st.metric(label="Promedio / Día", value=promedio_dia)
+        st.metric(label="👷 Prom. Externo / Día", value=promedio_externo)
     with m5:
+        st.metric(label="Personal (MIAA/Ext)", value=f"{total_miaa} / {total_externo}")
+    with m6:
         st.metric(label="Meta Total (BD)", value=total_meta_global)
 
     if 'colonia' in df.columns and not df_metas.empty:
