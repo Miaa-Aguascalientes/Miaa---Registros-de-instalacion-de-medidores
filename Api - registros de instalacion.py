@@ -569,7 +569,7 @@ if 'datos_instalaciones' in st.session_state:
                 st.write(f"**Domicilio:** {registro.get('domicilio')}")
                 st.write(f"**Giro:** {registro.get('giro')} ({registro.get('nivel')})")
                 st.write(f"**Serie Medidor:** {registro.get('serie')}")
-                st.write(f"**Fecha de Instalación:** {registro.get('fechaInstalacion') primero)}")
+                st.write(f"**Fecha de Instalación:** {registro.get('fechaInstalacion')}")
                 st.write(f"**Técnico Responsable:** {registro.get('usuarioNombre')} (ID: {registro.get('usuarioId')})")
                 st.write(f"**Tipo de Personal:** {registro.get('Tipo_Personal')}")
                 st.write(f"**Lectura Anterior:** {registro.get('lecturaAnterior')} | **Actual:** {registro.get('lecturaActual')}")
