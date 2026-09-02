@@ -41,7 +41,7 @@ if st.sidebar.button("Consultar API"):
                         resultado = res_inst.json()
                         st.success("¡Datos obtenidos correctamente!")
                         
-                        # Guardamos los datos en la sesión para poder interactuar sin perderlos
+                        # Guardamos los datos en la sesión
                         st.session_state['datos_instalaciones'] = resultado
                     else:
                         st.error(f"Error al obtener las instalaciones (Código {res_inst.status_code})")
@@ -52,11 +52,11 @@ if st.sidebar.button("Consultar API"):
         except Exception as e:
             st.error(f"Ocurrió un error de conexión: {e}")
 
-# Si ya tenemos datos en la sesión, los mostramos de forma amigable
+# Si ya tenemos datos en la sesión, los procesamos y mostramos
 if 'datos_instalaciones' in st.session_state:
     data = st.session_state['datos_instalaciones']
     
-    # Normalizar la estructura JSON anidada para convertirla en una tabla limpia de Pandas
+    # Normalizar la estructura JSON anidada
     if isinstance(data, dict):
         lista_registros = []
         for key, value in data.items():
@@ -75,7 +75,13 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df = pd.DataFrame([data])
 
-    # Ocultar / Eliminar la columna 'uuid' del DataFrame para que no aparezca
+    # Formatear columnas de fecha para que se vean limpias (ej. 2026-08-11 12:24)
+    for col in df.columns:
+        if 'fecha' in col.lower():
+            # Convertimos a datetime manejando errores y luego formateamos a string sin la T ni milisegundos
+            df[col] = pd.to_datetime(df[col], errors='coerce').dt.strftime('%Y-%m-%d %H:%M').fillna(df[col])
+
+    # Ocultar / Eliminar la columna 'uuid' del DataFrame visual
     if 'uuid' in df.columns:
         df_display = df.drop(columns=['uuid'])
     else:
@@ -93,7 +99,7 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df_filtrado = df_display
 
-    # Mostrar tabla interactiva sin uuid
+    # Mostrar tabla interactiva con las fechas formateadas
     st.dataframe(df_filtrado, use_container_width=True)
 
     st.divider()
