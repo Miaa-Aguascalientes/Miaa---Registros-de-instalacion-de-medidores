@@ -292,19 +292,21 @@ if 'datos_instalaciones' in st.session_state:
     df_metas = cargar_metas_db()
     total_meta_global = df_metas['Usuarios_nueva_instalacion'].sum() if not df_metas.empty and 'Usuarios_nueva_instalacion' in df_metas.columns else 0
 
-    # 6 Columnas para mostrar de forma limpia el desglose completo de promedios y totales
-    m1, m2, m3, m4, m5, m6 = st.columns(6)
+    # 7 Columnas para mostrar por separado los totales instalados y sus promedios diarios correspondientes
+    m1, m2, m3, m4, m5, m6, m7 = st.columns(7)
     with m1:
         st.metric(label="Total Registros", value=total_instalaciones)
     with m2:
-        st.metric(label="Promedio / Día (Filtro)", value=promedio_dia)
+        st.metric(label="Promedio / Día", value=promedio_dia)
     with m3:
-        st.metric(label="👨‍💼 Prom. MIAA / Día", value=promedio_miaa)
+        st.metric(label="👨‍💼 Inst. MIAA", value=total_miaa)
     with m4:
-        st.metric(label="👷 Prom. Externo / Día", value=promedio_externo)
+        st.metric(label="Prom. MIAA / Día", value=promedio_miaa)
     with m5:
-        st.metric(label="Personal (MIAA/Ext)", value=f"{total_miaa} / {total_externo}")
+        st.metric(label="👷 Inst. Externo", value=total_externo)
     with m6:
+        st.metric(label="Prom. Ext. / Día", value=promedio_externo)
+    with m7:
         st.metric(label="Meta Total (BD)", value=total_meta_global)
 
     if 'colonia' in df.columns and not df_metas.empty:
