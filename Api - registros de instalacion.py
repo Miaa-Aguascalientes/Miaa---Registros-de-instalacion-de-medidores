@@ -75,19 +75,25 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df = pd.DataFrame([data])
 
+    # Ocultar / Eliminar la columna 'uuid' del DataFrame para que no aparezca
+    if 'uuid' in df.columns:
+        df_display = df.drop(columns=['uuid'])
+    else:
+        df_display = df.copy()
+
     st.divider()
     st.subheader("📊 Resumen General de Instalaciones")
     
     # Filtro de búsqueda rápido
     busqueda = st.text_input("🔍 Buscar por cliente, predio, colonia o serie de medidor:")
     
-    if busqueda and not df.empty:
-        mask = df.astype(str).apply(lambda x: x.str.contains(busqueda, case=False, na=False)).any(axis=1)
-        df_filtrado = df[mask]
+    if busqueda and not df_display.empty:
+        mask = df_display.astype(str).apply(lambda x: x.str.contains(busqueda, case=False, na=False)).any(axis=1)
+        df_filtrado = df_display[mask]
     else:
-        df_filtrado = df
+        df_filtrado = df_display
 
-    # Mostrar tabla interactiva
+    # Mostrar tabla interactiva sin uuid
     st.dataframe(df_filtrado, use_container_width=True)
 
     st.divider()
@@ -111,7 +117,6 @@ if 'datos_instalaciones' in st.session_state:
             
             with col1:
                 st.markdown("### 📋 Información del Servicio")
-                st.write(f"**UUID:** {registro.get('uuid')}")
                 st.write(f"**Predio:** {registro.get('predio')}")
                 st.write(f"**Cliente:** {registro.get('nombreCliente')}")
                 st.write(f"**Colonia:** {registro.get('colonia')}")
