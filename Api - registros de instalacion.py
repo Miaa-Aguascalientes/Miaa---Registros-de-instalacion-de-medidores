@@ -3,6 +3,8 @@ import requests
 import json
 import pandas as pd
 from sqlalchemy import create_engine
+import plotly.express as px
+import plotly.graph_objects as go
 
 st.set_page_config(
     page_title="Gestor de Medidores MIAA", 
@@ -373,15 +375,115 @@ if 'datos_instalaciones' in st.session_state:
         # Ordenar principal por Inst_Hoy descendente (más instalados hoy arriba) y secundario por Med_Inst descendente
         df_merged = df_merged.sort_values(by=['Inst_Hoy', 'Med_Inst', 'Ultima_Fecha'], ascending=[False, False, False], na_position='last')
         
-        df_merged['%_Avance'] = df_merged.apply(
-            lambda row: f"{round((row['Med_Inst'] / row['Med_Tot']) * 100, 1)}%" if row['Med_Tot'] > 0 else "0%", 
+        df_merged['Porcentaje_Avance_Num'] = df_merged.apply(
+            lambda row: round((row['Med_Inst'] / row['Med_Tot']) * 100, 1) if row['Med_Tot'] > 0 else 0.0, 
             axis=1
         )
+        
+        df_merged['%_Avance'] = df_merged['Porcentaje_Avance_Num'].astype(str) + "%"
         
         df_tabla_final = df_merged[['Colonia', 'Med_Tot', 'Med_Inst', 'Inst_Hoy', '%_Avance', 'Poligono', 'Nivel_Tarifario']]
         df_tabla_final.columns = ['Colonia', 'Med. Tot.', 'Med. Inst.', 'Inst. Hoy', '% Avance', 'Polígono', 'Nivel Tarifario']
         
         st.dataframe(df_tabla_final, use_container_width=True, hide_index=True)
+
+        # ==========================================
+        # SECCIÓN DE GRÁFICAS ANALÍTICAS AVANZADAS
+        # ==========================================
+        st.markdown("---")
+        st.subheader("📈 Análisis Gráfico de Operaciones y Avances")
+
+        # Top 10 colonias para visualizaciones limpias
+        df_top10 = df_merged.sort_values(by='Med_Inst', ascending=False).head(10)
+        df_top10_hoy = df_merged[df_merged['Inst_Hoy'] > 0].sort_values(by='Inst_Hoy', ascending=False).head(10)
+
+        gcol1, gcol2 = st.columns(2)
+
+        with gcol1:
+            st.markdown("##### 🏢 Instalados vs Meta Total (Top 10)")
+            fig_bar_comp = px.bar(
+                df_top10,
+                x='Colonia',
+                y=['Med_Tot', 'Med_Inst'],
+                barmode='group',
+                labels={'value': 'Número de Medidores', 'variable': 'Métrica'},
+                color_discrete_map={'Med_Tot': '#3498db', 'Med_Inst': '#2ecc71'}
+            )
+            fig_bar_comp.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                font_color='#ffffff',
+                xaxis_tickangle=-35,
+                margin=dict(t=20, b=40, l=20, r=20)
+            )
+            st.plotly_chart(fig_bar_comp, use_container_width=True)
+
+        with gcol2:
+            st.markdown("##### ⚡ Productividad Diaria (Instalaciones Hoy)")
+            if not df_top10_hoy.empty:
+                fig_hoy = px.bar(
+                    df_top10_hoy,
+                    x='Inst_Hoy',
+                    y='Colonia',
+                    orientation='h',
+                    labels={'Inst_Hoy': 'Instalaciones Realizadas Hoy', 'Colonia': 'Colonia'},
+                    color='Inst_Hoy',
+                    color_continuous_scale='Tealgrn'
+                )
+                fig_hoy.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    font_color='#ffffff',
+                    yaxis={'categoryorder': 'total ascending'},
+                    margin=dict(t=20, b=20, l=20, r=20)
+                )
+                st.plotly_chart(fig_hoy, use_container_width=True)
+            else:
+                st.info("No hay instalaciones registradas el día de hoy.")
+
+        gcol3, gcol4 = st.columns(2)
+
+        with gcol3:
+            st.markdown("##### 🎯 Porcentaje de Avance por Colonia (Top 10)")
+            df_avance_top = df_merged.sort_values(by='Porcentaje_Avance_Num', ascending=False).head(10)
+            fig_avance = px.bar(
+                df_avance_top,
+                x='Porcentaje_Avance_Num',
+                y='Colonia',
+                orientation='h',
+                labels={'Porcentaje_Avance_Num': 'Avance (%)', 'Colonia': 'Colonia'},
+                text='%_Avance',
+                color='Porcentaje_Avance_Num',
+                color_continuous_scale='Viridis'
+            )
+            fig_avance.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                font_color='#ffffff',
+                yaxis={'categoryorder': 'total ascending'},
+                margin=dict(t=20, b=20, l=20, r=20)
+            )
+            fig_avance.update_traces(texttemplate='%{text}', textposition='outside')
+            st.plotly_chart(fig_avance, use_container_width=True)
+
+        with gcol4:
+            st.markdown("##### 🗺️ Distribución de Medidores Instalados por Polígono")
+            df_poligono = df_merged.groupby('Poligono')[['Med_Inst', 'Med_Tot']].sum().reset_index()
+            fig_poly = px.pie(
+                df_poligono,
+                names='Poligono',
+                values='Med_Inst',
+                hole=0.4,
+                color_discrete_sequence=px.colors.sequential.RdBu
+            )
+            fig_poly.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                font_color='#ffffff',
+                margin=dict(t=20, b=20, l=20, r=20)
+            )
+            st.plotly_chart(fig_poly, use_container_width=True)
+
     elif 'colonia' in df.columns:
         st.info("Conectando con la base de datos para mostrar el desglose de metas por colonia...")
 
