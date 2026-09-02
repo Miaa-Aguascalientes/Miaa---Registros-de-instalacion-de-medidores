@@ -497,18 +497,23 @@ if 'datos_instalaciones' in st.session_state:
 
         with gcol4:
             st.markdown("##### Distribución de Medidores Instalados por Polígono")
-            df_poligono = df_merged.groupby('Poligono')[['Med_Inst', 'Med_Tot']].sum().reset_index()
+            df_poligono = df_merged.groupby('Poligono').agg(
+                Med_Inst=('Med_Inst', 'sum'),
+                Med_Tot=('Med_Tot', 'sum')
+            ).reset_index()
+            df_poligono['Poligono_Label'] = "Polígono " + df_poligono['Poligono'].astype(str)
+
             fig_poly = px.pie(
                 df_poligono,
-                names='Poligono',
+                names='Poligono_Label',
                 values='Med_Inst',
                 hole=0.4,
                 color_discrete_sequence=px.colors.sequential.RdBu,
-                custom_data=['Poligono', 'Med_Tot', 'Med_Inst']
+                custom_data=['Poligono_Label', 'Med_Tot', 'Med_Inst']
             )
-            # Formato de hover solicitado para el gráfico de pastel por polígono
+            # Tooltip actualizado mostrando claramente Polígono, Meta y el número de medidores Instalados exactos del polígono
             fig_poly.update_traces(
-                hovertemplate="<b>Polígono:</b> %{customdata[0]}<br><b>Meta:</b> %{customdata[1]:,}<br><b>Instalados:</b> %{customdata[2]:,}<extra></extra>"
+                hovertemplate="<b>%{customdata[0]}</b><br><b>Meta:</b> %{customdata[1]:,}<br><b>Instalados:</b> %{customdata[2]:,}<extra></extra>"
             )
             fig_poly.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)',
