@@ -324,7 +324,7 @@ if 'datos_instalaciones' in st.session_state:
         st.metric(label="Meta Total (BD)", value=total_meta_global)
 
     if 'colonia' in df.columns and not df_metas.empty:
-        st.markdown("##### 📌 Avance de Instalación por Colonia (Ordenado por actividad más reciente)")
+        st.markdown("##### 📌 Avance de Instalación por Colonia (Ordenado por mayor actividad el día de hoy)")
         
         df_filtrado_personal['colonia_norm'] = df_filtrado_personal['colonia'].astype(str).str.strip().str.upper()
         df_metas['colonia_norm'] = df_metas['Colonia_ATL'].astype(str).str.strip().str.upper()
@@ -332,7 +332,7 @@ if 'datos_instalaciones' in st.session_state:
         # Fecha actual para filtrar medidores instalados hoy
         hoy_date = pd.Timestamp.today().normalize()
         
-        # Agregación incluyendo el conteo de instalaciones de hoy y la última fecha para ordenar
+        # Agregación incluyendo el conteo de instalaciones de hoy y la última fecha para ordenar de mayor a menor instalación hoy
         df_resumen_api = df_filtrado_personal.groupby('colonia_norm').agg(
             Colonia_Real=('colonia', 'first'),
             Med_Inst=('predio', 'count'),
@@ -355,8 +355,8 @@ if 'datos_instalaciones' in st.session_state:
         df_merged['Colonia'] = df_merged['Colonia_ATL'].fillna(df_merged['Colonia_Real'])
         df_merged['Nivel_Tarifario'] = df_merged['Nivel_Tarifario'].fillna("N/D")
         
-        # Ordenar por la fecha de instalación más reciente arriba
-        df_merged = df_merged.sort_values(by='Ultima_Fecha', ascending=False, na_position='last')
+        # Ordenar principal por Inst_Hoy descendente (más instalados hoy arriba) y secundario por Med_Inst descendente
+        df_merged = df_merged.sort_values(by=['Inst_Hoy', 'Med_Inst', 'Ultima_Fecha'], ascending=[False, False, False], na_position='last')
         
         df_merged['%_Avance'] = df_merged.apply(
             lambda row: f"{round((row['Med_Inst'] / row['Med_Tot']) * 100, 1)}%" if row['Med_Tot'] > 0 else "0%", 
