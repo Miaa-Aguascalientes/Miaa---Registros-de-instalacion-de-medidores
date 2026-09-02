@@ -6,7 +6,6 @@ import pandas as pd
 st.set_page_config(page_title="Gestor de Medidores MIAA", page_icon="💧", layout="wide")
 
 st.title("💧 Consulta de Instalación de Medidores - MIAA")
-st.write("Panel visual para el registro de instalaciones de medidores.")
 
 # Campos de entrada en la barra lateral
 st.sidebar.header("Credenciales de Acceso")
@@ -19,7 +18,6 @@ url_instalaciones = "https://prelec.miaa.mx/msvc-tecnica/medidores/instalaciones
 if st.sidebar.button("Consultar API"):
     with st.spinner("Autenticándose y obteniendo registros..."):
         try:
-            # 1. Petición de Login
             res_login = requests.post(
                 url_login, 
                 json={"username": usuario, "password": password}, 
@@ -31,7 +29,6 @@ if st.sidebar.button("Consultar API"):
                 token = data_login.get("token") or data_login.get("access_token")
                 
                 if token:
-                    # 2. Petición al endpoint protegido
                     res_inst = requests.get(
                         url_instalaciones, 
                         headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
@@ -40,8 +37,6 @@ if st.sidebar.button("Consultar API"):
                     if res_inst.status_code == 200:
                         resultado = res_inst.json()
                         st.success("¡Datos obtenidos correctamente!")
-                        
-                        # Guardamos los datos en la sesión
                         st.session_state['datos_instalaciones'] = resultado
                     else:
                         st.error(f"Error al obtener las instalaciones (Código {res_inst.status_code})")
@@ -52,11 +47,10 @@ if st.sidebar.button("Consultar API"):
         except Exception as e:
             st.error(f"Ocurrió un error de conexión: {e}")
 
-# Si ya tenemos datos en la sesión, los procesamos y mostramos
+# Si ya tenemos datos en la sesión, procesamos y mostramos el dashboard superior y las tablas
 if 'datos_instalaciones' in st.session_state:
     data = st.session_state['datos_instalaciones']
     
-    # Normalizar la estructura JSON anidada
     if isinstance(data, dict):
         lista_registros = []
         for key, value in data.items():
@@ -75,20 +69,65 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df = pd.DataFrame([data])
 
-    # Formatear columnas de fecha para que se vean limpias (ej. 2026-08-11 12:24)
+    # Formatear columnas de fecha
     for col in df.columns:
         if 'fecha' in col.lower():
-            # Convertimos a datetime manejando errores y luego formateamos a string sin la T ni milisegundos
             df[col] = pd.to_datetime(df[col], errors='coerce').dt.strftime('%Y-%m-%d %H:%M').fillna(df[col])
 
-    # Ocultar / Eliminar la columna 'uuid' del DataFrame visual
-    if 'uuid' in df.columns:
-        df_display = df.drop(columns=['uuid'])
-    else:
-        df_display = df.copy()
+    # Ocultar uuid y fotos de la tabla principal
+    columnas_a_ocultar = ['uuid'] + [col for col in df.columns if 'foto' in col.lower()]
+    df_display = df.drop(columns=columnas_a_ocultar, errors='ignore')
 
-    st.divider()
-    st.subheader("📊 Resumen General de Instalaciones")
+    # ==========================================
+    # DASHBOARD SUPERIOR
+    # ==========================================
+    st.markdown("---")
+    st.subheader("📊 Dashboard Principal - Resumen Operativo")
+    
+    total_instalaciones = len(df)
+    
+    col_fecha_ref = 'fechaInstalacion' if 'fechaInstalacion' in df.columns else ('fechaRegistro' if 'fechaRegistro' in df.columns else None)
+    promedio_dia = 0
+    if col_fecha_ref:
+        fechas_unicas = pd.to_datetime(df[col_fecha_ref].str[:10], errors='coerce').dropna().unique()
+        if len(fechas_unicas) > 0:
+            promedio_dia = round(total_instalaciones / len(fechas_unicas), 1)
+
+    # Tarjetas de indicadores
+    m1, m2, m3, m4 = st.columns(4)
+    with m1:
+        st.metric(label="Total Instalados", value=total_instalaciones)
+    with m2:
+        st.metric(label="Promedio por Día", value=promedio_dia)
+    with m3:
+        colonias_unicas = df['colonia'].nunique() if 'colonia' in df.columns else 0
+        st.metric(label="Colonias Atendidas", value=colonias_unicas)
+    with m4:
+        niveles_unicos = df['nivel'].nunique() if 'nivel' in df.columns else 0
+        st.metric(label="Niveles Tarifarios", value=niveles_unicos)
+
+    # Resumen agrupado por Colonia (Preparado para cruzar con la base de datos de metas totales)
+    if 'colonia' in df.columns:
+        st.markdown("##### 📌 Avance de Instalación por Colonia")
+        
+        # Agrupamos lo instalado actual desde la API
+        df_resumen_colonia = df.groupby('colonia').agg(
+            Med_Inst=('predio', 'count'),
+            Nivel_Tarifario=('nivel', lambda x: ', '.join(x.dropna().unique()[:2]))
+        ).reset_index()
+        
+        # Columna temporal vacía para los medidores totales (pendiente de BD)
+        df_resumen_colonia['Med_Tot'] = "Pendiente (BD)"
+        df_resumen_colonia['%_Avance'] = "Pendiente (BD)"
+        
+        # Reordenar columnas para que coincida con tu esquema deseado
+        df_resumen_colonia = df_resumen_colonia[['colonia', 'Med_Tot', 'Med_Inst', '%_Avance', 'Nivel_Tarifario']]
+        df_resumen_colonia.columns = ['Colonia', 'Med. Tot.', 'Med. Inst.', '% Avance', 'Nivel Tarifario']
+        
+        st.dataframe(df_resumen_colonia, use_container_width=True)
+
+    st.markdown("---")
+    st.subheader("📋 Detalle General de Registros")
     
     # Filtro de búsqueda rápido
     busqueda = st.text_input("🔍 Buscar por cliente, predio, colonia o serie de medidor:")
@@ -99,7 +138,6 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df_filtrado = df_display
 
-    # Mostrar tabla interactiva con las fechas formateadas
     st.dataframe(df_filtrado, use_container_width=True)
 
     st.divider()
@@ -135,7 +173,6 @@ if 'datos_instalaciones' in st.session_state:
 
             with col2:
                 st.markdown("### 📸 Evidencias Fotográficas")
-                
                 fotos = {
                     "Foto Medidor Anterior": registro.get('fotoMedidorAnterior'),
                     "Foto Fachada": registro.get('fotoFachada'),
@@ -145,7 +182,7 @@ if 'datos_instalaciones' in st.session_state:
                 
                 hay_fotos = False
                 for titulo, url_foto in fotos.items():
-                    if url_foto and str(url_foto).lower() != "nan" and str(url_foto).lower() != "none" and str(url_foto).lower() != "null":
+                    if url_foto and str(url_foto).lower() not in ["nan", "none", "null", ""]:
                         try:
                             st.image(url_foto, caption=titulo, use_container_width=True)
                             hay_fotos = True
@@ -155,7 +192,6 @@ if 'datos_instalaciones' in st.session_state:
                 if not hay_fotos:
                     st.info("Este registro no cuenta con evidencias fotográficas disponibles.")
 
-    # Botón para descargar respaldo en JSON limpio
     st.download_button(
         label="📥 Descargar todos los registros en JSON",
         data=json.dumps(data, ensure_ascii=False, indent=2),
