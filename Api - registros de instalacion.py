@@ -8,51 +8,46 @@ st.set_page_config(page_title="Gestor de Medidores MIAA", page_icon="💧", layo
 
 st.title("💧 Consulta de Instalación de Medidores - MIAA")
 
-# Campos de entrada en la barra lateral
-st.sidebar.header("Credenciales de Acceso API")
-usuario = st.sidebar.text_input("Usuario", value="pedro.templos@miaa.mx")
-password = st.sidebar.text_input("Contraseña", type="password", value="Pedro0208")
-
 url_login = "https://prelec.miaa.mx/auth/v2/login"
 url_instalaciones = "https://prelec.miaa.mx/msvc-tecnica/medidores/instalaciones"
 
-if st.sidebar.button("Consultar API"):
-    with st.spinner("Autenticándose y obteniendo registros..."):
-        try:
-            res_login = requests.post(
-                url_login, 
-                json={"username": usuario, "password": password}, 
-                headers={"Content-Type": "application/json"}
-            )
+# Función para autenticar y obtener datos de la API automáticamente usando st.secrets
+@st.cache_data(ttl=300)
+def cargar_datos_api():
+    try:
+        usuario = st.secrets["api"]["usuario"]
+        password = st.secrets["api"]["password"]
+        
+        # 1. Petición de Login
+        res_login = requests.post(
+            url_login, 
+            json={"username": usuario, "password": password}, 
+            headers={"Content-Type": "application/json"}
+        )
+        
+        if res_login.status_code == 200:
+            data_login = res_login.json()
+            token = data_login.get("token") or data_login.get("access_token")
             
-            if res_login.status_code == 200:
-                data_login = res_login.json()
-                token = data_login.get("token") or data_login.get("access_token")
+            if token:
+                # 2. Petición al endpoint protegido
+                res_inst = requests.get(
+                    url_instalaciones, 
+                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
+                )
                 
-                if token:
-                    res_inst = requests.get(
-                        url_instalaciones, 
-                        headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
-                    )
-                    
-                    if res_inst.status_code == 200:
-                        resultado = res_inst.json()
-                        st.success("¡Datos obtenidos correctamente!")
-                        st.session_state['datos_instalaciones'] = resultado
-                    else:
-                        st.error(f"Error al obtener las instalaciones (Código {res_inst.status_code})")
-                else:
-                    st.warning("No se encontró el token en la respuesta de autenticación.")
-            else:
-                st.error(f"Error de autenticación (Código {res_login.status_code})")
-        except Exception as e:
-            st.error(f"Ocurrió un error de conexión: {e}")
+                if res_inst.status_code == 200:
+                    return res_inst.json()
+        return None
+    except Exception as e:
+        st.error(f"Error de conexión con la API: {e}")
+        return None
 
-# Función para cargar las metas de medidores desde la base de datos MySQL
+# Función para cargar las metas de medidores desde la base de datos MySQL usando st.secrets
 @st.cache_data(ttl=600)
 def cargar_metas_db():
     try:
-        connection_string = "mysql+pymysql://miaamx_telemetria2:bWkrw1Uum1O%26@miaa.mx/miaamx_telemetria2"
+        connection_string = st.secrets["mysql"]["connection_string"]
         engine = create_engine(connection_string)
         query = "SELECT Colonia_ATL, Usuarios_nueva_instalacion, Poligono_de_instalacion FROM Diccionario_instalacion_medidores"
         df_metas = pd.read_sql(query, con=engine)
@@ -60,6 +55,15 @@ def cargar_metas_db():
     except Exception as e:
         st.error(f"Error al conectar con la base de datos MySQL: {e}")
         return pd.DataFrame()
+
+# Cargar automáticamente al abrir la aplicación
+if 'datos_instalaciones' not in st.session_state:
+    with st.spinner("Conectando y cargando registros desde la API y Base de Datos..."):
+        resultado_api = cargar_datos_api()
+        if resultado_api:
+            st.session_state['datos_instalaciones'] = resultado_api
+        else:
+            st.error("No se pudieron cargar los datos de la API. Verifica tus credenciales en los secretos.")
 
 # Si ya tenemos datos en la sesión, procesamos y mostramos el dashboard superior y las tablas
 if 'datos_instalaciones' in st.session_state:
@@ -88,25 +92,21 @@ if 'datos_instalaciones' in st.session_state:
         if 'fecha' in col.lower():
             df[col] = pd.to_datetime(df[col], errors='coerce').dt.strftime('%Y-%m-%d %H:%M').fillna(df[col])
 
-    # Detectar columna de personal externo (busca campos como 'externo', 'esExterno', 'isExterno', 'tercero', etc.)
+    # Detectar columna de personal externo
     col_externo_candidatos = [c for c in df.columns if any(k in c.lower() for k in ['extern', 'tercero', 'contratista'])]
     col_externo = col_externo_candidatos[0] if col_externo_candidatos else None
 
-    # Mandar a una columna estándar limpia 'Tipo_Personal' para facilitar filtros e indicadores
     if col_externo:
         df['Tipo_Personal'] = df[col_externo].apply(lambda x: "Personal Externo" if str(x).lower() in ['true', '1', 'yes', 'si', 't'] else "Personal MIAA")
     else:
-        # Fallograma de respaldo si el nombre exacto varía, busca columnas booleanas
         df['Tipo_Personal'] = "Personal MIAA"
 
     # ==========================================
     # FILTRO EN BARRA LATERAL (Personal Externo / MIAA)
     # ==========================================
-    st.sidebar.markdown("---")
     st.sidebar.header("Filtros Operativos")
     filtro_personal = st.sidebar.selectbox("Tipo de Personal", ["Todos", "Personal MIAA", "Personal Externo"])
 
-    # Aplicar filtro de personal al DataFrame principal de trabajo
     if filtro_personal == "Personal MIAA":
         df_filtrado_personal = df[df['Tipo_Personal'] == "Personal MIAA"]
     elif filtro_personal == "Personal Externo":
@@ -114,9 +114,8 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df_filtrado_personal = df.copy()
 
-    # Ocultar uuid y fotos de la tabla principal
-    columnas_a_ocultar = ['uuid', 'Tipo_Personal'] + [col for col in df.columns if 'foto' in col.lower()]
-    df_display = df_filtrado_personal.drop(columns=[c for c in columnas_a_ocultar if c in df_filtrado_personal.columns], errors='ignore')
+    columnas_to_hide = ['uuid', 'Tipo_Personal'] + [col for col in df.columns if 'foto' in col.lower()]
+    df_display = df_filtrado_personal.drop(columns=[c for c in columnas_to_hide if c in df_filtrado_personal.columns], errors='ignore')
 
     # ==========================================
     # DASHBOARD SUPERIOR
@@ -135,11 +134,9 @@ if 'datos_instalaciones' in st.session_state:
         if len(fechas_unicas) > 0:
             promedio_dia = round(total_instalaciones / len(fechas_unicas), 1)
 
-    # Cargar metas desde la base de datos
     df_metas = cargar_metas_db()
     total_meta_global = df_metas['Usuarios_nueva_instalacion'].sum() if not df_metas.empty and 'Usuarios_nueva_instalacion' in df_metas.columns else 0
 
-    # Tarjetas de indicadores con desglose MIAA y Externo
     m1, m2, m3, m4, m5 = st.columns(5)
     with m1:
         st.metric(label="Total Registros", value=total_instalaciones)
@@ -152,7 +149,6 @@ if 'datos_instalaciones' in st.session_state:
     with m5:
         st.metric(label="Meta Total (BD)", value=total_meta_global)
 
-    # Resumen cruzado por Colonia con la base de datos
     if 'colonia' in df.columns and not df_metas.empty:
         st.markdown("##### 📌 Avance de Instalación por Colonia (Cruce con Base de Datos)")
         
