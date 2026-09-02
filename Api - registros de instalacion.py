@@ -404,7 +404,6 @@ if 'datos_instalaciones' in st.session_state:
 
         with gcol1:
             st.markdown("##### Instalados vs Meta Total (Top 10)")
-            # Preparamos un DataFrame derretido para formatear el hover limpio y claro en el gráfico de barras agrupadas
             df_top10_melted = df_top10.melt(
                 id_vars=['Colonia'], 
                 value_vars=['Med_Tot', 'Med_Inst'],
@@ -479,10 +478,11 @@ if 'datos_instalaciones' in st.session_state:
                 text='%_Avance',
                 color='Porcentaje_Avance_Num',
                 color_continuous_scale='Viridis',
-                custom_data=['Colonia', 'Porcentaje_Avance_Num', 'Med_Inst', 'Med_Tot']
+                custom_data=['Colonia', 'Porcentaje_Avance_Num', 'Med_Tot', 'Med_Inst']
             )
+            # Formato de hover solicitado: Colonia, Avance, Meta y su número, después Instalados y su número
             fig_avance.update_traces(
-                hovertemplate="<b>Colonia:</b> %{customdata[0]}<br><b>Avance:</b> %{customdata[1]}%<br><b>Instalados / Meta:</b> %{customdata[2]:,} / %{customdata[3]:,}<extra></extra>",
+                hovertemplate="<b>Colonia:</b> %{customdata[0]}<br><b>Avance:</b> %{customdata[1]}%<br><b>Meta:</b> %{customdata[2]:,}<br><b>Instalados:</b> %{customdata[3]:,}<extra></extra>",
                 texttemplate='%{text}', 
                 textposition='outside'
             )
@@ -504,10 +504,11 @@ if 'datos_instalaciones' in st.session_state:
                 values='Med_Inst',
                 hole=0.4,
                 color_discrete_sequence=px.colors.sequential.RdBu,
-                custom_data=['Poligono', 'Med_Inst', 'Med_Tot']
+                custom_data=['Poligono', 'Med_Tot', 'Med_Inst']
             )
+            # Formato de hover solicitado para el gráfico de pastel por polígono
             fig_poly.update_traces(
-                hovertemplate="<b>Polígono:</b> %{customdata[0]}<br><b>Medidores Instalados:</b> %{customdata[1]:,}<br><b>Meta Total:</b> %{customdata[2]:,}<extra></extra>"
+                hovertemplate="<b>Polígono:</b> %{customdata[0]}<br><b>Meta:</b> %{customdata[1]:,}<br><b>Instalados:</b> %{customdata[2]:,}<extra></extra>"
             )
             fig_poly.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)',
@@ -568,7 +569,7 @@ if 'datos_instalaciones' in st.session_state:
                 st.write(f"**Domicilio:** {registro.get('domicilio')}")
                 st.write(f"**Giro:** {registro.get('giro')} ({registro.get('nivel')})")
                 st.write(f"**Serie Medidor:** {registro.get('serie')}")
-                st.write(f"**Fecha de Instalación:** {registro.get('fechaInstalacion')}")
+                st.write(f"**Fecha de Instalación:** {registro.get('fechaInstalacion') primero)}")
                 st.write(f"**Técnico Responsable:** {registro.get('usuarioNombre')} (ID: {registro.get('usuarioId')})")
                 st.write(f"**Tipo de Personal:** {registro.get('Tipo_Personal')}")
                 st.write(f"**Lectura Anterior:** {registro.get('lecturaAnterior')} | **Actual:** {registro.get('lecturaActual')}")
