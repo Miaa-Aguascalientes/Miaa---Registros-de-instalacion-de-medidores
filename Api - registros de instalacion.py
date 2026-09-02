@@ -480,7 +480,6 @@ if 'datos_instalaciones' in st.session_state:
                 color_continuous_scale='Viridis',
                 custom_data=['Colonia', 'Porcentaje_Avance_Num', 'Med_Tot', 'Med_Inst']
             )
-            # Formato de hover solicitado: Colonia, Avance, Meta y su número, después Instalados y su número
             fig_avance.update_traces(
                 hovertemplate="<b>Colonia:</b> %{customdata[0]}<br><b>Avance:</b> %{customdata[1]}%<br><b>Meta:</b> %{customdata[2]:,}<br><b>Instalados:</b> %{customdata[3]:,}<extra></extra>",
                 texttemplate='%{text}', 
@@ -498,8 +497,7 @@ if 'datos_instalaciones' in st.session_state:
         with gcol4:
             st.markdown("##### Distribución de Medidores Instalados por Polígono")
             df_poligono = df_merged.groupby('Poligono').agg(
-                Med_Inst=('Med_Inst', 'sum'),
-                Med_Tot=('Med_Tot', 'sum')
+                Med_Inst=('Med_Inst', 'sum')
             ).reset_index()
             df_poligono['Poligono_Label'] = "Polígono " + df_poligono['Poligono'].astype(str)
 
@@ -509,11 +507,11 @@ if 'datos_instalaciones' in st.session_state:
                 values='Med_Inst',
                 hole=0.4,
                 color_discrete_sequence=px.colors.sequential.RdBu,
-                custom_data=['Poligono_Label', 'Med_Tot', 'Med_Inst']
+                custom_data=['Poligono_Label', 'Med_Inst']
             )
-            # Tooltip actualizado mostrando claramente Polígono, Meta y el número de medidores Instalados exactos del polígono
+            # Tooltip actualizado: solo muestra el nombre del polígono y cuántos medidores instalados tiene
             fig_poly.update_traces(
-                hovertemplate="<b>%{customdata[0]}</b><br><b>Meta:</b> %{customdata[1]:,}<br><b>Instalados:</b> %{customdata[2]:,}<extra></extra>"
+                hovertemplate="<b>%{customdata[0]}</b><br><b>Instalados:</b> %{customdata[1]:,}<extra></extra>"
             )
             fig_poly.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)',
