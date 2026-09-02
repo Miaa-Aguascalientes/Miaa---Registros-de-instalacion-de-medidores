@@ -329,10 +329,14 @@ if 'datos_instalaciones' in st.session_state:
         df_filtrado_personal['colonia_norm'] = df_filtrado_personal['colonia'].astype(str).str.strip().str.upper()
         df_metas['colonia_norm'] = df_metas['Colonia_ATL'].astype(str).str.strip().str.upper()
         
-        # Agregamos la fecha máxima de instalación por colonia para ordenar de la más reciente a la más antigua
+        # Fecha actual para filtrar medidores instalados hoy
+        hoy_date = pd.Timestamp.today().normalize()
+        
+        # Agregación incluyendo el conteo de instalaciones de hoy y la última fecha para ordenar
         df_resumen_api = df_filtrado_personal.groupby('colonia_norm').agg(
             Colonia_Real=('colonia', 'first'),
             Med_Inst=('predio', 'count'),
+            Inst_Hoy=('fecha_dt', lambda x: (pd.to_datetime(x).dt.normalize() == hoy_date).sum()),
             Ultima_Fecha=('fecha_dt', 'max'),
             Nivel_Tarifario=('nivel', lambda x: ', '.join(x.dropna().unique()[:2]))
         ).reset_index()
@@ -345,12 +349,13 @@ if 'datos_instalaciones' in st.session_state:
         )
         
         df_merged['Med_Inst'] = df_merged['Med_Inst'].fillna(0).astype(int)
+        df_merged['Inst_Hoy'] = df_merged['Inst_Hoy'].fillna(0).astype(int)
         df_merged['Med_Tot'] = df_merged['Usuarios_nueva_instalacion'].fillna(0).astype(int)
         df_merged['Poligono'] = df_merged['Poligono_de_instalacion'].fillna(0).astype(int)
         df_merged['Colonia'] = df_merged['Colonia_ATL'].fillna(df_merged['Colonia_Real'])
         df_merged['Nivel_Tarifario'] = df_merged['Nivel_Tarifario'].fillna("N/D")
         
-        # Ordenar por la fecha de instalación más reciente arriba (na_position='last' para mandar las que no tienen instalaciones al final)
+        # Ordenar por la fecha de instalación más reciente arriba
         df_merged = df_merged.sort_values(by='Ultima_Fecha', ascending=False, na_position='last')
         
         df_merged['%_Avance'] = df_merged.apply(
@@ -358,8 +363,8 @@ if 'datos_instalaciones' in st.session_state:
             axis=1
         )
         
-        df_tabla_final = df_merged[['Colonia', 'Med_Tot', 'Med_Inst', '%_Avance', 'Poligono', 'Nivel_Tarifario']]
-        df_tabla_final.columns = ['Colonia', 'Med. Tot.', 'Med. Inst.', '% Avance', 'Polígono', 'Nivel Tarifario']
+        df_tabla_final = df_merged[['Colonia', 'Med_Tot', 'Med_Inst', 'Inst_Hoy', '%_Avance', 'Poligono', 'Nivel_Tarifario']]
+        df_tabla_final.columns = ['Colonia', 'Med. Tot.', 'Med. Inst.', 'Inst. Hoy', '% Avance', 'Polígono', 'Nivel Tarifario']
         
         st.dataframe(df_tabla_final, use_container_width=True, hide_index=True)
     elif 'colonia' in df.columns:
