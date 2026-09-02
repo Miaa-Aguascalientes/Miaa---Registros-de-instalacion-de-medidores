@@ -52,7 +52,6 @@ if st.sidebar.button("Consultar API"):
 @st.cache_data(ttl=600)
 def cargar_metas_db():
     try:
-        # Codificamos el caracter '&' de la contraseña como '%26' para la cadena de conexión
         connection_string = "mysql+pymysql://miaamx_telemetria2:bWkrw1Uum1O%26@miaa.mx/miaamx_telemetria2"
         engine = create_engine(connection_string)
         query = "SELECT Colonia_ATL, Usuarios_nueva_instalacion, Poligono_de_instalacion FROM Diccionario_instalacion_medidores"
@@ -89,9 +88,35 @@ if 'datos_instalaciones' in st.session_state:
         if 'fecha' in col.lower():
             df[col] = pd.to_datetime(df[col], errors='coerce').dt.strftime('%Y-%m-%d %H:%M').fillna(df[col])
 
+    # Detectar columna de personal externo (busca campos como 'externo', 'esExterno', 'isExterno', 'tercero', etc.)
+    col_externo_candidatos = [c for c in df.columns if any(k in c.lower() for k in ['extern', 'tercero', 'contratista'])]
+    col_externo = col_externo_candidatos[0] if col_externo_candidatos else None
+
+    # Mandar a una columna estándar limpia 'Tipo_Personal' para facilitar filtros e indicadores
+    if col_externo:
+        df['Tipo_Personal'] = df[col_externo].apply(lambda x: "Personal Externo" if str(x).lower() in ['true', '1', 'yes', 'si', 't'] else "Personal MIAA")
+    else:
+        # Fallograma de respaldo si el nombre exacto varía, busca columnas booleanas
+        df['Tipo_Personal'] = "Personal MIAA"
+
+    # ==========================================
+    # FILTRO EN BARRA LATERAL (Personal Externo / MIAA)
+    # ==========================================
+    st.sidebar.markdown("---")
+    st.sidebar.header("Filtros Operativos")
+    filtro_personal = st.sidebar.selectbox("Tipo de Personal", ["Todos", "Personal MIAA", "Personal Externo"])
+
+    # Aplicar filtro de personal al DataFrame principal de trabajo
+    if filtro_personal == "Personal MIAA":
+        df_filtrado_personal = df[df['Tipo_Personal'] == "Personal MIAA"]
+    elif filtro_personal == "Personal Externo":
+        df_filtrado_personal = df[df['Tipo_Personal'] == "Personal Externo"]
+    else:
+        df_filtrado_personal = df.copy()
+
     # Ocultar uuid y fotos de la tabla principal
-    columnas_a_ocultar = ['uuid'] + [col for col in df.columns if 'foto' in col.lower()]
-    df_display = df.drop(columns=columnas_a_ocultar, errors='ignore')
+    columnas_a_ocultar = ['uuid', 'Tipo_Personal'] + [col for col in df.columns if 'foto' in col.lower()]
+    df_display = df_filtrado_personal.drop(columns=[c for c in columnas_a_ocultar if c in df_filtrado_personal.columns], errors='ignore')
 
     # ==========================================
     # DASHBOARD SUPERIOR
@@ -99,12 +124,14 @@ if 'datos_instalaciones' in st.session_state:
     st.markdown("---")
     st.subheader("📊 Dashboard Principal - Resumen Operativo")
     
-    total_instalaciones = len(df)
+    total_instalaciones = len(df_filtrado_personal)
+    total_miaa = len(df[df['Tipo_Personal'] == "Personal MIAA"])
+    total_externo = len(df[df['Tipo_Personal'] == "Personal Externo"])
     
     col_fecha_ref = 'fechaInstalacion' if 'fechaInstalacion' in df.columns else ('fechaRegistro' if 'fechaRegistro' in df.columns else None)
     promedio_dia = 0
-    if col_fecha_ref:
-        fechas_unicas = pd.to_datetime(df[col_fecha_ref].str[:10], errors='coerce').dropna().unique()
+    if col_fecha_ref and not df_filtrado_personal.empty:
+        fechas_unicas = pd.to_datetime(df_filtrado_personal[col_fecha_ref].str[:10], errors='coerce').dropna().unique()
         if len(fechas_unicas) > 0:
             promedio_dia = round(total_instalaciones / len(fechas_unicas), 1)
 
@@ -112,34 +139,32 @@ if 'datos_instalaciones' in st.session_state:
     df_metas = cargar_metas_db()
     total_meta_global = df_metas['Usuarios_nueva_instalacion'].sum() if not df_metas.empty and 'Usuarios_nueva_instalacion' in df_metas.columns else 0
 
-    # Tarjetas de indicadores
-    m1, m2, m3, m4 = st.columns(4)
+    # Tarjetas de indicadores con desglose MIAA y Externo
+    m1, m2, m3, m4, m5 = st.columns(5)
     with m1:
-        st.metric(label="Total Instalados (API)", value=total_instalaciones)
+        st.metric(label="Total Registros", value=total_instalaciones)
     with m2:
-        st.metric(label="Meta Total (BD)", value=total_meta_global)
+        st.metric(label="👨‍💼 Personal MIAA", value=total_miaa)
     with m3:
-        st.metric(label="Promedio por Día", value=promedio_dia)
+        st.metric(label="👷 Personal Externo", value=total_externo)
     with m4:
-        colonias_unicas = df['colonia'].nunique() if 'colonia' in df.columns else 0
-        st.metric(label="Colonias Atendidas", value=colonias_unicas)
+        st.metric(label="Promedio / Día", value=promedio_dia)
+    with m5:
+        st.metric(label="Meta Total (BD)", value=total_meta_global)
 
     # Resumen cruzado por Colonia con la base de datos
     if 'colonia' in df.columns and not df_metas.empty:
         st.markdown("##### 📌 Avance de Instalación por Colonia (Cruce con Base de Datos)")
         
-        # Normalizar nombres para hacer el cruce correcto
-        df['colonia_norm'] = df['colonia'].astype(str).str.strip().str.upper()
+        df_filtrado_personal['colonia_norm'] = df_filtrado_personal['colonia'].astype(str).str.strip().str.upper()
         df_metas['colonia_norm'] = df_metas['Colonia_ATL'].astype(str).str.strip().str.upper()
         
-        # Agrupar instalaciones reales de la API
-        df_resumen_api = df.groupby('colonia_norm').agg(
+        df_resumen_api = df_filtrado_personal.groupby('colonia_norm').agg(
             Colonia_Real=('colonia', 'first'),
             Med_Inst=('predio', 'count'),
             Nivel_Tarifario=('nivel', lambda x: ', '.join(x.dropna().unique()[:2]))
         ).reset_index()
         
-        # Unir con la tabla del diccionario en la BD
         df_merged = pd.merge(
             df_metas,
             df_resumen_api,
@@ -153,7 +178,6 @@ if 'datos_instalaciones' in st.session_state:
         df_merged['Colonia'] = df_merged['Colonia_ATL'].fillna(df_merged['Colonia_Real'])
         df_merged['Nivel_Tarifario'] = df_merged['Nivel_Tarifario'].fillna("N/D")
         
-        # Calcular porcentaje de avance
         df_merged['%_Avance'] = df_merged.apply(
             lambda row: f"{round((row['Med_Inst'] / row['Med_Tot']) * 100, 1)}%" if row['Med_Tot'] > 0 else "0%", 
             axis=1
@@ -169,7 +193,6 @@ if 'datos_instalaciones' in st.session_state:
     st.markdown("---")
     st.subheader("📋 Detalle General de Registros")
     
-    # Filtro de búsqueda rápido
     busqueda = st.text_input("🔍 Buscar por cliente, predio, colonia o serie de medidor:")
     
     if busqueda and not df_display.empty:
@@ -209,6 +232,7 @@ if 'datos_instalaciones' in st.session_state:
                 st.write(f"**Serie Medidor:** {registro.get('serie')}")
                 st.write(f"**Fecha de Instalación:** {registro.get('fechaInstalacion')}")
                 st.write(f"**Técnico Responsable:** {registro.get('usuarioNombre')} (ID: {registro.get('usuarioId')})")
+                st.write(f"**Tipo de Personal:** {registro.get('Tipo_Personal')}")
                 st.write(f"**Lectura Anterior:** {registro.get('lecturaAnterior')} | **Actual:** {registro.get('lecturaActual')}")
 
             with col2:
