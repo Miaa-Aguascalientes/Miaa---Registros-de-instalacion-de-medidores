@@ -40,12 +40,14 @@ custom_style = """
         animation: fadeIn 0.8s ease-in-out;
     }
 
-    /* Estilo personalizado para hacer el título principal más chico */
+    /* Estilo personalizado para hacer el título más chico y centrado */
     .custom-main-title {
         font-size: 1.8rem !important;
         font-weight: 700;
-        margin-bottom: 1rem;
+        text-align: center !important;
+        margin-bottom: 1.5rem;
         margin-top: 0rem;
+        width: 100%;
     }
 
     /* Subir el logotipo de la barra lateral al borde superior */
@@ -173,8 +175,8 @@ custom_style = """
 """
 st.markdown(custom_style, unsafe_allow_html=True)
 
-# Título principal con tamaño personalizado más chico mediante HTML
-st.markdown("<h1 class='custom-main-title'>📊 Registro de instalacion medidores Miaa</h1>", unsafe_allow_html=True)
+# Título principal centrado, sin icono y con letra más chica
+st.markdown("<h1 class='custom-main-title'>Registro de instalacion medidores Miaa</h1>", unsafe_allow_html=True)
 
 # Logo en la barra lateral
 st.sidebar.image(
