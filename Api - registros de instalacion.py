@@ -1,62 +1,74 @@
+import streamlit as st
 import requests
 import json
 
-# 1. Configuración de URLs y credenciales
+st.set_page_config(page_title="Gestor de Medidores MIAA", page_icon="💧", layout="wide")
+
+st.title("💧 Consulta de Instalación de Medidores - MIAA")
+st.write("Interfaz para autenticarse y consultar el registro de instalaciones de medidores.")
+
+# Campos de entrada en la interfaz
+st.sidebar.header("Credenciales de Acceso")
+usuario = st.sidebar.text_input("Usuario", value="pedro.templos@miaa.mx")
+password = st.sidebar.text_input("Contraseña", type="password", value="Pedro0208")
+
 url_login = "https://prelec.miaa.mx/auth/v2/login"
 url_instalaciones = "https://prelec.miaa.mx/msvc-tecnica/medidores/instalaciones"
 
-payload_login = {
-    "username": "pedro.templos@miaa.mx",
-    "password": "Pedro0208"
-}
-
-headers = {
-    "Content-Type": "application/json"
-}
-
-print("Autenticándose en la API...")
-
-# 2. Solicitud para obtener el token
-response_login = requests.post(url_login, json=payload_login, headers=headers)
-
-if response_login.status_code == 200:
-    data_login = response_login.json()
-    
-    # Nota: Dependiendo de cómo devuelva el token la API, 
-    # comúnmente viene en una llave como "token", "access_token" o similar.
-    # Imprimiremos la respuesta completa por seguridad si la estructura varía.
-    print("¡Autenticación exitosa!")
-    
-    # Intentamos extraer el token (ajusta la clave si el JSON usa otra, ej: data_login['access_token'])
-    token = data_login.get("token") or data_login.get("access_token")
-    
-    if not token:
-        # Si no tiene una clave estándar, mostramos el JSON para identificarla
-        print("Estructura de respuesta de login:", json.dumps(data_login, indent=2))
-        token = input("Pega aquí el token o la llave de acceso que aparece arriba: ").strip()
-
-    # 3. Consulta al endpoint protegido con el token obtenido
-    headers_auth = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {token}"
-    }
-
-    print("Obteniendo el listado de instalaciones de medidores...")
-    response_inst = requests.get(url_instalaciones, headers=headers_auth)
-
-    if response_inst.status_code == 200:
-        print("¡Datos obtenidos correctamente!")
-        resultado = response_inst.json()
-        print(json.dumps(resultado, indent=2))
+if st.sidebar.button("Consultar API"):
+    with st.spinner("Autenticándose en la API..."):
+        payload_login = {
+            "username": usuario,
+            "password": password
+        }
+        headers = {
+            "Content-Type": "application/json"
+        }
         
-        # Opcional: Guardar el resultado en un archivo JSON local
-        with open("instalaciones_medidores.json", "w", encoding="utf-8") as f:
-            json.dump(resultado, f, ensure_ascii=False, indent=2)
-        print("Los datos se han guardado en 'instalaciones_medidores.json'")
-    else:
-        print(f"Error al obtener las instalaciones: {response_inst.status_code}")
-        print(response_inst.text)
-
-else:
-    print(f"Error de autenticación: {response_login.status_code}")
-    print(response_login.text)
+        try:
+            response_login = requests.post(url_login, json=payload_login, headers=headers)
+            
+            if response_login.status_code == 200:
+                data_login = response_login.json()
+                st.success("¡Autenticación exitosa!")
+                
+                # Extraemos el token (ajusta la clave según la respuesta exacta de la API si es necesario)
+                token = data_login.get("token") or data_login.get("access_token")
+                
+                if not token:
+                    st.warning("No se encontró el token automáticamente. Estructura recibida:")
+                    st.json(data_login)
+                else:
+                    headers_auth = {
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {token}"
+                    }
+                    
+                    with st.spinner("Obteniendo el listado de instalaciones..."):
+                        response_inst = requests.get(url_instalaciones, headers=headers_auth)
+                        
+                        if response_inst.status_code == 200:
+                            resultado = response_inst.json()
+                            st.success("¡Datos obtenidos correctamente!")
+                            
+                            # Mostrar los datos en pantalla de forma interactiva
+                            st.subheader("Listado de Instalaciones")
+                            st.json(resultado)
+                            
+                            # Botón de descarga para el archivo JSON
+                            json_str = json.dumps(resultado, ensure_ascii=False, indent=2)
+                            st.download_button(
+                                label="Descargar JSON de Instalaciones",
+                                data=json_str,
+                                file_name="instalaciones_medidores.json",
+                                mime="application/json"
+                            )
+                        else:
+                            st.error(f"Error al obtener las instalaciones (Código {response_inst.status_code})")
+                            st.text(response_inst.text)
+            else:
+                st.error(f"Error de autenticación (Código {response_login.status_code})")
+                st.text(response_login.text)
+                
+        except Exception as e:
+            st.error(f"Ocurrió un error de conexión: {e}")
