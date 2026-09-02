@@ -57,15 +57,12 @@ if 'datos_instalaciones' in st.session_state:
     data = st.session_state['datos_instalaciones']
     
     # Normalizar la estructura JSON anidada para convertirla en una tabla limpia de Pandas
-    # Dependiendo de si la API devuelve una lista o un diccionario con índices numéricos:
     if isinstance(data, dict):
-        # Extraer los elementos si vienen anidados por número (ej. {"800": {...}, "801": {...}})
         lista_registros = []
         for key, value in data.items():
             if isinstance(value, list):
                 lista_registros.extend(value)
             elif isinstance(value, dict):
-                # Si el diccionario tiene sub-niveles numéricos como en tu captura
                 for sub_k, sub_v in value.items():
                     if isinstance(sub_v, dict):
                         lista_registros.append(sub_v)
@@ -85,21 +82,18 @@ if 'datos_instalaciones' in st.session_state:
     busqueda = st.text_input("🔍 Buscar por cliente, predio, colonia o serie de medidor:")
     
     if busqueda and not df.empty:
-        # Filtrar el DataFrame de manera global en columnas de texto
         mask = df.astype(str).apply(lambda x: x.str.contains(busqueda, case=False, na=False)).any(axis=1)
         df_filtrado = df[mask]
     else:
         df_filtrado = df
 
-    # Mostrar tabla interactiva (puedes ordenar columnas, hacer zoom, etc.)
+    # Mostrar tabla interactiva
     st.dataframe(df_filtrado, use_container_width=True)
 
     st.divider()
     st.subheader("👁️ Vista Detallada por Registro y Fotografías")
     
-    # Selector para ver a detalle un registro específico si la tabla es grande
     if not df_filtrado.empty:
-        # Crear etiquetas legibles para el selector
         opciones_select = []
         for idx, row in df_filtrado.iterrows():
             cliente = row.get('nombreClienteVia', row.get('nombreCliente', 'Sin Nombre'))
@@ -110,7 +104,6 @@ if 'datos_instalaciones' in st.session_state:
         seleccion = st.selectbox("Selecciona un registro para ver sus detalles y evidencias fotográficas:", opciones_select)
         
         if seleccion:
-            # Extraer el índice seleccionado
             idx_seleccionado = int(seleccion.split(" | ")[0].replace("Índice ", ""))
             registro = df.loc[idx_seleccionado]
             
@@ -131,19 +124,25 @@ if 'datos_instalaciones' in st.session_state:
 
             with col2:
                 st.markdown("### 📸 Evidencias Fotográficas")
-                foto_anterior = registro.get('fotoMedidorAnterior')
-                foto_fachada = registro.get('fotoFachada')
-                foto_columpio = registro.get('fotoColumpioRegistro')
-                foto_id_visible = registro.get('fotoMedidorIdVisible')
                 
-                if foto_anterior:
-                    st.image(foto_anterior, caption="Foto Medidor Anterior", use_column_width=True)
-                if foto_fachada:
-                    st.image(foto_fachada, caption="Foto Fachada", use_column_width=True)
-                if foto_columpio:
-                    st.image(foto_columpio, caption="Foto Columpio / Registro", use_column_width=True)
-                if foto_id_visible:
-                    st.image(foto_id_visible, caption="Foto Medidor ID Visible", use_column_width=True)
+                fotos = {
+                    "Foto Medidor Anterior": registro.get('fotoMedidorAnterior'),
+                    "Foto Fachada": registro.get('fotoFachada'),
+                    "Foto Columpio / Registro": registro.get('fotoColumpioRegistro'),
+                    "Foto Medidor ID Visible": registro.get('fotoMedidorIdVisible')
+                }
+                
+                hay_fotos = False
+                for titulo, url_foto in fotos.items():
+                    if url_foto and str(url_foto).lower() != "nan" and str(url_foto).lower() != "none" and str(url_foto).lower() != "null":
+                        try:
+                            st.image(url_foto, caption=titulo, use_container_width=True)
+                            hay_fotos = True
+                        except Exception as img_err:
+                            st.warning(f"No se pudo cargar la imagen de {titulo}: {img_err}")
+                
+                if not hay_fotos:
+                    st.info("Este registro no cuenta con evidencias fotográficas disponibles.")
 
     # Botón para descargar respaldo en JSON limpio
     st.download_button(
