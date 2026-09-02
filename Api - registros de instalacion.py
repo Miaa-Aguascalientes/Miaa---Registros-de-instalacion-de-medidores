@@ -341,8 +341,6 @@ if 'datos_instalaciones' in st.session_state:
         st.metric(label="Meta Total (BD)", value=total_meta_global)
 
     if 'colonia' in df.columns and not df_metas.empty:
-        st.markdown("##### 📌 Avance de Instalación por Colonia (Ordenado por mayor actividad el día de hoy)")
-        
         df_filtrado_personal['colonia_norm'] = df_filtrado_personal['colonia'].astype(str).str.strip().str.upper()
         df_metas['colonia_norm'] = df_metas['Colonia_ATL'].astype(str).str.strip().str.upper()
         
@@ -381,14 +379,9 @@ if 'datos_instalaciones' in st.session_state:
         )
         
         df_merged['%_Avance'] = df_merged['Porcentaje_Avance_Num'].astype(str) + "%"
-        
-        df_tabla_final = df_merged[['Colonia', 'Med_Tot', 'Med_Inst', 'Inst_Hoy', '%_Avance', 'Poligono', 'Nivel_Tarifario']]
-        df_tabla_final.columns = ['Colonia', 'Med. Tot.', 'Med. Inst.', 'Inst. Hoy', '% Avance', 'Polígono', 'Nivel Tarifario']
-        
-        st.dataframe(df_tabla_final, use_container_width=True, hide_index=True)
 
         # ==========================================
-        # SECCIÓN DE GRÁFICAS ANALÍTICAS AVANZADAS
+        # SECCIÓN DE GRÁFICAS ANALÍTICAS AVANZADAS (ARRIBA DE LA TABLA)
         # ==========================================
         st.markdown("---")
         st.subheader("📈 Análisis Gráfico de Operaciones y Avances")
@@ -483,6 +476,17 @@ if 'datos_instalaciones' in st.session_state:
                 margin=dict(t=20, b=20, l=20, r=20)
             )
             st.plotly_chart(fig_poly, use_container_width=True)
+
+        # ==========================================
+        # TABLA PRINCIPAL DE AVANCE POR COLONIA (AHORA DEBAJO DE LAS GRÁFICAS)
+        # ==========================================
+        st.markdown("---")
+        st.markdown("##### 📌 Avance de Instalación por Colonia (Ordenado por mayor actividad el día de hoy)")
+        
+        df_tabla_final = df_merged[['Colonia', 'Med_Tot', 'Med_Inst', 'Inst_Hoy', '%_Avance', 'Poligono', 'Nivel_Tarifario']]
+        df_tabla_final.columns = ['Colonia', 'Med. Tot.', 'Med. Inst.', 'Inst. Hoy', '% Avance', 'Polígono', 'Nivel Tarifario']
+        
+        st.dataframe(df_tabla_final, use_container_width=True, hide_index=True)
 
     elif 'colonia' in df.columns:
         st.info("Conectando con la base de datos para mostrar el desglose de metas por colonia...")
