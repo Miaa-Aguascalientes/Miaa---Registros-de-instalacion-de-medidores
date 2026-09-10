@@ -96,7 +96,15 @@ def cargar_datos_api():
 def cargar_metas_db():
     try:
         engine = create_engine(st.secrets["mysql"]["connection_string"])
-        query = "SELECT Colonia_ATL, Usuarios_nueva_instalacion, Poligono_de_instalacion FROM Diccionario_instalacion_medidores"
+        query = """
+            SELECT 
+                Colonia_ATL, 
+                Usuarios_Reales, 
+                Usuarios_con_medidor_inteligente, 
+                Usuarios_nueva_instalacion, 
+                Poligono_de_instalacion 
+            FROM Diccionario_instalacion_medidores
+        """
         return pd.read_sql(query, con=engine)
     except Exception as e:
         return pd.DataFrame()
@@ -139,15 +147,13 @@ if 'datos_instalaciones' in st.session_state:
     st.sidebar.image("https://www.miaa.mx/assets/img/logo.png", use_container_width=True)
     st.sidebar.markdown("---")
 
-    # Filtro de Periodo de Fechas debajo del logotipo
     st.sidebar.subheader("Periodo de Fechas")
     opcion_periodo = st.sidebar.selectbox(
         "Seleccionar Rango",
         ["Este mes", "El mes pasado", "Últimos tres meses", "Últimos 6 meses", "Este año", "El año pasado"],
-        index=4 # Por defecto "Este año"
+        index=4
     )
 
-    # Calcular fechas de inicio y fin según la opción seleccionada (asumiendo fecha actual 2026-09-10)
     hoy = pd.to_datetime("2026-09-10").date()
     
     if opcion_periodo == "Este mes":
@@ -177,7 +183,6 @@ if 'datos_instalaciones' in st.session_state:
         for p in sorted(df_metas['Poligono_de_instalacion'].dropna().unique()):
             st.sidebar.checkbox(str(p), value=True)
 
-    # Filtrar dataframe general de acuerdo al rango calculado
     if col_fecha_ref and not df['fecha_dt'].isna().all():
         mask = (df['fecha_dt'].dt.date >= fecha_inicio) & (df['fecha_dt'].dt.date <= fecha_fin)
         df_filtrado = df.loc[mask].copy()
@@ -188,18 +193,41 @@ if 'datos_instalaciones' in st.session_state:
     total_instalados = len(df_filtrado)
     porc_avance = round((total_instalados / meta_total) * 100, 2) if meta_total > 0 else 0.0
 
-    if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns:
-        df_eficiencia = df_metas.groupby('Poligono_de_instalacion').agg(
-            Usuarios=('Usuarios_nueva_instalacion', 'sum')
-        ).reset_index()
-        df_eficiencia.columns = ['Polígono', 'Usuarios']
-        df_eficiencia['Instalados'] = total_instalados // len(df_eficiencia)
-        df_eficiencia['Fallos'] = 0
-        df_eficiencia['% Efec'] = (df_eficiencia['Instalados'] / df_eficiencia['Usuarios'] * 100).round(2).astype(str) + '%'
-    else:
-        df_eficiencia = pd.DataFrame(columns=['Polígono', 'Usuarios', 'Instalados', 'Fallos', '% Efec'])
+    # Procesar tabla exacta solicitada basada en Diccionario_instalacion_medidores
+    if not df_metas.empty:
+        df_tabla_eficiencia = df_metas.copy()
+        
+        # Limpiar y convertir columnas numéricas para cálculos precisos
+        for col_num in ['Usuarios_Reales', 'Usuarios_con_medidor_inteligente', 'Usuarios_nueva_instalacion']:
+            if col_num in df_tabla_eficiencia.columns:
+                df_tabla_eficiencia[col_num] = pd.to_numeric(df_tabla_eficiencia[col_num].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
 
-    # FILA 1: KPIs Superiores Reales (Con datos filtrados)
+        # Si en la API hay instalaciones registradas por colonia, podemos cruzarlas o agregarlas; aquí agrupamos por Colonia y Polígono tal como lo solicita el esquema
+        df_eficiencia = df_tabla_eficiencia.groupby(['Colonia_ATL', 'Poligono_de_instalacion'], as_index=False).agg({
+            'Usuarios_Reales': 'sum',
+            'Usuarios_con_medidor_inteligente': 'sum'
+        })
+        
+        # Renombrar columnas exactamente como el diseño de la pizarra: Colonia | Med. tot | Med. inst | % | Polígono
+        df_eficiencia['%'] = np.where(
+            df_eficiencia['Usuarios_Reales'] > 0, 
+            (df_eficiencia['Usuarios_con_medidor_inteligente'] / df_eficiencia['Usuarios_Reales'] * 100).round(2).astype(str) + '%', 
+            '0%'
+        )
+        
+        df_eficiencia = df_eficiencia.rename(columns={
+            'Colonia_ATL': 'Colonia',
+            'Usuarios_Reales': 'Med. tot',
+            'Usuarios_con_medidor_inteligente': 'Med. inst',
+            'Poligono_de_instalacion': 'Polígono'
+        })
+        
+        # Reordenar columnas a la estructura de la imagen
+        df_eficiencia = df_eficiencia[['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono']]
+    else:
+        df_eficiencia = pd.DataFrame(columns=['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono'])
+
+    # FILA 1: KPIs Superiores Reales
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     with k1: st.metric("Meta Total", f"{meta_total:,}")
     with k2: st.metric("Instalados", f"{total_instalados:,}")
@@ -210,7 +238,7 @@ if 'datos_instalaciones' in st.session_state:
 
     st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-    # FILA 2: Gráficas actualizadas (Instalaciones por Día y Distribución por Usuario Externo con datos filtrados)
+    # FILA 2: Gráficas (Instalaciones por Día y Distribución por Usuario Externo)
     col_g1, col_g2 = st.columns([1.8, 1.2])
 
     with col_g1:
@@ -236,11 +264,11 @@ if 'datos_instalaciones' in st.session_state:
         fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160, showlegend=True, legend=dict(orientation="h", y=-0.1))
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # FILA 3: Eficiencia real y Mapa con coordenadas reales (Con datos filtrados)
+    # FILA 3: Tabla de Eficiencia (Estructura exacta solicitada) y Mapa
     col_inf1, col_inf2 = st.columns([1, 1.6])
 
     with col_inf1:
-        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Eficiencia Polígonos (Base de Datos)</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Eficiencia por Colonia y Polígono</p>", unsafe_allow_html=True)
         if not df_eficiencia.empty:
             st.dataframe(df_eficiencia, use_container_width=True, hide_index=True)
         else:
@@ -276,25 +304,21 @@ if 'datos_instalaciones' in st.session_state:
 
         st_folium(mapa_miaa, width=None, height=230, use_container_width=True)
 
-    # FILA 4: Tabla limpia de la API (Con datos filtrados, sin columnas excluidas y con formatos específicos)
+    # FILA 4: Tabla limpia de la API
     st.markdown("<p style='font-size:12px; margin-top:10px; margin-bottom:0; font-weight:bold;'>Registros completos de la API (Tabla filtrada y formateada)</p>", unsafe_allow_html=True)
     
     df_tabla_limpia = df_filtrado.copy()
     
-    # Excluir campos solicitados: fotos, fechaRegistro, fechaModificacion, uuid, horaFin, lecturaAnterior, lecturaActual, folio
     terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
     columnas_a_excluir = [c for c in df_tabla_limpia.columns if any(term in c.lower() for term in terminos_excluidos)]
     df_tabla_limpia = df_tabla_limpia.drop(columns=columnas_a_excluir, errors='ignore')
     
-    # Formatear fechaInstalacion a DD/MM/YYYY HH:MM:SS
     if 'fechaInstalacion' in df_tabla_limpia.columns:
         df_tabla_limpia['fechaInstalacion'] = pd.to_datetime(df_tabla_limpia['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
 
-    # Formatear horaInicio a solo HH:MM
     if 'horaInicio' in df_tabla_limpia.columns:
         df_tabla_limpia['horaInicio'] = pd.to_datetime(df_tabla_limpia['horaInicio'], errors='coerce').dt.strftime('%H:%M')
 
-    # Eliminar columnas auxiliares internas creadas para el dashboard
     df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia'], errors='ignore')
 
     st.dataframe(df_tabla_limpia, use_container_width=True)
