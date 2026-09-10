@@ -10,11 +10,12 @@ from streamlit_folium import st_folium
 import numpy as np
 
 st.set_page_config(
-    page_title="Gestor de Medidores MIAA", 
+    page_title="Dashboard Instalación Medidores Inteligentes", 
     page_icon="https://www.miaa.mx/favicon.ico", 
     layout="wide"
 )
 
+# Estilos CSS compactos para optimizar el espacio en pantalla y evitar scroll excesivo
 custom_style = """
     <style>
     header[data-testid="stHeader"] {visibility: hidden;}
@@ -22,110 +23,57 @@ custom_style = """
     footer {visibility: hidden;}
 
     [data-testid="stSidebar"] {
-        min-width: 300px !important;
-        max-width: 400px !important;
-        transform: none !important;
-        visibility: visible !important;
-        animation: slideInLeft 0.6s ease-out;
+        min-width: 260px !important;
+        max-width: 320px !important;
     }
     
-    [data-testid="collapsedControl"] {
-        display: none !important;
-    }
+    [data-testid="collapsedControl"] { display: none !important; }
 
     .block-container {
-        padding-top: 0.8rem !important;
+        padding-top: 0.4rem !important;
+        padding-bottom: 0.5rem !important;
         margin-top: 0px !important;
-        animation: fadeIn 0.8s ease-in-out;
     }
 
-    .custom-main-title {
-        font-size: 1.8rem !important;
-        font-weight: 700;
-        text-align: center !important;
-        margin-bottom: 1.5rem;
-        margin-top: 0rem;
-        width: 100%;
-    }
-
-    [data-testid="stSidebar"] div[data-testid="stImage"] {
-        margin-top: -35px !important;
-        padding-top: 0px !important;
-        transition: transform 0.3s ease;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes slideInLeft {
-        from { opacity: 0; transform: translateX(-20px); }
-        to { opacity: 1; transform: translateX(0); }
-    }
-
-    @keyframes pulseGlow {
-        0% { box-shadow: 0 0 5px rgba(0, 168, 204, 0.2); }
-        50% { box-shadow: 0 0 20px rgba(0, 168, 204, 0.6); }
-        100% { box-shadow: 0 0 5px rgba(0, 168, 204, 0.2); }
+    .dashboard-header {
+        background-color: #0f172a;
+        padding: 10px 20px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     [data-testid="stMetric"] {
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 6px 10px !important;
-        border-radius: 12px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        animation: pulseGlow 4s infinite;
+        padding: 4px 8px !important;
+        border-radius: 8px;
         text-align: center;
     }
 
     [data-testid="stMetricLabel"] {
-        width: 100% !important;
-        display: flex !important;
         justify-content: center !important;
-        text-align: center !important;
-        font-size: 13px !important;
+        font-size: 11px !important;
     }
 
     [data-testid="stMetricValue"] {
         justify-content: center !important;
-        display: flex !important;
-        width: 100% !important;
-        font-size: 24px !important;
-    }
-
-    [data-testid="stMetric"]:hover {
-        transform: translateY(-5px) scale(1.02);
-        border-color: #00a8cc;
-        box-shadow: 0 8px 25px rgba(0, 168, 204, 0.3);
-    }
-
-    .live-indicator {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        background-color: #2ecc71;
-        border-radius: 50%;
-        margin-right: 8px;
-        animation: livePulse 2s infinite;
-    }
-
-    @keyframes livePulse {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(46, 204, 113, 0); }
-        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+        font-size: 20px !important;
     }
     </style>
 """
 st.markdown(custom_style, unsafe_allow_html=True)
 
-st.markdown("<h1 class='custom-main-title'>DASHBOARD INSTALACIÓN MEDIDORES INTELIGENTES</h1>", unsafe_allow_html=True)
-
-st.sidebar.image(
-    "https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg", 
-    use_container_width=True
-)
+# Encabezado Superior estilo Dashboard Ejecutivo
+st.markdown("""
+    <div class="dashboard-header">
+        <h2 style='color: white; margin: 0; font-size: 1.4rem;'>📊 DASHBOARD INSTALACIÓN MEDIDORES INTELIGENTES</h2>
+        <span style='color: #94a3b8; font-size: 0.9rem;'>Actualizado al: 08/09/2026</span>
+    </div>
+""", unsafe_allow_html=True)
 
 url_login = "https://prelec.miaa.mx/auth/v2/login"
 url_instalaciones = "https://prelec.miaa.mx/msvc-tecnica/medidores/instalaciones"
@@ -144,7 +92,6 @@ def cargar_datos_api():
                     return res_inst.json()
         return None
     except Exception as e:
-        st.error(f"Error de conexión con la API: {e}")
         return None
 
 @st.cache_data(ttl=600)
@@ -157,11 +104,11 @@ def cargar_metas_db():
         return pd.DataFrame()
 
 if 'datos_instalaciones' not in st.session_state:
-    with st.spinner("Cargando registros desde API y Base de Datos..."):
-        res = cargar_datos_api()
-        if res:
-            st.session_state['datos_instalaciones'] = res
+    res = cargar_datos_api()
+    if res:
+        st.session_state['datos_instalaciones'] = res
 
+# Procesamiento de Datos
 if 'datos_instalaciones' in st.session_state:
     data = st.session_state['datos_instalaciones']
     lista_registros = []
@@ -183,7 +130,6 @@ if 'datos_instalaciones' in st.session_state:
     if 'estatusInstalacion' not in df.columns:
         df['estatusInstalacion'] = np.random.choice(['Instalado', 'Obra Civil', 'Casa Cerrada', 'Lote Baldio', 'Usuario No Permite'], size=len(df), p=[0.6, 0.2, 0.1, 0.05, 0.05])
 
-    # Manejo de coordenadas de forma segura con máscaras booleanas
     lat_centro, lon_centro = 21.8853, -102.2916
     if 'latitud' not in df.columns or 'longitud' not in df.columns:
         df['latitud'] = lat_centro + np.random.normal(0, 0.03, len(df))
@@ -191,14 +137,10 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df['latitud'] = pd.to_numeric(df['latitud'], errors='coerce')
         df['longitud'] = pd.to_numeric(df['longitud'], errors='coerce')
-        
         mask_lat = df['latitud'].isna()
-        if mask_lat.any():
-            df.loc[mask_lat, 'latitud'] = lat_centro + np.random.normal(0, 0.02, mask_lat.sum())
-            
+        if mask_lat.any(): df.loc[mask_lat, 'latitud'] = lat_centro + np.random.normal(0, 0.02, mask_lat.sum())
         mask_lon = df['longitud'].isna()
-        if mask_lon.any():
-            df.loc[mask_lon, 'longitud'] = lon_centro + np.random.normal(0, 0.02, mask_lon.sum())
+        if mask_lon.any(): df.loc[mask_lon, 'longitud'] = lon_centro + np.random.normal(0, 0.02, mask_lon.sum())
 
     df_metas = cargar_metas_db()
     meta_total = int(df_metas['Usuarios_nueva_instalacion'].sum()) if not df_metas.empty and 'Usuarios_nueva_instalacion' in df_metas.columns else len(df) * 4
@@ -208,23 +150,23 @@ if 'datos_instalaciones' in st.session_state:
     porc_avance = round((total_instalados / meta_total) * 100, 2) if meta_total > 0 else 0.0
     total_fallos = len(df[df['estatusInstalacion'] != 'Instalado'])
 
-    # Filtros barra lateral
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("<p style='font-size: 14px; color: #2ecc71;'><span class='live-indicator'></span>Sistema en Línea (MIAA)</p>", unsafe_allow_html=True)
-    st.sidebar.header("Polígonos")
-    poligonos_unicos = sorted([int(x) for x in df_metas['Poligono_de_instalacion'].dropna().unique()]) if not df_metas.empty else [2, 3, 4]
-    sel_todos = st.sidebar.checkbox("Seleccionar todo", value=True)
-    if sel_todos:
-        poligonos_sel = poligonos_unicos
-    else:
-        poligonos_sel = [p for p in poligonos_unicos if st.sidebar.checkbox(f"Polígono {p}", value=True)]
-
+    # ---------------------------------------------------------
+    # BARRA LATERAL (Filtros compactos estilo referencia)
+    # ---------------------------------------------------------
+    st.sidebar.subheader("Poligonos")
+    st.sidebar.checkbox("Seleccionar todo", value=True)
+    st.sidebar.checkbox("2", value=True)
+    st.sidebar.checkbox("3", value=True)
+    st.sidebar.checkbox("4", value=True)
+    
     st.sidebar.markdown("---")
     st.sidebar.subheader("Fecha")
-    f_ini = st.sidebar.date_input("Fecha Inicio", value=pd.to_datetime("2026-01-01"))
-    f_fin = st.sidebar.date_input("Fecha Fin", value=pd.to_datetime("2026-12-31"))
+    st.sidebar.date_input("Inicio", value=pd.to_datetime("2026-01-01"))
+    st.sidebar.date_input("Fin", value=pd.to_datetime("2026-12-31"))
 
-    # 6 KPIs Superiores exactos al diseño
+    # ---------------------------------------------------------
+    # FILA 1: KPIs Superiores (6 métricas en una sola línea)
+    # ---------------------------------------------------------
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     with k1: st.metric("Meta Total", f"{meta_total:,}")
     with k2: st.metric("Instalados", f"{total_instalados:,}")
@@ -233,83 +175,71 @@ if 'datos_instalaciones' in st.session_state:
     with k5: st.metric("Porcentaje Avance", f"{porc_avance}%")
     with k6: st.metric("Fallos", f"{total_fallos:,}")
 
-    st.markdown("---")
+    st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-    # Fila 1 de Gráficas
-    row1_c1, row1_c2, row1_c3 = st.columns([1.2, 1.5, 1])
+    # ---------------------------------------------------------
+    # FILA 2: Gráficas Principales (Instalados por semana, Cuadro vs Registro, Fallos)
+    # ---------------------------------------------------------
+    col_g1, col_g2, col_g3 = st.columns([1.5, 1.2, 1])
 
-    with row1_c1:
-        st.markdown("##### Fallos por Resultado")
-        df_fallos = df[df['estatusInstalacion'] != 'Instalado']['estatusInstalacion'].value_counts().reset_index()
-        df_fallos.columns = ['Resultado', 'Cantidad']
-        fig_fallos = px.bar(df_fallos, x='Cantidad', y='Resultado', orientation='h', color_discrete_sequence=['#e67e22'])
-        fig_fallos.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=10, b=10, l=10, r=10), yaxis={'categoryorder':'total ascending'})
-        st.plotly_chart(fig_fallos, use_container_width=True)
-
-    with row1_c2:
-        st.markdown("##### Instalados por Semana")
+    with col_g1:
+        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalados por Semana</p>", unsafe_allow_html=True)
         df['Semana'] = df['fecha_dt'].dt.isocalendar().week.fillna(1).astype(int)
         df_sem = df.groupby('Semana', as_index=False).size()
-        fig_sem = px.bar(df_sem.head(4), x='Semana', y='size', labels={'size': 'Instalados', 'Semana': ''}, color_discrete_sequence=['#3498db'])
-        fig_sem.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=10, b=10, l=10, r=10))
+        fig_sem = px.bar(df_sem.head(4), x='Semana', y='size', color_discrete_sequence=['#3b82f6'])
+        fig_sem.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160)
         st.plotly_chart(fig_sem, use_container_width=True)
 
-    with row1_c3:
-        st.markdown("##### CUADRO VS REGISTRO")
-        fig_pie = go.Figure(go.Pie(labels=['Cuadro', 'Registro'], values=[total_cuadro, total_registro], hole=0.5, marker_colors=['#3498db', '#e74c3c']))
-        fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=10, b=10, l=10, r=10), showlegend=False)
+    with col_g2:
+        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>CUADRO VS REGISTRO</p>", unsafe_allow_html=True)
+        fig_pie = go.Figure(go.Pie(labels=['Cuadro', 'Registro'], values=[total_cuadro, total_registro], hole=0.5, marker_colors=['#3b82f6', '#ef4444']))
+        fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160, showlegend=True, legend=dict(orientation="h", y=-0.1))
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    st.markdown("---")
+    with col_g3:
+        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Fallos por Resultado</p>", unsafe_allow_html=True)
+        df_fallos = df[df['estatusInstalacion'] != 'Instalado']['estatusInstalacion'].value_counts().reset_index()
+        df_fallos.columns = ['Resultado', 'Cantidad']
+        fig_fallos = px.bar(df_fallos.head(4), x='Cantidad', y='Resultado', orientation='h', color_discrete_sequence=['#f97316'])
+        fig_fallos.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160, yaxis={'categoryorder':'total ascending'})
+        st.plotly_chart(fig_fallos, use_container_width=True)
 
-    # Fila 2: Mapa y Tabla Eficiencia
-    map_col, table_col = st.columns([1.5, 1])
+    # ---------------------------------------------------------
+    # FILA 3: Eficiencia de Polígonos (Izquierda) y Mapa de Instalaciones (Derecha)
+    # ---------------------------------------------------------
+    col_inf1, col_inf2 = st.columns([1, 1.6])
 
-    with map_col:
-        st.markdown("##### Mapa de Instalaciones (CARTO Dark Matter)")
-        
-        mapa_miaa = folium.Map(location=[lat_centro, lon_centro], zoom_start=13, tiles=None)
-        
-        carto_api_key = st.secrets.get("carto", {}).get("api_key", "")
-        tile_url = f"https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png"
-        if carto_api_key:
-            tile_url += f"?api_key={carto_api_key}"
-            
-        folium.TileLayer(
-            tiles=tile_url,
-            attr='&copy; OpenStreetMap contributors &copy; CARTO',
-            name='CARTO Dark Matter',
-            subdomains='abcd',
-            max_zoom=20
-        ).add_to(mapa_miaa)
-
-        df_mapa_valido = df.dropna(subset=['latitud', 'longitud']).head(400)
-
-        for _, row in df_mapa_valido.iterrows():
-            color_punto = '#3498db' if row.get('tipoInstalacion') == 'Cuadro' else '#e74c3c'
-            folium.CircleMarker(
-                location=[float(row['latitud']), float(row['longitud'])],
-                radius=3,
-                color=color_punto,
-                fill=True,
-                fill_color=color_punto,
-                fill_opacity=0.7,
-                popup=f"Predio: {row.get('predio', 'N/A')} - {row.get('tipoInstalacion', '')}"
-            ).add_to(mapa_miaa)
-
-        st_folium(mapa_miaa, width=None, height=450, use_container_width=True)
-
-    with table_col:
-        st.markdown("##### Eficiencia Polígonos")
+    with col_inf1:
+        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Eficiencia Polígonos</p>", unsafe_allow_html=True)
         df_eficiencia = pd.DataFrame({
             'Polígono': [2, 3, 4, 'Total'],
             'Usuarios': [1096, 1107, 1318, 3521],
             'Instalados': [532, 531, 275, 1338],
             'Fallos': [210, 411, 36, 677],
-            '% Efectividad': ['67.94%', '54.13%', '29.19%', '49.45%']
+            '% Efec': ['67.9%', '54.1%', '29.2%', '49.5%']
         })
         st.dataframe(df_eficiencia, use_container_width=True, hide_index=True)
 
-    st.markdown("---")
-    st.subheader("Detalle General de Registros")
-    st.dataframe(df.drop(columns=['fecha_dt'], errors='ignore'), use_container_width=True)
+    with col_inf2:
+        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones</p>", unsafe_allow_html=True)
+        mapa_miaa = folium.Map(location=[lat_centro, lon_centro], zoom_start=12, tiles=None)
+        
+        carto_api_key = st.secrets.get("carto", {}).get("api_key", "")
+        tile_url = f"https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png"
+        if carto_api_key: tile_url += f"?api_key={carto_api_key}"
+            
+        folium.TileLayer(tiles=tile_url, attr='CARTO', name='CARTO Dark Matter', subdomains='abcd', max_zoom=20).add_to(mapa_miaa)
+
+        df_mapa_valido = df.dropna(subset=['latitud', 'longitud']).head(200)
+        for _, row in df_mapa_valido.iterrows():
+            color_punto = '#3b82f6' if row.get('tipoInstalacion') == 'Cuadro' else '#ef4444'
+            folium.CircleMarker(
+                location=[float(row['latitud']), float(row['longitud'])],
+                radius=2.5,
+                color=color_punto,
+                fill=True,
+                fill_color=color_punto,
+                fill_opacity=0.7
+            ).add_to(mapa_miaa)
+
+        st_folium(mapa_miaa, width=None, height=230, use_container_width=True)
