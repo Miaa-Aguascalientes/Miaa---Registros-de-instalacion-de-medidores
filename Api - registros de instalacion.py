@@ -62,6 +62,11 @@ custom_style = """
         justify-content: center !important;
         font-size: 20px !important;
     }
+
+    /* Color azul más obscuro y profesional para los elementos seleccionados del multiselect */
+    .stMultiSelect [data-baseweb="tag"] {
+        background-color: #1e3a8a !important;
+    }
     </style>
 """
 st.markdown(custom_style, unsafe_allow_html=True)
