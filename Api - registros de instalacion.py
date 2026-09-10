@@ -62,26 +62,6 @@ custom_style = """
         justify-content: center !important;
         font-size: 20px !important;
     }
-
-    /* Forzado absoluto para los tags/píldoras del multiselect */
-    div.stMultiSelect div[data-baseweb="tag"],
-    span[data-baseweb="tag"],
-    div[data-baseweb="tag"] {
-        background-color: #1e293b !important;
-        background: #1e293b !important;
-        border: 1px solid #334155 !important;
-    }
-
-    div.stMultiSelect span[data-baseweb="tag"] span,
-    div[data-baseweb="tag"] span,
-    span[data-baseweb="tag"] span {
-        color: #f8fafc !important;
-    }
-
-    div.stMultiSelect div[data-baseweb="tag"] svg,
-    div[data-baseweb="tag"] svg {
-        fill: #94a3b8 !important;
-    }
     </style>
 """
 st.markdown(custom_style, unsafe_allow_html=True)
@@ -205,17 +185,33 @@ if 'datos_instalaciones' in st.session_state:
         fecha_fin = hoy.replace(year=hoy.year - 1, month=12, day=31)
 
     st.sidebar.markdown("---")
-    st.sidebar.subheader("Poligonos")
+    st.sidebar.subheader("Polígonos")
     
     lista_poligonos = []
     if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns:
         lista_poligonos = sorted([str(p) for p in df_metas['Poligono_de_instalacion'].dropna().unique()], key=lambda x: int(x) if x.isdigit() else x)
 
-    poligonos_seleccionados = st.sidebar.multiselect(
-        "Seleccionar Polígonos",
-        options=lista_poligonos,
-        default=lista_poligonos
-    )
+    # Botones de control rápido para los checkboxes
+    col_c1, col_c2 = st.sidebar.columns(2)
+    seleccionar_todos = col_c1.button("Marcar todos")
+    des seleccionar_todos = col_c2.button("Desmarcar")
+
+    if 'poligonos_activos' not in st.session_state or seleccionar_todos:
+        st.session_state['poligonos_activos'] = {p: True for p in lista_poligonos}
+    if deseleccionar_todos:
+        st.session_state['poligonos_activos'] = {p: False for p in lista_poligonos}
+
+    # Contenedor con scroll para los checkboxes de polígonos
+    with st.sidebar.container(height=220):
+        poligonos_seleccionados = []
+        for pol in lista_poligonos:
+            if pol not in st.session_state['poligonos_activos']:
+                st.session_state['poligonos_activos'][pol] = True
+            
+            estado = st.checkbox(f"Polígono {pol}", value=st.session_state['poligonos_activos'][pol], key=f"chk_pol_{pol}")
+            st.session_state['poligonos_activos'][pol] = estado
+            if estado:
+                poligonos_seleccionados.append(pol)
 
     if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns:
         df_metas_filtrado = df_metas[df_metas['Poligono_de_instalacion'].astype(str).isin(poligonos_seleccionados)].copy()
