@@ -63,23 +63,24 @@ custom_style = """
         font-size: 20px !important;
     }
 
-    /* Sobrescritura total y directa para los tags/píldoras seleccionadas en el multiselect */
-    .stMultiSelect span[data-baseweb="tag"], 
-    div[data-baseweb="tag"], 
-    span.st-ex, 
-    div.st-ex {
+    /* Forzado absoluto para los tags/píldoras del multiselect */
+    div.stMultiSelect div[data-baseweb="tag"],
+    span[data-baseweb="tag"],
+    div[data-baseweb="tag"] {
         background-color: #1e293b !important;
         background: #1e293b !important;
-        color: #ffffff !important;
         border: 1px solid #334155 !important;
     }
-    
-    .stMultiSelect [data-baseweb="tag"] span {
-        color: #ffffff !important;
+
+    div.stMultiSelect span[data-baseweb="tag"] span,
+    div[data-baseweb="tag"] span,
+    span[data-baseweb="tag"] span {
+        color: #f8fafc !important;
     }
 
-    .stMultiSelect [data-baseweb="tag"] svg {
-        fill: #ffffff !important;
+    div.stMultiSelect div[data-baseweb="tag"] svg,
+    div[data-baseweb="tag"] svg {
+        fill: #94a3b8 !important;
     }
     </style>
 """
