@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 import json
@@ -184,7 +183,7 @@ if 'datos_instalaciones' in st.session_state:
     if 'estatusInstalacion' not in df.columns:
         df['estatusInstalacion'] = np.random.choice(['Instalado', 'Obra Civil', 'Casa Cerrada', 'Lote Baldio', 'Usuario No Permite'], size=len(df), p=[0.6, 0.2, 0.1, 0.05, 0.05])
 
-    # Asegurar columnas de latitud y longitud numéricas y sin nulos
+    # Manejo de coordenadas de forma segura con máscaras booleanas
     lat_centro, lon_centro = 21.8853, -102.2916
     if 'latitud' not in df.columns or 'longitud' not in df.columns:
         df['latitud'] = lat_centro + np.random.normal(0, 0.03, len(df))
@@ -192,8 +191,14 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df['latitud'] = pd.to_numeric(df['latitud'], errors='coerce')
         df['longitud'] = pd.to_numeric(df['longitud'], errors='coerce')
-        df['latitud'].fillna(lat_centro + np.random.normal(0, 0.02, len(df)), inplace=True)
-        df['longitud'].fillna(lon_centro + np.random.normal(0, 0.02, len(df)), inplace=True)
+        
+        mask_lat = df['latitud'].isna()
+        if mask_lat.any():
+            df.loc[mask_lat, 'latitud'] = lat_centro + np.random.normal(0, 0.02, mask_lat.sum())
+            
+        mask_lon = df['longitud'].isna()
+        if mask_lon.any():
+            df.loc[mask_lon, 'longitud'] = lon_centro + np.random.normal(0, 0.02, mask_lon.sum())
 
     df_metas = cargar_metas_db()
     meta_total = int(df_metas['Usuarios_nueva_instalacion'].sum()) if not df_metas.empty and 'Usuarios_nueva_instalacion' in df_metas.columns else len(df) * 4
@@ -278,7 +283,6 @@ if 'datos_instalaciones' in st.session_state:
             max_zoom=20
         ).add_to(mapa_miaa)
 
-        # Filtrar solo filas con lat y lon perfectamente válidas (sin NaN)
         df_mapa_valido = df.dropna(subset=['latitud', 'longitud']).head(400)
 
         for _, row in df_mapa_valido.iterrows():
