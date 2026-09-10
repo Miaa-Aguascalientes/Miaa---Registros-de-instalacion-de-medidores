@@ -63,9 +63,16 @@ custom_style = """
         font-size: 20px !important;
     }
 
-    /* Color azul más obscuro y profesional para los elementos seleccionados del multiselect */
-    .stMultiSelect [data-baseweb="tag"] {
-        background-color: #1e3a8a !important;
+    /* Corrección estricta para oscurecer los chips seleccionados del multiselect */
+    div[data-baseweb="tag"] {
+        background-color: #1e293b !important;
+        border: 1px solid #334155 !important;
+    }
+    div[data-baseweb="tag"] span {
+        color: #f8fafc !important;
+    }
+    div[data-baseweb="tag"] svg {
+        fill: #94a3b8 !important;
     }
     </style>
 """
