@@ -196,20 +196,19 @@ if 'datos_instalaciones' in st.session_state:
     seleccionar_todos = col_c1.button("Marcar todos")
     deseleccionar_todos = col_c2.button("Desmarcar")
 
-    if 'poligonos_activos' not in st.session_state or seleccionar_todos:
-        st.session_state['poligonos_activos'] = {p: True for p in lista_poligonos}
+    if seleccionar_todos:
+        for p in lista_poligonos:
+            st.session_state[f"chk_pol_{p}"] = True
+
     if deseleccionar_todos:
-        st.session_state['poligonos_activos'] = {p: False for p in lista_poligonos}
+        for p in lista_poligonos:
+            st.session_state[f"chk_pol_{p}"] = False
 
     # Contenedor con scroll para los checkboxes de polígonos
     with st.sidebar.container(height=220):
         poligonos_seleccionados = []
         for pol in lista_poligonos:
-            if pol not in st.session_state['poligonos_activos']:
-                st.session_state['poligonos_activos'][pol] = True
-            
-            estado = st.checkbox(f"Polígono {pol}", value=st.session_state['poligonos_activos'][pol], key=f"chk_pol_{pol}")
-            st.session_state['poligonos_activos'][pol] = estado
+            estado = st.checkbox(f"Polígono {pol}", key=f"chk_pol_{pol}")
             if estado:
                 poligonos_seleccionados.append(pol)
 
