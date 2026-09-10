@@ -133,24 +133,19 @@ if 'datos_instalaciones' in st.session_state:
 
     df_metas = cargar_metas_db()
     
-    # ---------------------------------------------------------
-    # CÁLCULOS 100% REALES BASADOS EN LA BASE DE DATOS Y LA API
-    # ---------------------------------------------------------
     meta_total = int(df_metas['Usuarios_nueva_instalacion'].sum()) if not df_metas.empty and 'Usuarios_nueva_instalacion' in df_metas.columns else len(df)
     total_instalados = len(df)
     porc_avance = round((total_instalados / meta_total) * 100, 2) if meta_total > 0 else 0.0
 
-    # Generación dinámica de la tabla de eficiencia real conectando la BD y la API si existe relación de polígonos/columnas
     if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns:
         df_eficiencia = df_metas.groupby('Poligono_de_instalacion').agg(
             Usuarios=('Usuarios_nueva_instalacion', 'sum')
         ).reset_index()
         df_eficiencia.columns = ['Polígono', 'Usuarios']
-        df_eficiencia['Instalados'] = total_instalados // len(df_eficiencia) # O distribución real según los campos de la API
+        df_eficiencia['Instalados'] = total_instalados // len(df_eficiencia)
         df_eficiencia['Fallos'] = 0
         df_eficiencia['% Efec'] = (df_eficiencia['Instalados'] / df_eficiencia['Usuarios'] * 100).round(2).astype(str) + '%'
     else:
-        # Si no hay columnas de polígonos en BD, se genera la estructura vacía o basada estrictamente en los registros reales de la API
         df_eficiencia = pd.DataFrame(columns=['Polígono', 'Usuarios', 'Instalados', 'Fallos', '% Efec'])
 
     # BARRA LATERAL
@@ -252,6 +247,22 @@ if 'datos_instalaciones' in st.session_state:
 
         st_folium(mapa_miaa, width=None, height=230, use_container_width=True)
 
-    # FILA 4: Tabla completa original y directa de la API
-    st.markdown("<p style='font-size:12px; margin-top:10px; margin-bottom:0; font-weight:bold;'>Registros completos de la API (Datos 100% Reales)</p>", unsafe_allow_html=True)
-    st.dataframe(df.drop(columns=['fecha_dt', 'Semana'], errors='ignore'), use_container_width=True)
+    # FILA 4: Tabla limpia de la API (Sin columnas de fotos, fechas formateadas a DD/MM/AAAA HH:MM:SS)
+    st.markdown("<p style='font-size:12px; margin-top:10px; margin-bottom:0; font-weight:bold;'>Registros completos de la API (Sin fotos y con formato de fecha día/mes/año hora)</p>", unsafe_allow_html=True)
+    
+    df_tabla_limpia = df.copy()
+    
+    # Filtrar y eliminar columnas que contengan 'foto' (insensible a mayúsculas/minúsculas)
+    columnas_a_excluir = [c for c in df_tabla_limpia.columns if 'foto' in c.lower()]
+    df_tabla_limpia = df_tabla_limpia.drop(columns=columnas_a_excluir, errors='ignore')
+    
+    # Formatear el campo fechaInstalacion (o fechaRegistro si aplica) al formato solicitado: Día/Mes/Año Hora
+    campo_fecha_tabla = 'fechaInstalacion' if 'fechaInstalacion' in df_tabla_limpia.columns else ('fechaRegistro' if 'fechaRegistro' in df_tabla_limpia.columns else None)
+    
+    if campo_fecha_tabla:
+        df_tabla_limpia[campo_fecha_tabla] = pd.to_datetime(df_tabla_limpia[campo_fecha_tabla], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
+
+    # Eliminar columnas auxiliares internas creadas para el dashboard
+    df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana'], errors='ignore')
+
+    st.dataframe(df_tabla_limpia, use_container_width=True)
