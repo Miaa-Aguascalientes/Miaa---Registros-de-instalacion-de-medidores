@@ -194,7 +194,7 @@ if 'datos_instalaciones' in st.session_state:
     # Botones de control rápido para los checkboxes
     col_c1, col_c2 = st.sidebar.columns(2)
     seleccionar_todos = col_c1.button("Marcar todos")
-    des seleccionar_todos = col_c2.button("Desmarcar")
+    deseleccionar_todos = col_c2.button("Desmarcar")
 
     if 'poligonos_activos' not in st.session_state or seleccionar_todos:
         st.session_state['poligonos_activos'] = {p: True for p in lista_poligonos}
