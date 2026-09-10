@@ -15,7 +15,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilos CSS compactos para optimizar el espacio en pantalla y evitar scroll excesivo
 custom_style = """
     <style>
     header[data-testid="stHeader"] {visibility: hidden;}
@@ -67,7 +66,6 @@ custom_style = """
 """
 st.markdown(custom_style, unsafe_allow_html=True)
 
-# Encabezado Superior estilo Dashboard Ejecutivo
 st.markdown("""
     <div class="dashboard-header">
         <h2 style='color: white; margin: 0; font-size: 1.4rem;'>📊 DASHBOARD INSTALACIÓN MEDIDORES INTELIGENTES</h2>
@@ -108,7 +106,6 @@ if 'datos_instalaciones' not in st.session_state:
     if res:
         st.session_state['datos_instalaciones'] = res
 
-# Procesamiento de Datos
 if 'datos_instalaciones' in st.session_state:
     data = st.session_state['datos_instalaciones']
     lista_registros = []
@@ -150,9 +147,7 @@ if 'datos_instalaciones' in st.session_state:
     porc_avance = round((total_instalados / meta_total) * 100, 2) if meta_total > 0 else 0.0
     total_fallos = len(df[df['estatusInstalacion'] != 'Instalado'])
 
-    # ---------------------------------------------------------
-    # BARRA LATERAL (Filtros compactos estilo referencia)
-    # ---------------------------------------------------------
+    # BARRA LATERAL
     st.sidebar.subheader("Poligonos")
     st.sidebar.checkbox("Seleccionar todo", value=True)
     st.sidebar.checkbox("2", value=True)
@@ -164,9 +159,7 @@ if 'datos_instalaciones' in st.session_state:
     st.sidebar.date_input("Inicio", value=pd.to_datetime("2026-01-01"))
     st.sidebar.date_input("Fin", value=pd.to_datetime("2026-12-31"))
 
-    # ---------------------------------------------------------
-    # FILA 1: KPIs Superiores (6 métricas en una sola línea)
-    # ---------------------------------------------------------
+    # FILA 1: KPIs Superiores
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     with k1: st.metric("Meta Total", f"{meta_total:,}")
     with k2: st.metric("Instalados", f"{total_instalados:,}")
@@ -177,9 +170,7 @@ if 'datos_instalaciones' in st.session_state:
 
     st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-    # ---------------------------------------------------------
-    # FILA 2: Gráficas Principales (Instalados por semana, Cuadro vs Registro, Fallos)
-    # ---------------------------------------------------------
+    # FILA 2: Gráficas Principales
     col_g1, col_g2, col_g3 = st.columns([1.5, 1.2, 1])
 
     with col_g1:
@@ -204,9 +195,7 @@ if 'datos_instalaciones' in st.session_state:
         fig_fallos.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160, yaxis={'categoryorder':'total ascending'})
         st.plotly_chart(fig_fallos, use_container_width=True)
 
-    # ---------------------------------------------------------
-    # FILA 3: Eficiencia de Polígonos (Izquierda) y Mapa de Instalaciones (Derecha)
-    # ---------------------------------------------------------
+    # FILA 3: Eficiencia de Polígonos y Mapa de Instalaciones
     col_inf1, col_inf2 = st.columns([1, 1.6])
 
     with col_inf1:
@@ -243,3 +232,7 @@ if 'datos_instalaciones' in st.session_state:
             ).add_to(mapa_miaa)
 
         st_folium(mapa_miaa, width=None, height=230, use_container_width=True)
+
+    # FILA 4: Tabla completa directa de la API debajo del mapa
+    st.markdown("<p style='font-size:12px; margin-top:10px; margin-bottom:0; font-weight:bold;'>Registros de la API</p>", unsafe_allow_html=True)
+    st.dataframe(df, use_container_width=True)
