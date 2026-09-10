@@ -144,7 +144,8 @@ if 'datos_instalaciones' in st.session_state:
     # ---------------------------------------------------------
     # BARRA LATERAL
     # ---------------------------------------------------------
-    st.sidebar.image("https://www.miaa.mx/assets/img/logo.png", use_container_width=True)
+    logo_url = "https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg"
+    st.sidebar.image(logo_url, use_container_width=True)
     st.sidebar.markdown("---")
 
     st.sidebar.subheader("Periodo de Fechas")
@@ -178,10 +179,34 @@ if 'datos_instalaciones' in st.session_state:
 
     st.sidebar.markdown("---")
     st.sidebar.subheader("Poligonos")
-    st.sidebar.checkbox("Seleccionar todo", value=True)
+    
+    lista_poligonos = []
     if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns:
-        for p in sorted(df_metas['Poligono_de_instalacion'].dropna().unique()):
-            st.sidebar.checkbox(str(p), value=True)
+        lista_poligonos = sorted([str(p) for p in df_metas['Poligono_de_instalacion'].dropna().unique()])
+
+    if 'todos_poligonos' not in st.session_state:
+        st.session_state['todos_poligonos'] = True
+
+    def actualizar_todos():
+        for pol in lista_poligonos:
+            st.session_state[f"pol_{pol}"] = st.session_state['todos_poligonos']
+
+    st.sidebar.checkbox("Seleccionar todo", value=st.session_state['todos_poligonos'], key='todos_poligonos', on_change=actualizar_todos)
+    
+    poligonos_seleccionados = []
+    for p in lista_poligonos:
+        if f"pol_{p}" not in st.session_state:
+            st.session_state[f"pol_{p}"] = True
+        
+        seleccionado = st.sidebar.checkbox(f"{p}", key=f"pol_{p}")
+        if seleccionado:
+            poligonos_seleccionados.append(p)
+
+    # Filtrado base de datos de metas y API
+    if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns:
+        df_metas_filtrado = df_metas[df_metas['Poligono_de_instalacion'].astype(str).isin(poligonos_seleccionados)].copy()
+    else:
+        df_metas_filtrado = df_metas.copy()
 
     if col_fecha_ref and not df['fecha_dt'].isna().all():
         mask = (df['fecha_dt'].dt.date >= fecha_inicio) & (df['fecha_dt'].dt.date <= fecha_fin)
@@ -189,31 +214,32 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df_filtrado = df.copy()
 
-    meta_total = int(df_metas['Usuarios_nueva_instalacion'].sum()) if not df_metas.empty and 'Usuarios_nueva_instalacion' in df_metas.columns else len(df_filtrado)
+    meta_total = int(df_metas_filtrado['Usuarios_nueva_instalacion'].sum()) if not df_metas_filtrado.empty and 'Usuarios_nueva_instalacion' in df_metas_filtrado.columns else len(df_filtrado)
     total_instalados = len(df_filtrado)
     porc_avance = round((total_instalados / meta_total) * 100, 2) if meta_total > 0 else 0.0
 
-    # Procesar tabla exacta solicitada basada en Diccionario_instalacion_medidores
-    if not df_metas.empty:
-        df_tabla_eficiencia = df_metas.copy()
+    # Procesar tabla exacta solicitada basada en Diccionario_instalacion_medidores filtrada por polígonos y ordenada de mayor a menor porcentaje de avance
+    if not df_metas_filtrado.empty:
+        df_tabla_eficiencia = df_metas_filtrado.copy()
         
-        # Limpiar y convertir columnas numéricas para cálculos precisos
         for col_num in ['Usuarios_Reales', 'Usuarios_con_medidor_inteligente', 'Usuarios_nueva_instalacion']:
             if col_num in df_tabla_eficiencia.columns:
                 df_tabla_eficiencia[col_num] = pd.to_numeric(df_tabla_eficiencia[col_num].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
 
-        # Si en la API hay instalaciones registradas por colonia, podemos cruzarlas o agregarlas; aquí agrupamos por Colonia y Polígono tal como lo solicita el esquema
         df_eficiencia = df_tabla_eficiencia.groupby(['Colonia_ATL', 'Poligono_de_instalacion'], as_index=False).agg({
             'Usuarios_Reales': 'sum',
             'Usuarios_con_medidor_inteligente': 'sum'
         })
         
-        # Renombrar columnas exactamente como el diseño de la pizarra: Colonia | Med. tot | Med. inst | % | Polígono
-        df_eficiencia['%'] = np.where(
+        df_eficiencia['pct_sort'] = np.where(
             df_eficiencia['Usuarios_Reales'] > 0, 
-            (df_eficiencia['Usuarios_con_medidor_inteligente'] / df_eficiencia['Usuarios_Reales'] * 100).round(2).astype(str) + '%', 
-            '0%'
+            (df_eficiencia['Usuarios_con_medidor_inteligente'] / df_eficiencia['Usuarios_Reales']) * 100, 
+            0.0
         )
+        
+        df_eficiencia = df_eficiencia.sort_values(by='pct_sort', ascending=False).reset_index(drop=True)
+
+        df_eficiencia['%'] = df_eficiencia['pct_sort'].round(2).astype(str) + '%'
         
         df_eficiencia = df_eficiencia.rename(columns={
             'Colonia_ATL': 'Colonia',
@@ -222,7 +248,6 @@ if 'datos_instalaciones' in st.session_state:
             'Poligono_de_instalacion': 'Polígono'
         })
         
-        # Reordenar columnas a la estructura de la imagen
         df_eficiencia = df_eficiencia[['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono']]
     else:
         df_eficiencia = pd.DataFrame(columns=['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono'])
@@ -264,7 +289,7 @@ if 'datos_instalaciones' in st.session_state:
         fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160, showlegend=True, legend=dict(orientation="h", y=-0.1))
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # FILA 3: Tabla de Eficiencia (Estructura exacta solicitada) y Mapa
+    # FILA 3: Tabla de Eficiencia Ordenada y Mapa
     col_inf1, col_inf2 = st.columns([1, 1.6])
 
     with col_inf1:
@@ -272,7 +297,7 @@ if 'datos_instalaciones' in st.session_state:
         if not df_eficiencia.empty:
             st.dataframe(df_eficiencia, use_container_width=True, hide_index=True)
         else:
-            st.info("No se encontraron datos de polígonos en la base de datos.")
+            st.info("No se encontraron datos para los polígonos seleccionados.")
 
     with col_inf2:
         st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones (Coordenadas Reales API)</p>", unsafe_allow_html=True)
