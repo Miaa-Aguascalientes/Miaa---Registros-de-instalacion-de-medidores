@@ -171,19 +171,20 @@ if 'datos_instalaciones' in st.session_state:
 
     st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-    # FILA 2: Gráficas con datos reales
-    col_g1, col_g2, col_g3 = st.columns([1.5, 1.2, 1])
+    # FILA 2: Gráficas actualizadas (Instalaciones por Día y Distribución por Usuario Externo)
+    col_g1, col_g2 = st.columns([1.8, 1.2])
 
     with col_g1:
-        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Registros por Semana (Real API)</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día (Real API)</p>", unsafe_allow_html=True)
         if col_fecha_ref and not df['fecha_dt'].isna().all():
-            df['Semana'] = df['fecha_dt'].dt.isocalendar().week.astype(int)
-            df_sem = df.groupby('Semana', as_index=False).size()
-            fig_sem = px.bar(df_sem, x='Semana', y='size', color_discrete_sequence=['#3b82f6'])
+            df['fecha_dia'] = df['fecha_dt'].dt.date
+            df_dia = df.groupby('fecha_dia', as_index=False).size()
+            df_dia['fecha_dia'] = pd.to_datetime(df_dia['fecha_dia']).dt.strftime('%d/%m/%Y')
+            fig_dia = px.bar(df_dia, x='fecha_dia', y='size', color_discrete_sequence=['#3b82f6'])
         else:
-            fig_sem = px.bar(pd.DataFrame({'Aviso': ['Sin fechas'], 'Valor': [0]}), x='Aviso', y='Valor')
-        fig_sem.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160)
-        st.plotly_chart(fig_sem, use_container_width=True)
+            fig_dia = px.bar(pd.DataFrame({'Aviso': ['Sin fechas'], 'Valor': [0]}), x='Aviso', y='Valor')
+        fig_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160, xaxis_title=None, yaxis_title=None)
+        st.plotly_chart(fig_dia, use_container_width=True)
 
     with col_g2:
         st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Distribución por Usuario Externo</p>", unsafe_allow_html=True)
@@ -195,17 +196,6 @@ if 'datos_instalaciones' in st.session_state:
             fig_pie = go.Figure(go.Pie(labels=['Total'], values=[len(df)], hole=0.5))
         fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160, showlegend=True, legend=dict(orientation="h", y=-0.1))
         st.plotly_chart(fig_pie, use_container_width=True)
-
-    with col_g3:
-        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Registros por Técnico (Real API)</p>", unsafe_allow_html=True)
-        if 'usuarioNombre' in df.columns:
-            df_tec = df['usuarioNombre'].value_counts().reset_index().head(4)
-            df_tec.columns = ['Técnico', 'Cantidad']
-            fig_fallos = px.bar(df_tec, x='Cantidad', y='Técnico', orientation='h', color_discrete_sequence=['#f97316'])
-        else:
-            fig_fallos = px.bar(pd.DataFrame({'Técnico': ['N/A'], 'Cantidad': [0]}), x='Cantidad', y='Técnico', orientation='h')
-        fig_fallos.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160, yaxis={'categoryorder':'total ascending'})
-        st.plotly_chart(fig_fallos, use_container_width=True)
 
     # FILA 3: Eficiencia real y Mapa con coordenadas reales
     col_inf1, col_inf2 = st.columns([1, 1.6])
@@ -266,6 +256,6 @@ if 'datos_instalaciones' in st.session_state:
         df_tabla_limpia['horaInicio'] = pd.to_datetime(df_tabla_limpia['horaInicio'], errors='coerce').dt.strftime('%H:%M')
 
     # Eliminar columnas auxiliares internas creadas para el dashboard
-    df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana'], errors='ignore')
+    df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia'], errors='ignore')
 
     st.dataframe(df_tabla_limpia, use_container_width=True)
