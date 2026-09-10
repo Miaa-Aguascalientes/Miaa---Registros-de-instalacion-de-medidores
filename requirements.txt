@@ -4,3 +4,5 @@ pandas
 SQLAlchemy
 pymysql
 plotly
+folium
+streamlit-folium
