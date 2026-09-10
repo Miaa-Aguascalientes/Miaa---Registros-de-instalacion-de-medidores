@@ -63,16 +63,23 @@ custom_style = """
         font-size: 20px !important;
     }
 
-    /* Corrección estricta para oscurecer los chips seleccionados del multiselect */
-    div[data-baseweb="tag"] {
+    /* Sobrescritura total y directa para los tags/píldoras seleccionadas en el multiselect */
+    .stMultiSelect span[data-baseweb="tag"], 
+    div[data-baseweb="tag"], 
+    span.st-ex, 
+    div.st-ex {
         background-color: #1e293b !important;
+        background: #1e293b !important;
+        color: #ffffff !important;
         border: 1px solid #334155 !important;
     }
-    div[data-baseweb="tag"] span {
-        color: #f8fafc !important;
+    
+    .stMultiSelect [data-baseweb="tag"] span {
+        color: #ffffff !important;
     }
-    div[data-baseweb="tag"] svg {
-        fill: #94a3b8 !important;
+
+    .stMultiSelect [data-baseweb="tag"] svg {
+        fill: #ffffff !important;
     }
     </style>
 """
