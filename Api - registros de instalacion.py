@@ -133,8 +133,36 @@ if 'datos_instalaciones' in st.session_state:
 
     df_metas = cargar_metas_db()
     
-    meta_total = int(df_metas['Usuarios_nueva_instalacion'].sum()) if not df_metas.empty and 'Usuarios_nueva_instalacion' in df_metas.columns else len(df)
-    total_instalados = len(df)
+    # ---------------------------------------------------------
+    # BARRA LATERAL (Con Logotipo y Filtro Funcional de Fechas)
+    # ---------------------------------------------------------
+    st.sidebar.image("https://www.miaa.mx/assets/img/logo.png", use_container_width=True)
+    st.sidebar.markdown("---")
+
+    st.sidebar.subheader("Poligonos")
+    st.sidebar.checkbox("Seleccionar todo", value=True)
+    if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns:
+        for p in sorted(df_metas['Poligono_de_instalacion'].dropna().unique()):
+            st.sidebar.checkbox(str(p), value=True)
+    
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Filtro de Fechas")
+    
+    min_date = df['fecha_dt'].min().date() if not df['fecha_dt'].isna().all() else pd.to_datetime("2026-01-01").date()
+    max_date = df['fecha_dt'].max().date() if not df['fecha_dt'].isna().all() else pd.to_datetime("2026-12-31").date()
+    
+    fecha_inicio = st.sidebar.date_input("Fecha Inicio", value=min_date)
+    fecha_fin = st.sidebar.date_input("Fecha Fin", value=max_date)
+
+    # Filtrar dataframe general de acuerdo al rango de fechas seleccionado en la barra lateral
+    if col_fecha_ref and not df['fecha_dt'].isna().all():
+        mask = (df['fecha_dt'].dt.date >= fecha_inicio) & (df['fecha_dt'].dt.date <= fecha_fin)
+        df_filtrado = df.loc[mask].copy()
+    else:
+        df_filtrado = df.copy()
+
+    meta_total = int(df_metas['Usuarios_nueva_instalacion'].sum()) if not df_metas.empty and 'Usuarios_nueva_instalacion' in df_metas.columns else len(df_filtrado)
+    total_instalados = len(df_filtrado)
     porc_avance = round((total_instalados / meta_total) * 100, 2) if meta_total > 0 else 0.0
 
     if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns:
@@ -148,37 +176,25 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df_eficiencia = pd.DataFrame(columns=['Polígono', 'Usuarios', 'Instalados', 'Fallos', '% Efec'])
 
-    # BARRA LATERAL
-    st.sidebar.subheader("Poligonos")
-    st.sidebar.checkbox("Seleccionar todo", value=True)
-    if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns:
-        for p in sorted(df_metas['Poligono_de_instalacion'].dropna().unique()):
-            st.sidebar.checkbox(str(p), value=True)
-    
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("Fecha")
-    st.sidebar.date_input("Inicio", value=pd.to_datetime("2026-01-01"))
-    st.sidebar.date_input("Fin", value=pd.to_datetime("2026-12-31"))
-
-    # FILA 1: KPIs Superiores Reales
+    # FILA 1: KPIs Superiores Reales (Con datos filtrados)
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     with k1: st.metric("Meta Total", f"{meta_total:,}")
     with k2: st.metric("Instalados", f"{total_instalados:,}")
-    with k3: st.metric("Registros API", f"{len(df):,}")
-    with k4: st.metric("Técnicos Activos", f"{df['usuarioNombre'].nunique() if 'usuarioNombre' in df.columns else 0:,}")
+    with k3: st.metric("Registros API", f"{len(df_filtrado):,}")
+    with k4: st.metric("Técnicos Activos", f"{df_filtrado['usuarioNombre'].nunique() if 'usuarioNombre' in df_filtrado.columns else 0:,}")
     with k5: st.metric("Porcentaje Avance", f"{porc_avance}%")
-    with k6: st.metric("Sin Coordenadas", f"{df['latitud'].isna().sum():,}")
+    with k6: st.metric("Sin Coordenadas", f"{df_filtrado['latitud'].isna().sum():,}")
 
     st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-    # FILA 2: Gráficas actualizadas (Instalaciones por Día y Distribución por Usuario Externo)
+    # FILA 2: Gráficas actualizadas (Instalaciones por Día y Distribución por Usuario Externo con datos filtrados)
     col_g1, col_g2 = st.columns([1.8, 1.2])
 
     with col_g1:
         st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día (Real API)</p>", unsafe_allow_html=True)
-        if col_fecha_ref and not df['fecha_dt'].isna().all():
-            df['fecha_dia'] = df['fecha_dt'].dt.date
-            df_dia = df.groupby('fecha_dia', as_index=False).size()
+        if col_fecha_ref and not df_filtrado['fecha_dt'].isna().all():
+            df_filtrado['fecha_dia'] = df_filtrado['fecha_dt'].dt.date
+            df_dia = df_filtrado.groupby('fecha_dia', as_index=False).size()
             df_dia['fecha_dia'] = pd.to_datetime(df_dia['fecha_dia']).dt.strftime('%d/%m/%Y')
             fig_dia = px.bar(df_dia, x='fecha_dia', y='size', color_discrete_sequence=['#3b82f6'])
         else:
@@ -188,16 +204,16 @@ if 'datos_instalaciones' in st.session_state:
 
     with col_g2:
         st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Distribución por Usuario Externo</p>", unsafe_allow_html=True)
-        if 'usuarioExterno' in df.columns:
-            df_ext = df['usuarioExterno'].value_counts().reset_index()
+        if 'usuarioExterno' in df_filtrado.columns:
+            df_ext = df_filtrado['usuarioExterno'].value_counts().reset_index()
             df_ext.columns = ['Externo', 'Cantidad']
             fig_pie = go.Figure(go.Pie(labels=df_ext['Externo'], values=df_ext['Cantidad'], hole=0.5))
         else:
-            fig_pie = go.Figure(go.Pie(labels=['Total'], values=[len(df)], hole=0.5))
+            fig_pie = go.Figure(go.Pie(labels=['Total'], values=[len(df_filtrado)], hole=0.5))
         fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160, showlegend=True, legend=dict(orientation="h", y=-0.1))
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # FILA 3: Eficiencia real y Mapa con coordenadas reales
+    # FILA 3: Eficiencia real y Mapa con coordenadas reales (Con datos filtrados)
     col_inf1, col_inf2 = st.columns([1, 1.6])
 
     with col_inf1:
@@ -210,7 +226,7 @@ if 'datos_instalaciones' in st.session_state:
     with col_inf2:
         st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones (Coordenadas Reales API)</p>", unsafe_allow_html=True)
         
-        df_mapa_valido = df.dropna(subset=['latitud', 'longitud'])
+        df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
         if not df_mapa_valido.empty:
             map_lat = df_mapa_valido['latitud'].mean()
             map_lon = df_mapa_valido['longitud'].mean()
@@ -237,10 +253,10 @@ if 'datos_instalaciones' in st.session_state:
 
         st_folium(mapa_miaa, width=None, height=230, use_container_width=True)
 
-    # FILA 4: Tabla limpia de la API (Sin fotos, sin fechas excluidas, sin lecturas/folio/horaFin, y formatos específicos)
+    # FILA 4: Tabla limpia de la API (Con datos filtrados, sin columnas excluidas y con formatos específicos)
     st.markdown("<p style='font-size:12px; margin-top:10px; margin-bottom:0; font-weight:bold;'>Registros completos de la API (Tabla filtrada y formateada)</p>", unsafe_allow_html=True)
     
-    df_tabla_limpia = df.copy()
+    df_tabla_limpia = df_filtrado.copy()
     
     # Excluir campos solicitados: fotos, fechaRegistro, fechaModificacion, uuid, horaFin, lecturaAnterior, lecturaActual, folio
     terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
