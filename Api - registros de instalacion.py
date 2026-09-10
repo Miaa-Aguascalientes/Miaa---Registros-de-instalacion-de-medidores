@@ -247,18 +247,23 @@ if 'datos_instalaciones' in st.session_state:
 
         st_folium(mapa_miaa, width=None, height=230, use_container_width=True)
 
-    # FILA 4: Tabla limpia de la API (Sin fotos, sin fechaRegistro, sin fechaModificacion, sin uuid, y fechaInstalacion formateada a DD/MM/YYYY HH:MM:SS)
-    st.markdown("<p style='font-size:12px; margin-top:10px; margin-bottom:0; font-weight:bold;'>Registros completos de la API (Campos excluidos y fecha formateada)</p>", unsafe_allow_html=True)
+    # FILA 4: Tabla limpia de la API (Sin fotos, sin fechas excluidas, sin lecturas/folio/horaFin, y formatos específicos)
+    st.markdown("<p style='font-size:12px; margin-top:10px; margin-bottom:0; font-weight:bold;'>Registros completos de la API (Tabla filtrada y formateada)</p>", unsafe_allow_html=True)
     
     df_tabla_limpia = df.copy()
     
-    # Excluir campos de foto, fechaRegistro, fechaModificacion y uuid (insensible a mayúsculas/minúsculas)
-    columnas_a_excluir = [c for c in df_tabla_limpia.columns if any(term in c.lower() for term in ['foto', 'fecharegistro', 'fechamodificacion', 'uuid'])]
+    # Excluir campos solicitados: fotos, fechaRegistro, fechaModificacion, uuid, horaFin, lecturaAnterior, lecturaActual, folio
+    terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
+    columnas_a_excluir = [c for c in df_tabla_limpia.columns if any(term in c.lower() for term in terminos_excluidos)]
     df_tabla_limpia = df_tabla_limpia.drop(columns=columnas_a_excluir, errors='ignore')
     
-    # Formatear el campo fechaInstalacion al formato solicitado: Día/Mes/Año Hora
+    # Formatear fechaInstalacion a DD/MM/YYYY HH:MM:SS
     if 'fechaInstalacion' in df_tabla_limpia.columns:
         df_tabla_limpia['fechaInstalacion'] = pd.to_datetime(df_tabla_limpia['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
+
+    # Formatear horaInicio a solo HH:MM
+    if 'horaInicio' in df_tabla_limpia.columns:
+        df_tabla_limpia['horaInicio'] = pd.to_datetime(df_tabla_limpia['horaInicio'], errors='coerce').dt.strftime('%H:%M')
 
     # Eliminar columnas auxiliares internas creadas para el dashboard
     df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana'], errors='ignore')
