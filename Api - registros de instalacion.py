@@ -134,27 +134,50 @@ if 'datos_instalaciones' in st.session_state:
     df_metas = cargar_metas_db()
     
     # ---------------------------------------------------------
-    # BARRA LATERAL (Con Logotipo y Filtro Funcional de Fechas)
+    # BARRA LATERAL
     # ---------------------------------------------------------
     st.sidebar.image("https://www.miaa.mx/assets/img/logo.png", use_container_width=True)
     st.sidebar.markdown("---")
 
+    # Filtro de Periodo de Fechas debajo del logotipo
+    st.sidebar.subheader("Periodo de Fechas")
+    opcion_periodo = st.sidebar.selectbox(
+        "Seleccionar Rango",
+        ["Este mes", "El mes pasado", "Últimos tres meses", "Últimos 6 meses", "Este año", "El año pasado"],
+        index=4 # Por defecto "Este año"
+    )
+
+    # Calcular fechas de inicio y fin según la opción seleccionada (asumiendo fecha actual 2026-09-10)
+    hoy = pd.to_datetime("2026-09-10").date()
+    
+    if opcion_periodo == "Este mes":
+        fecha_inicio = hoy.replace(day=1)
+        fecha_fin = hoy
+    elif opcion_periodo == "El mes pasado":
+        mes_anterior = hoy.replace(day=1) - pd.Timedelta(days=1)
+        fecha_inicio = mes_anterior.replace(day=1)
+        fecha_fin = mes_anterior
+    elif opcion_periodo == "Últimos tres meses":
+        fecha_inicio = (pd.to_datetime(hoy) - pd.DateOffset(months=3)).date()
+        fecha_fin = hoy
+    elif opcion_periodo == "Últimos 6 meses":
+        fecha_inicio = (pd.to_datetime(hoy) - pd.DateOffset(months=6)).date()
+        fecha_fin = hoy
+    elif opcion_periodo == "Este año":
+        fecha_inicio = hoy.replace(month=1, day=1)
+        fecha_fin = hoy
+    elif opcion_periodo == "El año pasado":
+        fecha_inicio = hoy.replace(year=hoy.year - 1, month=1, day=1)
+        fecha_fin = hoy.replace(year=hoy.year - 1, month=12, day=31)
+
+    st.sidebar.markdown("---")
     st.sidebar.subheader("Poligonos")
     st.sidebar.checkbox("Seleccionar todo", value=True)
     if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns:
         for p in sorted(df_metas['Poligono_de_instalacion'].dropna().unique()):
             st.sidebar.checkbox(str(p), value=True)
-    
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("Filtro de Fechas")
-    
-    min_date = df['fecha_dt'].min().date() if not df['fecha_dt'].isna().all() else pd.to_datetime("2026-01-01").date()
-    max_date = df['fecha_dt'].max().date() if not df['fecha_dt'].isna().all() else pd.to_datetime("2026-12-31").date()
-    
-    fecha_inicio = st.sidebar.date_input("Fecha Inicio", value=min_date)
-    fecha_fin = st.sidebar.date_input("Fecha Fin", value=max_date)
 
-    # Filtrar dataframe general de acuerdo al rango de fechas seleccionado en la barra lateral
+    # Filtrar dataframe general de acuerdo al rango calculado
     if col_fecha_ref and not df['fecha_dt'].isna().all():
         mask = (df['fecha_dt'].dt.date >= fecha_inicio) & (df['fecha_dt'].dt.date <= fecha_fin)
         df_filtrado = df.loc[mask].copy()
