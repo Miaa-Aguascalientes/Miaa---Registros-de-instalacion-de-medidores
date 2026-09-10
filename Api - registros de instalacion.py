@@ -141,6 +141,15 @@ if 'datos_instalaciones' in st.session_state:
 
     df_metas = cargar_metas_db()
     
+    # Limpiar columnas numéricas en metas para validar cuáles tienen medidores instalados (> 0)
+    if not df_metas.empty:
+        for col_num in ['Usuarios_Reales', 'Usuarios_con_medidor_inteligente', 'Usuarios_nueva_instalacion']:
+            if col_num in df_metas.columns:
+                df_metas[col_num] = pd.to_numeric(df_metas[col_num].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
+
+        # Filtrar el diccionario para conservar únicamente registros y polígonos con medidores instalados (> 0)
+        df_metas = df_metas[df_metas['Usuarios_con_medidor_inteligente'] > 0].copy()
+
     # ---------------------------------------------------------
     # BARRA LATERAL
     # ---------------------------------------------------------
@@ -221,10 +230,6 @@ if 'datos_instalaciones' in st.session_state:
     # Procesar tabla exacta solicitada basada en Diccionario_instalacion_medidores filtrada por polígonos y ordenada de mayor a menor porcentaje de avance
     if not df_metas_filtrado.empty:
         df_tabla_eficiencia = df_metas_filtrado.copy()
-        
-        for col_num in ['Usuarios_Reales', 'Usuarios_con_medidor_inteligente', 'Usuarios_nueva_instalacion']:
-            if col_num in df_tabla_eficiencia.columns:
-                df_tabla_eficiencia[col_num] = pd.to_numeric(df_tabla_eficiencia[col_num].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
 
         df_eficiencia = df_tabla_eficiencia.groupby(['Colonia_ATL', 'Poligono_de_instalacion'], as_index=False).agg({
             'Usuarios_Reales': 'sum',
@@ -318,14 +323,7 @@ if 'datos_instalaciones' in st.session_state:
         folium.TileLayer(tiles=tile_url, attr='CARTO', name='CARTO Dark Matter', subdomains='abcd', max_zoom=20).add_to(mapa_miaa)
 
         for _, row in df_mapa_valido.iterrows():
-            folium.CircleMarker(
-                location=[float(row['latitud']), float(row['longitud'])],
-                radius=2.5,
-                color='#3b82f6',
-                fill=True,
-                fill_color='#3b82f6',
-                fill_opacity=0.7
-            ).add_to(mapa_miaa)
+            folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
 
         st_folium(mapa_miaa, width=None, height=230, use_container_width=True)
 
