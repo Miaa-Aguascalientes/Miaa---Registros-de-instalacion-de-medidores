@@ -141,13 +141,11 @@ if 'datos_instalaciones' in st.session_state:
 
     df_metas = cargar_metas_db()
     
-    # Limpiar columnas numéricas en metas para validar cuáles tienen medidores instalados (> 0)
     if not df_metas.empty:
         for col_num in ['Usuarios_Reales', 'Usuarios_con_medidor_inteligente', 'Usuarios_nueva_instalacion']:
             if col_num in df_metas.columns:
                 df_metas[col_num] = pd.to_numeric(df_metas[col_num].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
 
-        # Filtrar el diccionario para conservar únicamente registros y polígonos con medidores instalados (> 0)
         df_metas = df_metas[df_metas['Usuarios_con_medidor_inteligente'] > 0].copy()
 
     # ---------------------------------------------------------
@@ -191,27 +189,14 @@ if 'datos_instalaciones' in st.session_state:
     
     lista_poligonos = []
     if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns:
-        lista_poligonos = sorted([str(p) for p in df_metas['Poligono_de_instalacion'].dropna().unique()])
+        lista_poligonos = sorted([str(p) for p in df_metas['Poligono_de_instalacion'].dropna().unique()], key=lambda x: int(x) if x.isdigit() else x)
 
-    if 'todos_poligonos' not in st.session_state:
-        st.session_state['todos_poligonos'] = True
+    poligonos_seleccionados = st.sidebar.multiselect(
+        "Seleccionar Polígonos",
+        options=lista_poligonos,
+        default=lista_poligonos
+    )
 
-    def actualizar_todos():
-        for pol in lista_poligonos:
-            st.session_state[f"pol_{pol}"] = st.session_state['todos_poligonos']
-
-    st.sidebar.checkbox("Seleccionar todo", value=st.session_state['todos_poligonos'], key='todos_poligonos', on_change=actualizar_todos)
-    
-    poligonos_seleccionados = []
-    for p in lista_poligonos:
-        if f"pol_{p}" not in st.session_state:
-            st.session_state[f"pol_{p}"] = True
-        
-        seleccionado = st.sidebar.checkbox(f"{p}", key=f"pol_{p}")
-        if seleccionado:
-            poligonos_seleccionados.append(p)
-
-    # Filtrado base de datos de metas y API
     if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns:
         df_metas_filtrado = df_metas[df_metas['Poligono_de_instalacion'].astype(str).isin(poligonos_seleccionados)].copy()
     else:
@@ -227,7 +212,6 @@ if 'datos_instalaciones' in st.session_state:
     total_instalados = len(df_filtrado)
     porc_avance = round((total_instalados / meta_total) * 100, 2) if meta_total > 0 else 0.0
 
-    # Procesar tabla exacta solicitada basada en Diccionario_instalacion_medidores filtrada por polígonos y ordenada de mayor a menor porcentaje de avance
     if not df_metas_filtrado.empty:
         df_tabla_eficiencia = df_metas_filtrado.copy()
 
