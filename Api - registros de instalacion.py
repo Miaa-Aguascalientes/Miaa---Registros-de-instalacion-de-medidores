@@ -231,6 +231,14 @@ if 'datos_instalaciones' in st.session_state:
     total_instalados = len(df_filtrado)
     porc_avance = round((total_instalados / meta_total) * 100, 2) if meta_total > 0 else 0.0
 
+    # Cálculos para Externo y MIAA según el estado booleano/falsy de usuarioExterno
+    if 'usuarioExterno' in df_filtrado.columns:
+        total_externo = int(df_filtrado['usuarioExterno'].fillna(False).astype(bool).sum())
+        total_miaa = int((~df_filtrado['usuarioExterno'].fillna(False).astype(bool)).sum())
+    else:
+        total_externo = 0
+        total_miaa = len(df_filtrado)
+
     if not df_metas_filtrado.empty:
         df_tabla_eficiencia = df_metas_filtrado.copy()
 
@@ -265,12 +273,12 @@ if 'datos_instalaciones' in st.session_state:
     tab_principal, tab_tabla = st.tabs(["📊 Dashboard Principal", "📋 Tabla Base de Datos Completa"])
 
     with tab_principal:
-        # FILA 1: KPIs Superiores Reales
+        # FILA 1: KPIs Superiores (Actualizados con Externo y MIAA)
         k1, k2, k3, k4, k5, k6 = st.columns(6)
         with k1: st.metric("Meta Total", f"{meta_total:,}")
         with k2: st.metric("Instalados", f"{total_instalados:,}")
-        with k3: st.metric("Registros API", f"{len(df_filtrado):,}")
-        with k4: st.metric("Técnicos Activos", f"{df_filtrado['usuarioNombre'].nunique() if 'usuarioNombre' in df_filtrado.columns else 0:,}")
+        with k3: st.metric("Instalados por Externo", f"{total_externo:,}")
+        with k4: st.metric("Instalados por MIAA", f"{total_miaa:,}")
         with k5: st.metric("Porcentaje Avance", f"{porc_avance}%")
         with k6: st.metric("Sin Coordenadas", f"{df_filtrado['latitud'].isna().sum():,}")
 
