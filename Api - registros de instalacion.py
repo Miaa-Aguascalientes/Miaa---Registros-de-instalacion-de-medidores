@@ -69,7 +69,7 @@ st.markdown(custom_style, unsafe_allow_html=True)
 st.markdown("""
     <div class="dashboard-header">
         <h2 style='color: white; margin: 0; font-size: 1.4rem;'>📊 DASHBOARD INSTALACIÓN MEDIDORES INTELIGENTES</h2>
-        <span style='color: #94a3b8; font-size: 0.9rem;'>Actualizado al: 08/09/2026</span>
+        <span style='color: #94a3b8; font-size: 0.9rem;'>Actualizado al: 14/09/2026</span>
     </div>
 """, unsafe_allow_html=True)
 
@@ -162,7 +162,7 @@ if 'datos_instalaciones' in st.session_state:
         index=4
     )
 
-    hoy = pd.to_datetime("2026-09-10").date()
+    hoy = pd.to_datetime("2026-09-14").date()
     
     if opcion_periodo == "Este mes":
         fecha_inicio = hoy.replace(day=1)
@@ -191,7 +191,6 @@ if 'datos_instalaciones' in st.session_state:
     if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns:
         lista_poligonos = sorted([str(p) for p in df_metas['Poligono_de_instalacion'].dropna().unique()], key=lambda x: int(x) if x.isdigit() else x)
 
-    # Botones de control rápido para los checkboxes
     col_c1, col_c2 = st.sidebar.columns(2)
     seleccionar_todos = col_c1.button("Marcar todos")
     deseleccionar_todos = col_c2.button("Desmarcar")
@@ -204,7 +203,6 @@ if 'datos_instalaciones' in st.session_state:
         for p in lista_poligonos:
             st.session_state[f"chk_pol_{p}"] = False
 
-    # Contenedor con scroll para los checkboxes de polígonos
     with st.sidebar.container(height=220):
         poligonos_seleccionados = []
         for pol in lista_poligonos:
@@ -242,7 +240,6 @@ if 'datos_instalaciones' in st.session_state:
         )
         
         df_eficiencia = df_eficiencia.sort_values(by='pct_sort', ascending=False).reset_index(drop=True)
-
         df_eficiencia['%'] = df_eficiencia['pct_sort'].round(2).astype(str) + '%'
         
         df_eficiencia = df_eficiencia.rename(columns={
@@ -293,7 +290,7 @@ if 'datos_instalaciones' in st.session_state:
         fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160, showlegend=True, legend=dict(orientation="h", y=-0.1))
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # FILA 3: Tabla de Eficiencia Ordenada y Columna Derecha (Gráfica horizontal por Mes + Mapa)
+    # FILA 3: Tabla de Eficiencia Ordenada y Columna Derecha (Gráfica horizontal por Mes con nombres en español + Mapa)
     col_inf1, col_inf2 = st.columns([1, 1.6])
 
     with col_inf1:
@@ -304,20 +301,29 @@ if 'datos_instalaciones' in st.session_state:
             st.info("No se encontraron datos para los polígonos seleccionados.")
 
     with col_inf2:
-        # Gráfica de Barras Horizontales de Instalaciones por Mes colocada arriba del mapa
         st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
         
         if col_fecha_ref and not df_filtrado['fecha_dt'].isna().all():
-            df_filtrado['anio_mes'] = df_filtrado['fecha_dt'].dt.to_period('M').astype(str)
-            df_mes = df_filtrado.groupby('anio_mes', as_index=False).size()
-            df_mes.columns = ['Mes', 'Cantidad']
+            # Creamos una columna temporal de periodo para ordenar correctamente de forma cronológica
+            df_filtrado['periodo_mes'] = df_filtrado['fecha_dt'].dt.to_period('M')
+            df_mes = df_filtrado.groupby('periodo_mes', as_index=False).size()
+            df_mes.columns = ['Periodo', 'Cantidad']
+            
+            # Diccionario para traducir los meses al español
+            meses_es = {
+                1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 
+                5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto', 
+                9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
+            }
+            
+            # Formateamos como "Agosto 2026", "Septiembre 2026", etc.
+            df_mes['Mes'] = df_mes['Periodo'].apply(lambda x: f"{meses_es[x.month]} {x.year}")
+            
+            # Ordenamos cronológicamente ascendente para que al graficar en horizontal queden los meses antiguos abajo y los recientes arriba
+            df_mes = df_mes.sort_values(by='Periodo', ascending=True)
         else:
             df_mes = pd.DataFrame({'Mes': ['Sin datos'], 'Cantidad': [0]})
 
-        # Ordenamos de menor a mayor para que cronológicamente o por cantidad el orden sea correcto al mostrarse horizontal
-        df_mes = df_mes.sort_values(by='Cantidad', ascending=True)
-
-        # Colores personalizados (ej. azul y naranja combinados)
         colores_barras = ['#3b82f6', '#f97316'] * ((len(df_mes) // 2) + 1)
 
         fig_mes_h = px.bar(
@@ -338,12 +344,12 @@ if 'datos_instalaciones' in st.session_state:
             margin=dict(t=5, b=5, l=5, r=30), 
             height=130, 
             xaxis=dict(showgrid=False, showticklabels=False, title=None),
-            yaxis=dict(showgrid=False, title=None, tickfont=dict(size=11)),
+            yaxis=dict(showgrid=False, title=None, tickfont=dict(size=11), categoryorder='array', categoryarray=df_mes['Mes'].tolist()),
             showlegend=False
         )
         st.plotly_chart(fig_mes_h, use_container_width=True)
 
-        # Mapa de Instalaciones debajo de la gráfica mensual horizontal
+        # Mapa de Instalaciones debajo de la gráfica mensual
         st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones (Coordenadas Reales API)</p>", unsafe_allow_html=True)
         
         df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
@@ -381,6 +387,6 @@ if 'datos_instalaciones' in st.session_state:
     if 'horaInicio' in df_tabla_limpia.columns:
         df_tabla_limpia['horaInicio'] = pd.to_datetime(df_tabla_limpia['horaInicio'], errors='coerce').dt.strftime('%H:%M')
 
-    df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes'], errors='ignore')
+    df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
 
     st.dataframe(df_tabla_limpia, use_container_width=True)
