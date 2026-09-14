@@ -6,6 +6,7 @@ from sqlalchemy import create_engine
 import plotly.express as px
 import plotly.graph_objects as go
 import folium
+from folium.plugins import Fullscreen
 from streamlit_folium import st_folium
 import numpy as np
 
@@ -399,42 +400,62 @@ if 'datos_instalaciones' in st.session_state:
             else:
                 map_lat, map_lon = lat_centro, lon_centro
 
-            mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12, tiles="CartoDB dark_matter")
+            # Crear mapa base
+            mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12, tiles=None)
 
-            # --- INTEGRACIÓN DE POLÍGONOS EN EL MAPA ---
-            if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns and 'Poligono_de_instalacion' in df_metas.columns:
-                features_geojson = []
-                for _, row_meta in df_metas.dropna(subset=['Poligono_de_instalacion']).iterrows():
-                    p_id = str(row_meta['Poligono_de_instalacion'])
-                    if p_id in poligonos_seleccionados:
-                        geom_str = row_meta.get('Poligono_de_instalacion') # O la columna con la geometría geojson si aplica
-                        # Si tu columna de polígonos contiene GeoJSON string o WKT, asegúrate de procesarlo.
-                        # Aquí integramos capa de polígonos filtrados basados en la BD:
-                        pass
-                
-                # Integración segura de polígonos basados en diccionario/geojson de la BD si la columna trae geometrías:
-                if 'Poligono_de_instalacion' in df_metas.columns:
-                    for p_sel in poligonos_seleccionados:
-                        subset_p = df_metas[df_metas['Poligono_de_instalacion'].astype(str) == p_sel]
-                        for _, row_p in subset_p.iterrows():
-                            poly_data = row_p.get('Poligono_de_instalacion')
-                            if poly_data and isinstance(poly_data, str) and poly_data.strip().startswith("{"):
-                                try:
-                                    g_json = json.loads(poly_data)
-                                    folium.GeoJson(
-                                        g_json,
-                                        name=f"Polígono {p_sel}",
-                                        style_function=lambda x: {
-                                            'fillColor': '#f59e0b',
-                                            'color': '#d97706',
-                                            'weight': 2,
-                                            'fillOpacity': 0.2
-                                        },
-                                        tooltip=f"Polígono: {p_sel}"
-                                    ).add_to(mapa_miaa)
-                                except Exception:
-                                    pass
+            # Capa de Fondo (Vista Nocturna) provista
+            api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
+            
+            folium.TileLayer(
+                tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
+                name="Vista Nocturna",
+                attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains="abcd",
+                max_zoom=20,
+                overlay=False,
+                control=True
+            ).add_to(mapa_miaa)
 
+            Fullscreen().add_to(mapa_miaa)
+
+            # --- CARGA Y DIBUJADO DE POLÍGONOS DESDE GEOJSON ---
+            try:
+                with open("poligonos.geojson", "r", encoding="utf-8") as f:
+                    archivo_geojson = json.load(f)
+
+                features_filtradas = []
+                for feat in archivo_geojson.get("features", []):
+                    props = feat.get("properties", {})
+                    id_pol = str(props.get("Poligono_de_instalacion") or props.get("id") or "")
+                    if id_pol in poligonos_seleccionados:
+                        features_filtradas.append(feat)
+
+                geojson_a_mostrar = {
+                    "type": "FeatureCollection",
+                    "features": features_filtradas
+                }
+
+                folium.GeoJson(
+                    geojson_a_mostrar,
+                    name="Polígonos de Instalación",
+                    style_function=lambda feature: {
+                        'fillColor': '#f59e0b',
+                        'color': '#d97706',
+                        'weight': 2,
+                        'fillOpacity': 0.25
+                    },
+                    tooltip=folium.GeoJsonTooltip(
+                        fields=[k for k in ['Poligono_de_instalacion', 'Sector_comercial', 'Area_km2'] if k in (archivo_geojson.get("features", [{}])[0].get("properties", {}))],
+                        aliases=[k.replace('_', ' ').capitalize() + ":" for k in ['Poligono_de_instalacion', 'Sector_comercial', 'Area_km2'] if k in (archivo_geojson.get("features", [{}])[0].get("properties", {}))],
+                        localize=True
+                    )
+                ).add_to(mapa_miaa)
+            except FileNotFoundError:
+                pass
+            except Exception as e:
+                pass
+
+            # Dibujar los marcadores de las instalaciones de la API
             for _, row in df_mapa_valido.iterrows():
                 folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
 
@@ -490,7 +511,19 @@ if 'datos_instalaciones' in st.session_state:
         df_ext_map = df_externo.dropna(subset=['latitud', 'longitud']) if not df_externo.empty else pd.DataFrame()
         m_lat = df_ext_map['latitud'].mean() if not df_ext_map.empty else lat_centro
         m_lon = df_ext_map['longitud'].mean() if not df_ext_map.empty else lon_centro
-        mapa_ext = folium.Map(location=[m_lat, m_lon], zoom_start=12, tiles="CartoDB dark_matter")
+        
+        mapa_ext = folium.Map(location=[m_lat, m_lon], zoom_start=12, tiles=None)
+        folium.TileLayer(
+            tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
+            name="Vista Nocturna",
+            attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains="abcd",
+            max_zoom=20,
+            overlay=False,
+            control=True
+        ).add_to(mapa_ext)
+        Fullscreen().add_to(mapa_ext)
+
         for _, row in df_ext_map.iterrows():
             folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#f59e0b', fill=True, fill_color='#f59e0b', fill_opacity=0.7).add_to(mapa_ext)
         st_folium(mapa_ext, width=None, height=220, use_container_width=True, key="mapa_externo", returned_objects=[])
@@ -556,7 +589,19 @@ if 'datos_instalaciones' in st.session_state:
         df_miaa_map = df_miaa_pers.dropna(subset=['latitud', 'longitud']) if not df_miaa_pers.empty else pd.DataFrame()
         mm_lat = df_miaa_map['latitud'].mean() if not df_miaa_map.empty else lat_centro
         mm_lon = df_miaa_map['longitud'].mean() if not df_miaa_map.empty else lon_centro
-        mapa_miaa_pers = folium.Map(location=[mm_lat, mm_lon], zoom_start=12, tiles="CartoDB dark_matter")
+        
+        mapa_miaa_pers = folium.Map(location=[mm_lat, mm_lon], zoom_start=12, tiles=None)
+        folium.TileLayer(
+            tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
+            name="Vista Nocturna",
+            attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains="abcd",
+            max_zoom=20,
+            overlay=False,
+            control=True
+        ).add_to(mapa_miaa_pers)
+        Fullscreen().add_to(mapa_miaa_pers)
+
         for _, row in df_miaa_map.iterrows():
             folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#10b981', fill=True, fill_color='#10b981', fill_opacity=0.7).add_to(mapa_miaa_pers)
         st_folium(mapa_miaa_pers, width=None, height=220, use_container_width=True, key="mapa_miaa_personal", returned_objects=[])
