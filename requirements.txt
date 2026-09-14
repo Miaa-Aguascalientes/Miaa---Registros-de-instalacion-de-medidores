@@ -1,7 +1,5 @@
-geopandas
 shapely
 pyproj
-fiona
 streamlit-folium
 sqlalchemy
 pymysql
