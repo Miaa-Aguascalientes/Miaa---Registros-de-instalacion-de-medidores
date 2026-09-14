@@ -270,7 +270,7 @@ if 'datos_instalaciones' in st.session_state:
 
     st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-    # FILA 2: Gráficas (Instalaciones por Día y Distribución por Usuario Externo)
+    # FILA 2: Gráficas (Instalaciones por Día con números arriba y Distribución por Usuario Externo)
     col_g1, col_g2 = st.columns([1.8, 1.2])
 
     with col_g1:
@@ -279,10 +279,20 @@ if 'datos_instalaciones' in st.session_state:
             df_filtrado['fecha_dia'] = df_filtrado['fecha_dt'].dt.date
             df_dia = df_filtrado.groupby('fecha_dia', as_index=False).size()
             df_dia['fecha_dia'] = pd.to_datetime(df_dia['fecha_dia']).dt.strftime('%d/%m/%Y')
-            fig_dia = px.bar(df_dia, x='fecha_dia', y='size', color_discrete_sequence=['#3b82f6'])
+            fig_dia = px.bar(df_dia, x='fecha_dia', y='size', text='size', color_discrete_sequence=['#3b82f6'])
         else:
-            fig_dia = px.bar(pd.DataFrame({'Aviso': ['Sin fechas'], 'Valor': [0]}), x='Aviso', y='Valor')
-        fig_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160, xaxis_title=None, yaxis_title=None)
+            fig_dia = px.bar(pd.DataFrame({'Aviso': ['Sin fechas'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
+        
+        fig_dia.update_traces(textposition='outside', textfont_size=10)
+        fig_dia.update_layout(
+            plot_bgcolor='rgba(0,0,0,0)', 
+            paper_bgcolor='rgba(0,0,0,0)', 
+            font_color='#ffffff', 
+            margin=dict(t=20, b=5, l=5, r=5), 
+            height=160, 
+            xaxis_title=None, 
+            yaxis_title=None
+        )
         st.plotly_chart(fig_dia, use_container_width=True)
 
     with col_g2:
@@ -296,7 +306,7 @@ if 'datos_instalaciones' in st.session_state:
         fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160, showlegend=True, legend=dict(orientation="h", y=-0.1))
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # FILA 3: Tabla de Eficiencia Ordenada y Columna Derecha (Gráfica horizontal por Mes usando df general + Mapa)
+    # FILA 3: Tabla de Eficiencia Ordenada y Columna Derecha (Gráfica horizontal por Mes con todos los datos + Mapa)
     col_inf1, col_inf2 = st.columns([1, 1.6])
 
     with col_inf1:
@@ -309,7 +319,6 @@ if 'datos_instalaciones' in st.session_state:
     with col_inf2:
         st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
         
-        # Usamos 'df' (sin filtrar por fecha) para que se muestren todos los meses
         if col_fecha_ref and not df['fecha_dt'].isna().all():
             df_mes_total = df.copy()
             df_mes_total['periodo_mes'] = df_mes_total['fecha_dt'].dt.to_period('M')
@@ -327,7 +336,6 @@ if 'datos_instalaciones' in st.session_state:
         else:
             df_mes = pd.DataFrame({'Mes': ['Sin datos'], 'Cantidad': [0]})
 
-        # Tonos exclusivamente azules para alternar las barras
         colores_barras = ['#1e3a8a', '#3b82f6'] * ((len(df_mes) // 2) + 1)
 
         fig_mes_h = px.bar(
