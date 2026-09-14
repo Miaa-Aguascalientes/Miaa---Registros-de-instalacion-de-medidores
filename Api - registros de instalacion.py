@@ -376,7 +376,7 @@ if 'datos_instalaciones' in st.session_state:
             )
             st.plotly_chart(fig_mes_h, use_container_width=True)
 
-            # Mapa de Instalaciones debajo de la gráfica mensual (Sin recargas al hacer zoom/pan)
+            # Mapa de Instalaciones (Capa base CartoDB dark_matter y clave fija para evitar recargas)
             st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones (Coordenadas Reales API)</p>", unsafe_allow_html=True)
             
             df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
@@ -386,22 +386,60 @@ if 'datos_instalaciones' in st.session_state:
             else:
                 map_lat, map_lon = lat_centro, lon_centro
 
-            mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12, tiles=None)
-            
-            carto_api_key = st.secrets.get("carto", {}).get("api_key", "")
-            tile_url = f"https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png"
-            if carto_api_key: tile_url += f"?api_key={carto_api_key}"
-                
-            folium.TileLayer(tiles=tile_url, attr='CARTO', name='CARTO Dark Matter', subdomains='abcd', max_zoom=20).add_to(mapa_miaa)
+            mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12, tiles="CartoDB dark_matter")
 
             for _, row in df_mapa_valido.iterrows():
                 folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
 
-            st_folium(mapa_miaa, width=None, height=190, use_container_width=True, returned_objects=[])
+            st_folium(mapa_miaa, width=None, height=190, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
 
     with tab_tabla:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>Tabla Completa de Registros de la API</p>", unsafe_allow_html=True)
         
+        # Indicadores en la pestaña de datos
+        total_registros_tabla = len(df_filtrado)
+        total_colonias_tabla = df_filtrado['colonia'].nunique() if 'colonia' in df_filtrado.columns else 0
+
+        t_col1, t_col2 = st.columns(2)
+        with t_col1:
+            st.metric("Total de Registros", f"{total_registros_tabla:,}")
+        with t_col2:
+            st.metric("Colonias Registradas", f"{total_colonias_tabla:,}")
+
+        st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+        # Gráfico por Nivel Comercial / Doméstico
+        st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:0;'>Distribución por Nivel (Comercial / Doméstico)</p>", unsafe_allow_html=True)
+        if 'nivel' in df_filtrado.columns:
+            df_nivel = df_filtrado['nivel'].fillna("SIN NIVEL").value_counts().reset_index()
+            df_nivel.columns = ['Nivel', 'Cantidad']
+            
+            fig_nivel = px.bar(
+                df_nivel, 
+                x='Nivel', 
+                y='Cantidad', 
+                text='Cantidad',
+                color='Nivel',
+                color_discrete_sequence=px.colors.qualitative.Prism
+            )
+            fig_nivel.update_traces(textposition='outside', textfont_size=11)
+            fig_nivel.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)', 
+                paper_bgcolor='rgba(0,0,0,0)', 
+                font_color='#ffffff', 
+                margin=dict(t=30, b=5, l=5, r=5), 
+                height=220, 
+                xaxis_title=None, 
+                yaxis_title=None,
+                showlegend=False
+            )
+            st.plotly_chart(fig_nivel, use_container_width=True)
+        else:
+            st.info("La columna 'nivel' no se encuentra disponible en los registros.")
+
+        st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+        # Preparar tabla limpia
         df_tabla_limpia = df_filtrado.copy()
         
         terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
