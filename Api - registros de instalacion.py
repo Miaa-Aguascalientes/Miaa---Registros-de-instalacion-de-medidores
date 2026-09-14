@@ -49,23 +49,26 @@ custom_style = """
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* Tarjetas de Indicadores con Vida (Efectos Glow y Hover) */
+    /* Tarjetas Compactas: Icono a la izquierda y textos a la derecha */
     .metric-card {
         background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 12px 10px;
-        border-radius: 10px;
-        text-align: center;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+        padding: 8px 12px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
+        height: 58px;
     }
 
     .metric-card:hover {
-        transform: translateY(-3px);
+        transform: translateY(-2px);
         border-color: rgba(59, 130, 246, 0.5);
-        box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2), 0 4px 6px -2px rgba(59, 130, 246, 0.1);
+        box-shadow: 0 8px 12px -3px rgba(59, 130, 246, 0.2);
     }
 
     .metric-card::before {
@@ -83,24 +86,38 @@ custom_style = """
         left: 100%;
     }
 
-    .metric-icon {
+    .metric-icon-box {
         font-size: 20px;
-        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 28px;
+    }
+
+    .metric-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        overflow: hidden;
     }
 
     .metric-title {
         color: #94a3b8;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        margin-bottom: 2px;
+        line-height: 1.1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .metric-value {
         color: #ffffff;
-        font-size: 20px;
+        font-size: 17px;
         font-weight: 700;
+        line-height: 1.2;
     }
     </style>
 """
@@ -357,60 +374,72 @@ if 'datos_instalaciones' in st.session_state:
     ])
 
     with tab_principal:
-        # FILA 1: KPIs Superiores con Tarjetas Interactivas e Iconos (Estilo Visual Moderno)
+        # FILA 1: KPIs Superiores Compactos (Icono a la izquierda, Texto y Valor a la derecha)
         k1, k2, k3, k4, k5, k6 = st.columns(6)
         
         with k1:
             st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-icon" style="color: #38bdf8;"><i class="fa-solid fa-bullseye"></i></div>
-                    <div class="metric-title">Meta Total</div>
-                    <div class="metric-value">{meta_total:,}</div>
+                    <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-bullseye"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Meta Total</div>
+                        <div class="metric-value">{meta_total:,}</div>
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
             
         with k2:
             st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-icon" style="color: #4ade80;"><i class="fa-solid fa-circle-check"></i></div>
-                    <div class="metric-title">Instalados</div>
-                    <div class="metric-value">{total_instalados:,}</div>
+                    <div class="metric-icon-box" style="color: #4ade80;"><i class="fa-solid fa-circle-check"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Instalados</div>
+                        <div class="metric-value">{total_instalados:,}</div>
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
             
         with k3:
             st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-icon" style="color: #f59e0b;"><i class="fa-solid fa-hard-hat"></i></div>
-                    <div class="metric-title">Instalados Externo</div>
-                    <div class="metric-value">{total_externo:,}</div>
+                    <div class="metric-icon-box" style="color: #f59e0b;"><i class="fa-solid fa-hard-hat"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Instalados Externo</div>
+                        <div class="metric-value">{total_externo:,}</div>
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
             
         with k4:
             st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-icon" style="color: #a855f7;"><i class="fa-solid fa-building-user"></i></div>
-                    <div class="metric-title">Instalados MIAA</div>
-                    <div class="metric-value">{total_miaa:,}</div>
+                    <div class="metric-icon-box" style="color: #a855f7;"><i class="fa-solid fa-building-user"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Instalados MIAA</div>
+                        <div class="metric-value">{total_miaa:,}</div>
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
             
         with k5:
             st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-icon" style="color: #f43f5e;"><i class="fa-solid fa-chart-pie"></i></div>
-                    <div class="metric-title">% Avance</div>
-                    <div class="metric-value">{porc_avance}%</div>
+                    <div class="metric-icon-box" style="color: #f43f5e;"><i class="fa-solid fa-chart-pie"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">% Avance</div>
+                        <div class="metric-value">{porc_avance}%</div>
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
             
         with k6:
             st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-icon" style="color: #94a3b8;"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                    <div class="metric-title">Sin Coordenadas</div>
-                    <div class="metric-value">{df_filtrado['latitud'].isna().sum():,}</div>
+                    <div class="metric-icon-box" style="color: #94a3b8;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Sin Coordenadas</div>
+                        <div class="metric-value">{df_filtrado['latitud'].isna().sum():,}</div>
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
 
