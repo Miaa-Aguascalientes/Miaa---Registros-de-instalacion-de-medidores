@@ -161,7 +161,7 @@ if 'datos_instalaciones' in st.session_state:
     opcion_periodo = st.sidebar.selectbox(
         "Seleccionar Rango",
         ["Este mes", "El mes pasado", "Últimos tres meses", "Últimos 6 meses", "Este año", "El año pasado"],
-        index=4
+        index=0
     )
 
     hoy = pd.to_datetime("2026-09-14").date()
@@ -193,7 +193,6 @@ if 'datos_instalaciones' in st.session_state:
     if not df_metas_valido.empty and 'Poligono_de_instalacion' in df_metas_valido.columns:
         lista_poligonos = sorted([str(p) for p in df_metas_valido['Poligono_de_instalacion'].dropna().unique()], key=lambda x: int(x) if x.isdigit() else x)
 
-    # Inicializar todos los polígonos como marcados (True) por defecto desde el inicio
     for p in lista_poligonos:
         if f"chk_pol_{p}" not in st.session_state:
             st.session_state[f"chk_pol_{p}"] = True
