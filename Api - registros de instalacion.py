@@ -259,8 +259,149 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df_eficiencia = pd.DataFrame(columns=['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono'])
 
-    # PESTAÑA / EXPANDER SUPERIOR (Justo antes de los KPIs)
-    with st.expander("📋 Ver Registros completos de la API (Tabla filtrada y formateada)"):
+    # ---------------------------------------------------------
+    # PESTAÑAS PRINCIPALES SUPERIORES
+    # ---------------------------------------------------------
+    tab_principal, tab_tabla = st.tabs(["📊 Dashboard Principal", "📋 Tabla Base de Datos Completa"])
+
+    with tab_principal:
+        # FILA 1: KPIs Superiores Reales
+        k1, k2, k3, k4, k5, k6 = st.columns(6)
+        with k1: st.metric("Meta Total", f"{meta_total:,}")
+        with k2: st.metric("Instalados", f"{total_instalados:,}")
+        with k3: st.metric("Registros API", f"{len(df_filtrado):,}")
+        with k4: st.metric("Técnicos Activos", f"{df_filtrado['usuarioNombre'].nunique() if 'usuarioNombre' in df_filtrado.columns else 0:,}")
+        with k5: st.metric("Porcentaje Avance", f"{porc_avance}%")
+        with k6: st.metric("Sin Coordenadas", f"{df_filtrado['latitud'].isna().sum():,}")
+
+        st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
+
+        # FILA 2: Gráficas (Instalaciones por Día y Distribución por Usuario Externo con altura de 230 y eje Y a 500)
+        col_g1, col_g2 = st.columns([1.8, 1.2])
+
+        with col_g1:
+            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día (Real API)</p>", unsafe_allow_html=True)
+            if col_fecha_ref and not df_filtrado['fecha_dt'].isna().all():
+                df_filtrado['fecha_dia'] = df_filtrado['fecha_dt'].dt.date
+                df_dia = df_filtrado.groupby('fecha_dia', as_index=False).size()
+                df_dia['fecha_dia'] = pd.to_datetime(df_dia['fecha_dia']).dt.strftime('%d/%m/%Y')
+                fig_dia = px.bar(df_dia, x='fecha_dia', y='size', text='size', color_discrete_sequence=['#3b82f6'])
+            else:
+                fig_dia = px.bar(pd.DataFrame({'Aviso': ['Sin fechas'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
+            
+            fig_dia.update_traces(textposition='outside', textfont_size=10)
+            fig_dia.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)', 
+                paper_bgcolor='rgba(0,0,0,0)', 
+                font_color='#ffffff', 
+                margin=dict(t=40, b=5, l=5, r=5), 
+                height=230, 
+                xaxis_title=None, 
+                yaxis_title=None,
+                yaxis=dict(range=[0, 500])
+            )
+            st.plotly_chart(fig_dia, use_container_width=True)
+
+        with col_g2:
+            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Distribución por Usuario Externo</p>", unsafe_allow_html=True)
+            if 'usuarioExterno' in df_filtrado.columns:
+                df_ext = df_filtrado['usuarioExterno'].value_counts().reset_index()
+                df_ext.columns = ['Externo', 'Cantidad']
+                fig_pie = go.Figure(go.Pie(labels=df_ext['Externo'], values=df_ext['Cantidad'], hole=0.5))
+            else:
+                fig_pie = go.Figure(go.Pie(labels=['Total'], values=[len(df_filtrado)], hole=0.5))
+            fig_pie.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)', 
+                paper_bgcolor='rgba(0,0,0,0)', 
+                font_color='#ffffff', 
+                margin=dict(t=5, b=5, l=5, r=5), 
+                height=230, 
+                showlegend=True, 
+                legend=dict(orientation="h", y=-0.1)
+            )
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+        # FILA 3: Tabla de Eficiencia Ordenada y Columna Derecha (Gráfica horizontal por Mes con todos los datos + Mapa)
+        col_inf1, col_inf2 = st.columns([1, 1.6])
+
+        with col_inf1:
+            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Eficiencia por Colonia y Polígono</p>", unsafe_allow_html=True)
+            if not df_eficiencia.empty:
+                st.dataframe(df_eficiencia, use_container_width=True, hide_index=True)
+            else:
+                st.info("No se encontraron datos para los polígonos seleccionados.")
+
+        with col_inf2:
+            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
+            
+            if col_fecha_ref and not df['fecha_dt'].isna().all():
+                df_mes_total = df.copy()
+                df_mes_total['periodo_mes'] = df_mes_total['fecha_dt'].dt.to_period('M')
+                df_mes = df_mes_total.groupby('periodo_mes', as_index=False).size()
+                df_mes.columns = ['Periodo', 'Cantidad']
+                
+                meses_es = {
+                    1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 
+                    5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto', 
+                    9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
+                }
+                
+                df_mes['Mes'] = df_mes['Periodo'].apply(lambda x: f"{meses_es[x.month]} {x.year}")
+                df_mes = df_mes.sort_values(by='Periodo', ascending=True)
+            else:
+                df_mes = pd.DataFrame({'Mes': ['Sin datos'], 'Cantidad': [0]})
+
+            colores_barras = ['#1e3a8a', '#3b82f6'] * ((len(df_mes) // 2) + 1)
+
+            fig_mes_h = px.bar(
+                df_mes, 
+                x='Cantidad', 
+                y='Mes', 
+                orientation='h',
+                text='Cantidad',
+                color='Mes',
+                color_discrete_sequence=colores_barras
+            )
+            
+            fig_mes_h.update_traces(textposition='outside', textfont_size=11)
+            fig_mes_h.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)', 
+                paper_bgcolor='rgba(0,0,0,0)', 
+                font_color='#ffffff', 
+                margin=dict(t=5, b=5, l=5, r=30), 
+                height=130, 
+                xaxis=dict(showgrid=False, showticklabels=False, title=None),
+                yaxis=dict(showgrid=False, title=None, tickfont=dict(size=11), categoryorder='array', categoryarray=df_mes['Mes'].tolist()),
+                showlegend=False
+            )
+            st.plotly_chart(fig_mes_h, use_container_width=True)
+
+            # Mapa de Instalaciones debajo de la gráfica mensual
+            st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones (Coordenadas Reales API)</p>", unsafe_allow_html=True)
+            
+            df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
+            if not df_mapa_valido.empty:
+                map_lat = df_mapa_valido['latitud'].mean()
+                map_lon = df_mapa_valido['longitud'].mean()
+            else:
+                map_lat, map_lon = lat_centro, lon_centro
+
+            mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12, tiles=None)
+            
+            carto_api_key = st.secrets.get("carto", {}).get("api_key", "")
+            tile_url = f"https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png"
+            if carto_api_key: tile_url += f"?api_key={carto_api_key}"
+                
+            folium.TileLayer(tiles=tile_url, attr='CARTO', name='CARTO Dark Matter', subdomains='abcd', max_zoom=20).add_to(mapa_miaa)
+
+            for _, row in df_mapa_valido.iterrows():
+                folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
+
+            st_folium(mapa_miaa, width=None, height=190, use_container_width=True)
+
+    with tab_tabla:
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>Tabla Completa de Registros de la API</p>", unsafe_allow_html=True)
+        
         df_tabla_limpia = df_filtrado.copy()
         
         terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
@@ -276,137 +417,3 @@ if 'datos_instalaciones' in st.session_state:
         df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
 
         st.dataframe(df_tabla_limpia, use_container_width=True)
-
-    # FILA 1: KPIs Superiores Reales
-    k1, k2, k3, k4, k5, k6 = st.columns(6)
-    with k1: st.metric("Meta Total", f"{meta_total:,}")
-    with k2: st.metric("Instalados", f"{total_instalados:,}")
-    with k3: st.metric("Registros API", f"{len(df_filtrado):,}")
-    with k4: st.metric("Técnicos Activos", f"{df_filtrado['usuarioNombre'].nunique() if 'usuarioNombre' in df_filtrado.columns else 0:,}")
-    with k5: st.metric("Porcentaje Avance", f"{porc_avance}%")
-    with k6: st.metric("Sin Coordenadas", f"{df_filtrado['latitud'].isna().sum():,}")
-
-    st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
-
-    # FILA 2: Gráficas (Instalaciones por Día y Distribución por Usuario Externo con altura de 230 y eje Y a 500)
-    col_g1, col_g2 = st.columns([1.8, 1.2])
-
-    with col_g1:
-        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día (Real API)</p>", unsafe_allow_html=True)
-        if col_fecha_ref and not df_filtrado['fecha_dt'].isna().all():
-            df_filtrado['fecha_dia'] = df_filtrado['fecha_dt'].dt.date
-            df_dia = df_filtrado.groupby('fecha_dia', as_index=False).size()
-            df_dia['fecha_dia'] = pd.to_datetime(df_dia['fecha_dia']).dt.strftime('%d/%m/%Y')
-            fig_dia = px.bar(df_dia, x='fecha_dia', y='size', text='size', color_discrete_sequence=['#3b82f6'])
-        else:
-            fig_dia = px.bar(pd.DataFrame({'Aviso': ['Sin fechas'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
-        
-        fig_dia.update_traces(textposition='outside', textfont_size=10)
-        fig_dia.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)', 
-            paper_bgcolor='rgba(0,0,0,0)', 
-            font_color='#ffffff', 
-            margin=dict(t=40, b=5, l=5, r=5), 
-            height=230, 
-            xaxis_title=None, 
-            yaxis_title=None,
-            yaxis=dict(range=[0, 500])
-        )
-        st.plotly_chart(fig_dia, use_container_width=True)
-
-    with col_g2:
-        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Distribución por Usuario Externo</p>", unsafe_allow_html=True)
-        if 'usuarioExterno' in df_filtrado.columns:
-            df_ext = df_filtrado['usuarioExterno'].value_counts().reset_index()
-            df_ext.columns = ['Externo', 'Cantidad']
-            fig_pie = go.Figure(go.Pie(labels=df_ext['Externo'], values=df_ext['Cantidad'], hole=0.5))
-        else:
-            fig_pie = go.Figure(go.Pie(labels=['Total'], values=[len(df_filtrado)], hole=0.5))
-        fig_pie.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)', 
-            paper_bgcolor='rgba(0,0,0,0)', 
-            font_color='#ffffff', 
-            margin=dict(t=5, b=5, l=5, r=5), 
-            height=230, 
-            showlegend=True, 
-            legend=dict(orientation="h", y=-0.1)
-        )
-        st.plotly_chart(fig_pie, use_container_width=True)
-
-    # FILA 3: Tabla de Eficiencia Ordenada y Columna Derecha (Gráfica horizontal por Mes con todos los datos + Mapa)
-    col_inf1, col_inf2 = st.columns([1, 1.6])
-
-    with col_inf1:
-        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Eficiencia por Colonia y Polígono</p>", unsafe_allow_html=True)
-        if not df_eficiencia.empty:
-            st.dataframe(df_eficiencia, use_container_width=True, hide_index=True)
-        else:
-            st.info("No se encontraron datos para los polígonos seleccionados.")
-
-    with col_inf2:
-        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
-        
-        if col_fecha_ref and not df['fecha_dt'].isna().all():
-            df_mes_total = df.copy()
-            df_mes_total['periodo_mes'] = df_mes_total['fecha_dt'].dt.to_period('M')
-            df_mes = df_mes_total.groupby('periodo_mes', as_index=False).size()
-            df_mes.columns = ['Periodo', 'Cantidad']
-            
-            meses_es = {
-                1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 
-                5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto', 
-                9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
-            }
-            
-            df_mes['Mes'] = df_mes['Periodo'].apply(lambda x: f"{meses_es[x.month]} {x.year}")
-            df_mes = df_mes.sort_values(by='Periodo', ascending=True)
-        else:
-            df_mes = pd.DataFrame({'Mes': ['Sin datos'], 'Cantidad': [0]})
-
-        colores_barras = ['#1e3a8a', '#3b82f6'] * ((len(df_mes) // 2) + 1)
-
-        fig_mes_h = px.bar(
-            df_mes, 
-            x='Cantidad', 
-            y='Mes', 
-            orientation='h',
-            text='Cantidad',
-            color='Mes',
-            color_discrete_sequence=colores_barras
-        )
-        
-        fig_mes_h.update_traces(textposition='outside', textfont_size=11)
-        fig_mes_h.update_layout(
-            plot_bgcolor='rgba(0,0,0,0)', 
-            paper_bgcolor='rgba(0,0,0,0)', 
-            font_color='#ffffff', 
-            margin=dict(t=5, b=5, l=5, r=30), 
-            height=130, 
-            xaxis=dict(showgrid=False, showticklabels=False, title=None),
-            yaxis=dict(showgrid=False, title=None, tickfont=dict(size=11), categoryorder='array', categoryarray=df_mes['Mes'].tolist()),
-            showlegend=False
-        )
-        st.plotly_chart(fig_mes_h, use_container_width=True)
-
-        # Mapa de Instalaciones debajo de la gráfica mensual
-        st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones (Coordenadas Reales API)</p>", unsafe_allow_html=True)
-        
-        df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
-        if not df_mapa_valido.empty:
-            map_lat = df_mapa_valido['latitud'].mean()
-            map_lon = df_mapa_valido['longitud'].mean()
-        else:
-            map_lat, map_lon = lat_centro, lon_centro
-
-        mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12, tiles=None)
-        
-        carto_api_key = st.secrets.get("carto", {}).get("api_key", "")
-        tile_url = f"https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png"
-        if carto_api_key: tile_url += f"?api_key={carto_api_key}"
-            
-        folium.TileLayer(tiles=tile_url, attr='CARTO', name='CARTO Dark Matter', subdomains='abcd', max_zoom=20).add_to(mapa_miaa)
-
-        for _, row in df_mapa_valido.iterrows():
-            folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
-
-        st_folium(mapa_miaa, width=None, height=190, use_container_width=True)
