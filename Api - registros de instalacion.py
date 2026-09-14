@@ -129,6 +129,50 @@ def cargar_poligonos_db():
     except Exception as e:
         return pd.DataFrame()
 
+def agregar_capas_base(m):
+    api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
+    
+    # Capa Principal: Vista Nocturna
+    folium.TileLayer(
+        tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
+        name="Vista Nocturna",
+        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains="abcd",
+        max_zoom=20,
+        overlay=False,
+        control=True
+    ).add_to(m)
+
+    # OpenStreetMap
+    folium.TileLayer(
+        tiles='OpenStreetMap',
+        name='OpenStreetMap',
+        attr='&copy; OpenStreetMap contributors',
+        overlay=False,
+        control=True
+    ).add_to(m)
+
+    # Satélite
+    folium.TileLayer(
+        tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        name='Satélite',
+        attr='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+        overlay=False,
+        control=True
+    ).add_to(m)
+
+    # Satélite con Calles
+    folium.TileLayer(
+        tiles='https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+        name='Satélite con Calles',
+        attr='Esri &mdash; World Boundaries and Places',
+        overlay=True,
+        control=True
+    ).add_to(m)
+
+    Fullscreen(position="topright", title="Ampliar Mapa", cancel_title="Salir de pantalla completa").add_to(m)
+    folium.LayerControl(collapsed=False).add_to(m)
+
 if 'datos_instalaciones' not in st.session_state:
     res = cargar_datos_api()
     if res:
@@ -424,8 +468,8 @@ if 'datos_instalaciones' in st.session_state:
             else:
                 map_lat, map_lon = lat_centro, lon_centro
 
-            mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12)
-            Fullscreen(position="topright", title="Ampliar Mapa", cancel_title="Salir de pantalla completa").add_to(mapa_miaa)
+            mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12, tiles=None)
+            agregar_capas_base(mapa_miaa)
 
             for _, row in df_mapa_valido.iterrows():
                 folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
@@ -433,7 +477,7 @@ if 'datos_instalaciones' in st.session_state:
             st_folium(mapa_miaa, width=None, height=190, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
 
     # ---------------------------------------------------------
-    # PESTAÑA: MAPA POLÍGONOS (Selector a la Izquierda con todos seleccionados por defecto + Mapa + Tabla Abajo)
+    # PESTAÑA: MAPA POLÍGONOS
     # ---------------------------------------------------------
     with tab_poligonos:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Mapa Detallado de Polígonos de Instalación</p>", unsafe_allow_html=True)
@@ -441,12 +485,10 @@ if 'datos_instalaciones' in st.session_state:
         if not df_poligonos.empty:
             fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
             
-            # Inicializar todos los fids seleccionados por defecto a True si no existen en session_state
             for fid in fids_disponibles:
                 if f"sel_map_fid_{fid}" not in st.session_state:
                     st.session_state[f"sel_map_fid_{fid}"] = True
 
-            # Layout de 2 columnas: Izquierda (Selector de polígonos), Derecha (Mapa)
             col_sel_izq, col_map_der = st.columns([0.3, 0.7])
 
             with col_sel_izq:
@@ -487,16 +529,13 @@ if 'datos_instalaciones' in st.session_state:
                             continue
                         c_str = str(c_val).strip()
                         
-                        # Parser robusto adaptado para manejar WKT o múltiples puntos por celda si fuera necesario
                         for char in ['(', ')', '[', ']', '"', "'", 'POINT', 'POLYGON']:
                             c_str = c_str.replace(char, '')
                         c_str = c_str.strip()
                         
-                        # Manejar si vienen varios pares separados por comas en una misma fila (como ocurre en FID 913)
                         pares = [p.strip() for p in c_str.split(',') if p.strip()]
                         
                         if len(pares) >= 2 and len(pares) % 2 == 0:
-                            # Iterar de 2 en 2 si hay múltiples coordenadas en el mismo registro
                             for i in range(0, len(pares), 2):
                                 try:
                                     p1 = float(pares[i])
@@ -512,7 +551,6 @@ if 'datos_instalaciones' in st.session_state:
                                 except Exception:
                                     pass
                         else:
-                            # Formato estándar de un par por fila
                             if ',' in c_str:
                                 partes = c_str.split(',')
                             elif ' ' in c_str:
@@ -552,10 +590,9 @@ if 'datos_instalaciones' in st.session_state:
                 else:
                     m_p_lat, m_p_lon = lat_centro, lon_centro
 
-                mapa_poligonos_tab = folium.Map(location=[m_p_lat, m_p_lon], zoom_start=12)
-                Fullscreen(position="topright", title="Ampliar Mapa", cancel_title="Salir de pantalla completa").add_to(mapa_poligonos_tab)
+                mapa_poligonos_tab = folium.Map(location=[m_p_lat, m_p_lon], zoom_start=12, tiles=None)
+                agregar_capas_base(mapa_poligonos_tab)
 
-                # Renderizar únicamente los polígonos seleccionados en el selector de la izquierda
                 for fid, datos in poligonos_procesados.items():
                     if fid in fids_seleccionados_mapa:
                         folium.Polygon(
@@ -639,8 +676,8 @@ if 'datos_instalaciones' in st.session_state:
         m_lat = df_ext_map['latitud'].mean() if not df_ext_map.empty else lat_centro
         m_lon = df_ext_map['longitud'].mean() if not df_ext_map.empty else lon_centro
         
-        mapa_ext = folium.Map(location=[m_lat, m_lon], zoom_start=12)
-        Fullscreen(position="topright", title="Ampliar Mapa").add_to(mapa_ext)
+        mapa_ext = folium.Map(location=[m_lat, m_lon], zoom_start=12, tiles=None)
+        agregar_capas_base(mapa_ext)
 
         for _, row in df_ext_map.iterrows():
             folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#f59e0b', fill=True, fill_color='#f59e0b', fill_opacity=0.7).add_to(mapa_ext)
@@ -709,8 +746,8 @@ if 'datos_instalaciones' in st.session_state:
         mm_lat = df_miaa_map['latitud'].mean() if not df_miaa_map.empty else lat_centro
         mm_lon = df_miaa_map['longitud'].mean() if not df_miaa_map.empty else lon_centro
         
-        mapa_miaa_pers = folium.Map(location=[mm_lat, mm_lon], zoom_start=12)
-        Fullscreen(position="topright", title="Ampliar Mapa").add_to(mapa_miaa_pers)
+        mapa_miaa_pers = folium.Map(location=[mm_lat, mm_lon], zoom_start=12, tiles=None)
+        agregar_capas_base(mapa_miaa_pers)
 
         for _, row in df_miaa_map.iterrows():
             folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#10b981', fill=True, fill_color='#10b981', fill_opacity=0.7).add_to(mapa_miaa_pers)
