@@ -109,6 +109,26 @@ def cargar_metas_db():
     except Exception as e:
         return pd.DataFrame()
 
+@st.cache_data(ttl=600)
+def cargar_poligonos_db():
+    try:
+        engine = create_engine(st.secrets["mysql"]["connection_string"])
+        query = """
+            SELECT 
+                FID, 
+                Sector_comercial, 
+                Orden_instalacion, 
+                Poligono, 
+                Anillo, 
+                Vertice, 
+                X, 
+                Y 
+            FROM Diccionario_poligonos_instalacion
+        """
+        return pd.read_sql(query, con=engine)
+    except Exception as e:
+        return pd.DataFrame()
+
 if 'datos_instalaciones' not in st.session_state:
     res = cargar_datos_api()
     if res:
@@ -140,6 +160,7 @@ if 'datos_instalaciones' in st.session_state:
         df['longitud'] = np.nan
 
     df_metas = cargar_metas_db()
+    df_poligonos = cargar_poligonos_db()
     
     if not df_metas.empty:
         for col_num in ['Usuarios_Reales', 'Usuarios_con_medidor_inteligente', 'Usuarios_nueva_instalacion']:
@@ -272,13 +293,14 @@ if 'datos_instalaciones' in st.session_state:
         df_eficiencia = pd.DataFrame(columns=['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono'])
 
     # ---------------------------------------------------------
-    # PESTAÑAS PRINCIPALES SUPERIORES (4 Pestañas)
+    # PESTAÑAS PRINCIPALES SUPERIORES (5 Pestañas)
     # ---------------------------------------------------------
-    tab_principal, tab_externo, tab_miaa, tab_tabla = st.tabs([
+    tab_principal, tab_externo, tab_miaa, tab_tabla, tab_poligonos = st.tabs([
         "📊 Dashboard Principal", 
         "👷 Personal Externo", 
         "🏢 Personal MIAA", 
-        "📋 Tabla Base de Datos Completa"
+        "📋 Tabla Base de Datos Completa",
+        "🗺️ Polígonos"
     ])
 
     with tab_principal:
@@ -600,3 +622,68 @@ if 'datos_instalaciones' in st.session_state:
         df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
 
         st.dataframe(df_tabla_limpia, use_container_width=True)
+
+    # ---------------------------------------------------------
+    # PESTAÑA: POLÍGONOS (Diccionario_poligonos_instalacion)
+    # ---------------------------------------------------------
+    with tab_poligonos:
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Visualización de Polígonos de Instalación</p>", unsafe_allow_html=True)
+        
+        if not df_poligonos.empty:
+            total_pols = df_poligonos['Poligono'].nunique() if 'Poligono' in df_poligonos.columns else 0
+            total_verts = len(df_poligonos)
+
+            p_col1, p_col2 = st.columns(2)
+            with p_col1: st.metric("Total de Polígonos", f"{total_pols:,}")
+            with p_col2: st.metric("Vértices Totales", f"{total_verts:,}")
+
+            st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+            # Crear mapa de polígonos
+            map_lat_p, map_lon_p = lat_centro, lon_centro
+            if 'Y' in df_poligonos.columns and 'X' in df_poligonos.columns:
+                df_poligonos['Y'] = pd.to_numeric(df_poligonos['Y'], errors='coerce')
+                df_poligonos['X'] = pd.to_numeric(df_poligonos['X'], errors='coerce')
+                valid_coords = df_poligonos.dropna(subset=['Y', 'X'])
+                if not valid_coords.empty:
+                    map_lat_p = valid_coords['Y'].mean()
+                    map_lon_p = valid_coords['X'].mean()
+
+            mapa_poligonos = folium.Map(location=[map_lat_p, map_lon_p], zoom_start=12, tiles="CartoDB dark_matter")
+
+            if {'Poligono', 'Anillo', 'Vertice', 'X', 'Y'}.issubset(df_poligonos.columns):
+                # Ordenar por Polígono, Anillo y Orden de Vértice
+                df_sorted = df_poligonos.sort_values(by=['Poligono', 'Anillo', 'Vertice'])
+                
+                for poligono_id, grupo_pol in df_sorted.groupby('Poligono'):
+                    for anillo_id, grupo_anillo in grupo_pol.groupby('Anillo'):
+                        puntos = grupo_anillo[['Y', 'X']].dropna().values.tolist()
+                        if len(puntos) > 2:
+                            # Dibujar el polígono con estilo azul transparente
+                            folium.Polygon(
+                                locations=puntos,
+                                color='#3b82f6',
+                                weight=2,
+                                fill=True,
+                                fill_color='#3b82f6',
+                                fill_opacity=0.4,
+                                tooltip=f"Polígono: {poligono_id} | Anillo: {anillo_id}"
+                            ).add_to(mapa_poligonos)
+
+                            # Añadir un marcador de etiqueta en el centroide aproximado de cada polígono
+                            centro_lat = np.mean([p[0] for p in puntos])
+                            centro_lon = np.mean([p[1] for p in puntos])
+                            
+                            folium.Marker(
+                                location=[centro_lat, centro_lon],
+                                icon=folium.DivIcon(
+                                    html=f"""<div style="font-size: 10px; color: white; background: rgba(15, 23, 42, 0.75); padding: 2px 5px; border-radius: 4px; text-align: center; border: 1px solid #3b82f6;"><b>P-{poligono_id}</b></div>"""
+                                )
+                            ).add_to(mapa_poligonos)
+
+            st_folium(mapa_poligonos, width=None, height=500, use_container_width=True, key="mapa_diccionario_poligonos", returned_objects=[])
+            
+            with st.expander("Ver tabla de datos de polígonos"):
+                st.dataframe(df_poligonos, use_container_width=True)
+        else:
+            st.warning("No se encontraron registros en la tabla `Diccionario_poligonos_instalacion` o faltan las columnas requeridas.")
