@@ -132,7 +132,7 @@ def cargar_poligonos_db():
 def agregar_capas_base(m):
     api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
     
-    # Capa Principal: Vista Nocturna
+    # Capa Principal por defecto: Vista Nocturna (Agregada primero)
     folium.TileLayer(
         tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
         name="Vista Nocturna",
