@@ -10,18 +10,16 @@ from folium.plugins import Fullscreen
 from streamlit_folium import st_folium
 import numpy as np
 
-# ==========================================
-# SECCIÓN 1: CONFIGURACIÓN GENERAL DE LA PÁGINA
-# ==========================================
+# SECCIÓN 1: ---------------------------------------------------------------------- CONFIGURACIÓN GENERAL DE LA PÁGINA ---------------------------------------------------------------------------------------------
+
 st.set_page_config(
     page_title="Dashboard Instalación Medidores Inteligentes", 
     page_icon="https://www.miaa.mx/favicon.ico", 
     layout="wide"
 )
 
-# ==========================================
-# SECCIÓN 2: ESTILOS CSS PERSONALIZADOS
-# ==========================================
+# SECCIÓN 2: ------------------------------------------------------------------------- ESTILOS CSS PERSONALIZADOS ---------------------------------------------------------------------------------------------------
+
 custom_style = """
     <style>
     /* Importar FontAwesome para los iconos */
@@ -142,9 +140,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ==========================================
-# SECCIÓN 3: FUNCIONES DE CONEXIÓN Y DATOS (API Y BASE DE DATOS)
-# ==========================================
+# SECCIÓN 3: ------------------------------------------------------------ FUNCIONES DE CONEXIÓN Y DATOS (API Y BASE DE DATOS) ------------------------------------------------------------------------------------
+
 url_login = "https://prelec.miaa.mx/auth/v2/login"
 url_instalaciones = "https://prelec.miaa.mx/msvc-tecnica/medidores/instalaciones"
 
@@ -204,9 +201,9 @@ def cargar_poligonos_db():
         return pd.DataFrame()
 
 
-# ==========================================
-# SECCIÓN 4: FUNCIONES AUXILIARES PARA MAPAS
-# ==========================================
+
+# SECCIÓN 4: --------------------------------------------------------------------- FUNCIONES AUXILIARES PARA MAPAS -----------------------------------------------------------------------------------------------
+
 def agregar_capas_base(m):
     """Agrega las capas base de mapa (Carto Dark Matter con API Key) y controles de pantalla completa."""
     api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
@@ -223,9 +220,8 @@ def agregar_capas_base(m):
     Fullscreen(position="topright", title="Ampliar Mapa", cancel_title="Salir de pantalla completa").add_to(m)
 
 
-# ==========================================
-# SECCIÓN 5: PROCESAMIENTO Y LIMPIEZA INICIAL DE DATOS
-# ==========================================
+# SECCIÓN 5: ----------------------------------------------------------------------- PROCESAMIENTO Y LIMPIEZA INICIAL DE DATOS --------------------------------------------------------------------------------------
+
 if 'datos_instalaciones' not in st.session_state:
     res = cargar_datos_api()
     if res:
@@ -261,9 +257,8 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df_metas_valido = pd.DataFrame()
 
-    # ==========================================
-    # SECCIÓN 6: BARRA LATERAL (FILTROS Y CONTROLES)
-    # ==========================================
+    # SECCIÓN 6: ----------------------------------------------------------------- BARRA LATERAL (FILTROS Y CONTROLES) --------------------------------------------------------------------------------------------
+    
     logo_url = "https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg"
     st.sidebar.image(logo_url, use_container_width=True)
     st.sidebar.markdown("---")
@@ -383,9 +378,8 @@ if 'datos_instalaciones' in st.session_state:
         df_eficiencia = pd.DataFrame(columns=['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono'])
 
 
-    # ==========================================
-    # SECCIÓN 7: ESTRUCTURA DE PESTAÑAS PRINCIPALES
-    # ==========================================
+    # SECCIÓN 7: ----------------------------------------------------------------- ESTRUCTURA DE PESTAÑAS PRINCIPALES ------------------------------------------------------------------------------------------------
+    
     tab_principal, tab_poligonos, tab_externo, tab_miaa, tab_tabla = st.tabs([
         "📊 Dashboard Principal", 
         "🗺️ Mapa Polígonos",
@@ -394,9 +388,9 @@ if 'datos_instalaciones' in st.session_state:
         "📋 Tabla Base de Datos Completa"
     ])
 
-    # ------------------------------------------
-    # PESTAÑA 1: DASHBOARD PRINCIPAL
-    # ------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # SECCION - PESTAÑA 7.1: DASHBOARD PRINCIPAL
+    # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_principal:
         # Fila de Indicadores KPI Superiores
         k1, k2, k3, k4, k5, k6 = st.columns(6)
@@ -469,7 +463,7 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-        # Fila de Gráficos Principales (Instalaciones por Día y Distribución de Personal)
+        # SECCION 7.2: --------------------------------------------- Fila de Gráficos Principales (Instalaciones por Día y Distribución de Personal) ------------------------------------------------------------------
         col_g1, col_g2 = st.columns([1.8, 1.2])
 
         with col_g1:
@@ -514,7 +508,7 @@ if 'datos_instalaciones' in st.session_state:
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
-        # Fila Inferior: Tabla de Eficiencia, Mapa de Puntos y Gráfico Mensual Horizontal
+        # SECCION 7.3: ---------------------------------------------------  Fila Inferior: Tabla de Eficiencia, Mapa de Puntos y Gráfico Mensual Horizontal ---------------------------------------------------------------
         col_inf1, col_inf2 = st.columns([1, 1.6])
 
         with col_inf1:
@@ -591,9 +585,9 @@ if 'datos_instalaciones' in st.session_state:
                 )
                 st.plotly_chart(fig_mes_h, use_container_width=True)
 
-    # ------------------------------------------
-    # PESTAÑA 2: MAPA DE POLÍGONOS GEOGRÁFICOS
-    # ------------------------------------------
+    # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # SECCION 8: PESTAÑA MAPA DE POLÍGONOS GEOGRÁFICOS
+    # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_poligonos:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Mapa Detallado de Polígonos de Instalación</p>", unsafe_allow_html=True)
         
@@ -740,9 +734,9 @@ if 'datos_instalaciones' in st.session_state:
         else:
             st.warning("No se pudo cargar la tabla `Diccionario_poligonos_instalacion` desde la base de datos.")
 
-    # ------------------------------------------
-    # PESTAÑA 3: PERSONAL EXTERNO
-    # ------------------------------------------
+    # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # SECCION 9: PESTAÑA PERSONAL EXTERNO
+    # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_externo:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>👷 Resumen de Instalaciones - Personal Externo</p>", unsafe_allow_html=True)
         
@@ -837,9 +831,9 @@ if 'datos_instalaciones' in st.session_state:
             df_tabla_ext = df_tabla_ext.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
         st.dataframe(df_tabla_ext, use_container_width=True)
 
-    # ------------------------------------------
-    # PESTAÑA 4: PERSONAL MIAA
-    # ------------------------------------------
+    # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # SECCION 10: PESTAÑA PERSONAL MIAA
+    # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_miaa:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🏢 Resumen de Instalaciones - Personal MIAA</p>", unsafe_allow_html=True)
         
@@ -934,9 +928,9 @@ if 'datos_instalaciones' in st.session_state:
             df_tabla_miaa = df_tabla_miaa.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
         st.dataframe(df_tabla_miaa, use_container_width=True)
 
-    # ------------------------------------------
-    # PESTAÑA 5: TABLA BASE DE DATOS COMPLETA
-    # ------------------------------------------
+    # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # SECCION 11: PESTAÑA TABLA BASE DE DATOS COMPLETA
+    # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_tabla:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📋 Tabla Completa de Registros de la API</p>", unsafe_allow_html=True)
         
