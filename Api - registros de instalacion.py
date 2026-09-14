@@ -293,7 +293,7 @@ if 'datos_instalaciones' in st.session_state:
         fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160, showlegend=True, legend=dict(orientation="h", y=-0.1))
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # FILA 3: Tabla de Eficiencia Ordenada y Mapa
+    # FILA 3: Tabla de Eficiencia Ordenada y Columna Derecha (Gráfica por Mes + Mapa)
     col_inf1, col_inf2 = st.columns([1, 1.6])
 
     with col_inf1:
@@ -304,7 +304,28 @@ if 'datos_instalaciones' in st.session_state:
             st.info("No se encontraron datos para los polígonos seleccionados.")
 
     with col_inf2:
-        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones (Coordenadas Reales API)</p>", unsafe_allow_html=True)
+        # Gráfica de Instalaciones por Mes colocada arriba del mapa
+        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
+        if col_fecha_ref and not df_filtrado['fecha_dt'].isna().all():
+            df_filtrado['anio_mes'] = df_filtrado['fecha_dt'].dt.to_period('M').astype(str)
+            df_mes = df_filtrado.groupby('anio_mes', as_index=False).size()
+            fig_mes = px.bar(df_mes, x='anio_mes', y='size', color_discrete_sequence=['#3b82f6'])
+        else:
+            fig_mes = px.bar(pd.DataFrame({'Mes': ['Sin datos'], 'Valor': [0]}), x='Mes', y='Valor')
+        
+        fig_mes.update_layout(
+            plot_bgcolor='rgba(0,0,0,0)', 
+            paper_bgcolor='rgba(0,0,0,0)', 
+            font_color='#ffffff', 
+            margin=dict(t=5, b=5, l=5, r=5), 
+            height=130, 
+            xaxis_title=None, 
+            yaxis_title=None
+        )
+        st.plotly_chart(fig_mes, use_container_width=True)
+
+        # Mapa de Instalaciones debajo de la gráfica mensual
+        st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones (Coordenadas Reales API)</p>", unsafe_allow_html=True)
         
         df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
         if not df_mapa_valido.empty:
@@ -324,7 +345,7 @@ if 'datos_instalaciones' in st.session_state:
         for _, row in df_mapa_valido.iterrows():
             folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
 
-        st_folium(mapa_miaa, width=None, height=230, use_container_width=True)
+        st_folium(mapa_miaa, width=None, height=190, use_container_width=True)
 
     # FILA 4: Tabla limpia de la API
     st.markdown("<p style='font-size:12px; margin-top:10px; margin-bottom:0; font-weight:bold;'>Registros completos de la API (Tabla filtrada y formateada)</p>", unsafe_allow_html=True)
@@ -341,6 +362,6 @@ if 'datos_instalaciones' in st.session_state:
     if 'horaInicio' in df_tabla_limpia.columns:
         df_tabla_limpia['horaInicio'] = pd.to_datetime(df_tabla_limpia['horaInicio'], errors='coerce').dt.strftime('%H:%M')
 
-    df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia'], errors='ignore')
+    df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes'], errors='ignore')
 
     st.dataframe(df_tabla_limpia, use_container_width=True)
