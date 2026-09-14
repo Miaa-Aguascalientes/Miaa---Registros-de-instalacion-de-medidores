@@ -136,6 +136,10 @@ def cargar_poligonos_geojson_db():
             for anillo_val, ring_group in group.groupby('Anillo' if 'Anillo' in group.columns else 0):
                 ring_sorted = ring_group.sort_values('Vertice')
                 coords = ring_sorted[['X', 'Y']].values.tolist()
+                
+                if coords and coords[0] != coords[-1]:
+                    coords.append(coords[0])
+                    
                 if coords:
                     rings_dict[anillo_val] = coords
             
@@ -450,10 +454,8 @@ if 'datos_instalaciones' in st.session_state:
             else:
                 map_lat, map_lon = lat_centro, lon_centro
 
-            # Crear mapa base
             mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12, tiles=None)
 
-            # Capa de Fondo (Vista Nocturna) provista
             api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
             
             folium.TileLayer(
@@ -468,7 +470,6 @@ if 'datos_instalaciones' in st.session_state:
 
             Fullscreen().add_to(mapa_miaa)
 
-            # --- CARGA Y DIBUJADO DE POLÍGONOS DESDE LA BD (Diccionario_poligonos_instalacion) ---
             try:
                 archivo_geojson = cargar_poligonos_geojson_db()
 
@@ -488,10 +489,10 @@ if 'datos_instalaciones' in st.session_state:
                     geojson_a_mostrar,
                     name="Polígonos de Instalación",
                     style_function=lambda feature: {
-                        'fillColor': '#f59e0b',
-                        'color': '#d97706',
-                        'weight': 2,
-                        'fillOpacity': 0.25
+                        'fillColor': '#ff7f00',
+                        'color': '#ff7f00',
+                        'weight': 2.5,
+                        'fillOpacity': 0.3
                     },
                     tooltip=folium.GeoJsonTooltip(
                         fields=[k for k in ['Poligono_de_instalacion', 'Sector_comercial'] if k in (archivo_geojson.get("features", [{}])[0].get("properties", {}))],
@@ -502,7 +503,6 @@ if 'datos_instalaciones' in st.session_state:
             except Exception as e:
                 pass
 
-            # Dibujar los marcadores de las instalaciones de la API
             for _, row in df_mapa_valido.iterrows():
                 folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
 
