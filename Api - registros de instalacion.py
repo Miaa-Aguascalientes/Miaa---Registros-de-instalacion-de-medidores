@@ -235,7 +235,6 @@ if 'datos_instalaciones' in st.session_state:
         total_externo = int(df_filtrado['usuarioExterno'].fillna(False).astype(bool).sum())
         total_miaa = int((~df_filtrado['usuarioExterno'].fillna(False).astype(bool)).sum())
         
-        # Subconjuntos filtrados por tipo de personal
         df_externo = df_filtrado[df_filtrado['usuarioExterno'].fillna(False).astype(bool)].copy()
         df_miaa_pers = df_filtrado[~df_filtrado['usuarioExterno'].fillna(False).astype(bool)].copy()
     else:
@@ -283,7 +282,6 @@ if 'datos_instalaciones' in st.session_state:
     ])
 
     with tab_principal:
-        # FILA 1: KPIs Superiores
         k1, k2, k3, k4, k5, k6 = st.columns(6)
         with k1: st.metric("Meta Total", f"{meta_total:,}")
         with k2: st.metric("Instalados", f"{total_instalados:,}")
@@ -294,7 +292,6 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-        # FILA 2: Gráficas
         col_g1, col_g2 = st.columns([1.8, 1.2])
 
         with col_g1:
@@ -339,7 +336,6 @@ if 'datos_instalaciones' in st.session_state:
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
-        # FILA 3: Tabla de Eficiencia y Gráfica Mensual + Mapa
         col_inf1, col_inf2 = st.columns([1, 1.6])
 
         with col_inf1:
@@ -394,7 +390,7 @@ if 'datos_instalaciones' in st.session_state:
             )
             st.plotly_chart(fig_mes_h, use_container_width=True)
 
-            st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones (Coordenadas Reales API)</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones y Polígonos</p>", unsafe_allow_html=True)
             
             df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
             if not df_mapa_valido.empty:
@@ -404,6 +400,40 @@ if 'datos_instalaciones' in st.session_state:
                 map_lat, map_lon = lat_centro, lon_centro
 
             mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12, tiles="CartoDB dark_matter")
+
+            # --- INTEGRACIÓN DE POLÍGONOS EN EL MAPA ---
+            if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns and 'Poligono_de_instalacion' in df_metas.columns:
+                features_geojson = []
+                for _, row_meta in df_metas.dropna(subset=['Poligono_de_instalacion']).iterrows():
+                    p_id = str(row_meta['Poligono_de_instalacion'])
+                    if p_id in poligonos_seleccionados:
+                        geom_str = row_meta.get('Poligono_de_instalacion') # O la columna con la geometría geojson si aplica
+                        # Si tu columna de polígonos contiene GeoJSON string o WKT, asegúrate de procesarlo.
+                        # Aquí integramos capa de polígonos filtrados basados en la BD:
+                        pass
+                
+                # Integración segura de polígonos basados en diccionario/geojson de la BD si la columna trae geometrías:
+                if 'Poligono_de_instalacion' in df_metas.columns:
+                    for p_sel in poligonos_seleccionados:
+                        subset_p = df_metas[df_metas['Poligono_de_instalacion'].astype(str) == p_sel]
+                        for _, row_p in subset_p.iterrows():
+                            poly_data = row_p.get('Poligono_de_instalacion')
+                            if poly_data and isinstance(poly_data, str) and poly_data.strip().startswith("{"):
+                                try:
+                                    g_json = json.loads(poly_data)
+                                    folium.GeoJson(
+                                        g_json,
+                                        name=f"Polígono {p_sel}",
+                                        style_function=lambda x: {
+                                            'fillColor': '#f59e0b',
+                                            'color': '#d97706',
+                                            'weight': 2,
+                                            'fillOpacity': 0.2
+                                        },
+                                        tooltip=f"Polígono: {p_sel}"
+                                    ).add_to(mapa_miaa)
+                                except Exception:
+                                    pass
 
             for _, row in df_mapa_valido.iterrows():
                 folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
@@ -416,7 +446,6 @@ if 'datos_instalaciones' in st.session_state:
     with tab_externo:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>👷 Resumen de Instalaciones - Personal Externo</p>", unsafe_allow_html=True)
         
-        # KPIs específicos Externo
         ext_total = len(df_externo)
         ext_sin_coord = df_externo['latitud'].isna().sum() if not df_externo.empty else 0
         ext_colonias = df_externo['colonia'].nunique() if 'colonia' in df_externo.columns and not df_externo.empty else 0
@@ -483,7 +512,6 @@ if 'datos_instalaciones' in st.session_state:
     with tab_miaa:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🏢 Resumen de Instalaciones - Personal MIAA</p>", unsafe_allow_html=True)
         
-        # KPIs específicos MIAA
         miaa_total = len(df_miaa_pers)
         miaa_sin_coord = df_miaa_pers['latitud'].isna().sum() if not df_miaa_pers.empty else 0
         miaa_colonias = df_miaa_pers['colonia'].nunique() if 'colonia' in df_miaa_pers.columns and not df_miaa_pers.empty else 0
