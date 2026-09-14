@@ -259,6 +259,24 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df_eficiencia = pd.DataFrame(columns=['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono'])
 
+    # PESTAÑA / EXPANDER SUPERIOR (Justo antes de los KPIs)
+    with st.expander("📋 Ver Registros completos de la API (Tabla filtrada y formateada)"):
+        df_tabla_limpia = df_filtrado.copy()
+        
+        terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
+        columnas_a_excluir = [c for c in df_tabla_limpia.columns if any(term in c.lower() for term in terminos_excluidos)]
+        df_tabla_limpia = df_tabla_limpia.drop(columns=columnas_a_excluir, errors='ignore')
+        
+        if 'fechaInstalacion' in df_tabla_limpia.columns:
+            df_tabla_limpia['fechaInstalacion'] = pd.to_datetime(df_tabla_limpia['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
+
+        if 'horaInicio' in df_tabla_limpia.columns:
+            df_tabla_limpia['horaInicio'] = pd.to_datetime(df_tabla_limpia['horaInicio'], errors='coerce').dt.strftime('%H:%M')
+
+        df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
+
+        st.dataframe(df_tabla_limpia, use_container_width=True)
+
     # FILA 1: KPIs Superiores Reales
     k1, k2, k3, k4, k5, k6 = st.columns(6)
     with k1: st.metric("Meta Total", f"{meta_total:,}")
@@ -392,22 +410,3 @@ if 'datos_instalaciones' in st.session_state:
             folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
 
         st_folium(mapa_miaa, width=None, height=190, use_container_width=True)
-
-    # FILA 4: Tabla limpia de la API
-    st.markdown("<p style='font-size:12px; margin-top:10px; margin-bottom:0; font-weight:bold;'>Registros completos de la API (Tabla filtrada y formateada)</p>", unsafe_allow_html=True)
-    
-    df_tabla_limpia = df_filtrado.copy()
-    
-    terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
-    columnas_a_excluir = [c for c in df_tabla_limpia.columns if any(term in c.lower() for term in terminos_excluidos)]
-    df_tabla_limpia = df_tabla_limpia.drop(columns=columnas_a_excluir, errors='ignore')
-    
-    if 'fechaInstalacion' in df_tabla_limpia.columns:
-        df_tabla_limpia['fechaInstalacion'] = pd.to_datetime(df_tabla_limpia['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
-
-    if 'horaInicio' in df_tabla_limpia.columns:
-        df_tabla_limpia['horaInicio'] = pd.to_datetime(df_tabla_limpia['horaInicio'], errors='coerce').dt.strftime('%H:%M')
-
-    df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
-
-    st.dataframe(df_tabla_limpia, use_container_width=True)
