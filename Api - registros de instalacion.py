@@ -113,6 +113,9 @@ def cargar_metas_db():
 @st.cache_data(ttl=600)
 def cargar_poligonos_geojson_db():
     try:
+        import geopandas as gpd
+        from shapely.geometry import Polygon
+        
         engine = create_engine(st.secrets["mysql"]["connection_string"])
         query = """
             SELECT FID, Sector_comercial, Orden_instalacion, Poligono, Anillo, Vertice, X, Y 
@@ -128,7 +131,8 @@ def cargar_poligonos_geojson_db():
         df_poly['Anillo'] = pd.to_numeric(df_poly['Anillo'], errors='coerce')
         df_poly = df_poly.dropna(subset=['X', 'Y', 'Poligono'])
         
-        features = []
+        # Agrupar vértices para formar los polígonos en UTM (Zona 13N típica de Aguascalientes, EPSG:32613)
+        polygons_list = []
         for poligono_val, group in df_poly.groupby('Poligono'):
             sector_val = group['Sector_comercial'].iloc[0] if 'Sector_comercial' in group.columns else ''
             
@@ -136,31 +140,30 @@ def cargar_poligonos_geojson_db():
             for anillo_val, ring_group in group.groupby('Anillo' if 'Anillo' in group.columns else 0):
                 ring_sorted = ring_group.sort_values('Vertice')
                 coords = ring_sorted[['X', 'Y']].values.tolist()
-                
-                if coords and coords[0] != coords[-1]:
-                    coords.append(coords[0])
-                    
-                if coords:
+                if len(coords) >= 3:
+                    if coords[0] != coords[-1]:
+                        coords.append(coords[0])
                     rings_dict[anillo_val] = coords
             
-            polygon_coordinates = list(rings_dict.values())
-            if not polygon_coordinates:
-                continue
-                
-            feature = {
-                "type": "Feature",
-                "properties": {
-                    "Poligono_de_instalacion": str(poligono_val),
-                    "Sector_comercial": str(sector_val)
-                },
-                "geometry": {
-                    "type": "Polygon",
-                    "coordinates": polygon_coordinates
-                }
-            }
-            features.append(feature)
+            exterior = rings_dict.get(0) or list(rings_dict.values())[0] if rings_dict else None
+            interiors = [r for k, r in rings_dict.items() if k != 0] if len(rings_dict) > 1 else []
             
-        return {"type": "FeatureCollection", "features": features}
+            if exterior and len(exterior) >= 4:
+                poly_geom = Polygon(shell=exterior, holes=interiors if interiors else None)
+                polygons_list.append({
+                    'Poligono_de_instalacion': str(poligono_val),
+                    'Sector_comercial': str(sector_val),
+                    'geometry': poly_geom
+                })
+                
+        if not polygons_list:
+            return {"type": "FeatureCollection", "features": []}
+            
+        gdf = gpd.GeoDataFrame(polygons_list, crs="EPSG:32613")
+        # Convertir de UTM Zona 13N a WGS84 (Lat/Lon)
+        gdf = gdf.to_crs("EPSG:4326")
+        
+        return json.loads(gdf.to_json())
     except Exception as e:
         return {"type": "FeatureCollection", "features": []}
 
