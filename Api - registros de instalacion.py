@@ -146,7 +146,9 @@ if 'datos_instalaciones' in st.session_state:
             if col_num in df_metas.columns:
                 df_metas[col_num] = pd.to_numeric(df_metas[col_num].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
 
-        df_metas = df_metas[df_metas['Usuarios_con_medidor_inteligente'] > 0].copy()
+        df_metas_valido = df_metas[df_metas['Usuarios_con_medidor_inteligente'] > 0].copy()
+    else:
+        df_metas_valido = pd.DataFrame()
 
     # ---------------------------------------------------------
     # BARRA LATERAL
@@ -188,8 +190,8 @@ if 'datos_instalaciones' in st.session_state:
     st.sidebar.subheader("Polígonos")
     
     lista_poligonos = []
-    if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns:
-        lista_poligonos = sorted([str(p) for p in df_metas['Poligono_de_instalacion'].dropna().unique()], key=lambda x: int(x) if x.isdigit() else x)
+    if not df_metas_valido.empty and 'Poligono_de_instalacion' in df_metas_valido.columns:
+        lista_poligonos = sorted([str(p) for p in df_metas_valido['Poligono_de_instalacion'].dropna().unique()], key=lambda x: int(x) if x.isdigit() else x)
 
     col_c1, col_c2 = st.sidebar.columns(2)
     seleccionar_todos = col_c1.button("Marcar todos")
@@ -210,10 +212,10 @@ if 'datos_instalaciones' in st.session_state:
             if estado:
                 poligonos_seleccionados.append(pol)
 
-    if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns:
-        df_metas_filtrado = df_metas[df_metas['Poligono_de_instalacion'].astype(str).isin(poligonos_seleccionados)].copy()
+    if not df_metas_valido.empty and 'Poligono_de_instalacion' in df_metas_valido.columns:
+        df_metas_filtrado = df_metas_valido[df_metas_valido['Poligono_de_instalacion'].astype(str).isin(poligonos_seleccionados)].copy()
     else:
-        df_metas_filtrado = df_metas.copy()
+        df_metas_filtrado = df_metas_valido.copy()
 
     if col_fecha_ref and not df['fecha_dt'].isna().all():
         mask = (df['fecha_dt'].dt.date >= fecha_inicio) & (df['fecha_dt'].dt.date <= fecha_fin)
@@ -221,7 +223,8 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df_filtrado = df.copy()
 
-    meta_total = int(df_metas_filtrado['Usuarios_nueva_instalacion'].sum()) if not df_metas_filtrado.empty and 'Usuarios_nueva_instalacion' in df_metas_filtrado.columns else len(df_filtrado)
+    # Meta Total global absoluta de la tabla Diccionario_instalacion_medidores (~60,000 medidores)
+    meta_total = int(df_metas['Usuarios_nueva_instalacion'].sum()) if not df_metas.empty and 'Usuarios_nueva_instalacion' in df_metas.columns else len(df_filtrado)
     total_instalados = len(df_filtrado)
     porc_avance = round((total_instalados / meta_total) * 100, 2) if meta_total > 0 else 0.0
 
@@ -304,22 +307,17 @@ if 'datos_instalaciones' in st.session_state:
         st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
         
         if col_fecha_ref and not df_filtrado['fecha_dt'].isna().all():
-            # Creamos una columna temporal de periodo para ordenar correctamente de forma cronológica
             df_filtrado['periodo_mes'] = df_filtrado['fecha_dt'].dt.to_period('M')
             df_mes = df_filtrado.groupby('periodo_mes', as_index=False).size()
             df_mes.columns = ['Periodo', 'Cantidad']
             
-            # Diccionario para traducir los meses al español
             meses_es = {
                 1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 
                 5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto', 
                 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
             }
             
-            # Formateamos como "Agosto 2026", "Septiembre 2026", etc.
             df_mes['Mes'] = df_mes['Periodo'].apply(lambda x: f"{meses_es[x.month]} {x.year}")
-            
-            # Ordenamos cronológicamente ascendente para que al graficar en horizontal queden los meses antiguos abajo y los recientes arriba
             df_mes = df_mes.sort_values(by='Periodo', ascending=True)
         else:
             df_mes = pd.DataFrame({'Mes': ['Sin datos'], 'Cantidad': [0]})
