@@ -49,7 +49,7 @@ custom_style = """
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* Tarjetas Compactas: Icono a la izquierda y textos a la derecha */
+    /* Tarjetas Compactas: Icono a la izquierda y textos centrados a la derecha */
     .metric-card {
         background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
         border: 1px solid rgba(255, 255, 255, 0.08);
@@ -57,7 +57,8 @@ custom_style = """
         border-radius: 8px;
         display: flex;
         align-items: center;
-        gap: 12px;
+        justify-content: center;
+        gap: 15px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
         transition: all 0.3s ease;
         position: relative;
@@ -87,18 +88,21 @@ custom_style = """
     }
 
     .metric-icon-box {
-        font-size: 20px;
+        font-size: 22px;
         display: flex;
         align-items: center;
         justify-content: center;
-        min-width: 28px;
+        min-width: 30px;
     }
 
     .metric-content {
         display: flex;
         flex-direction: column;
+        align-items: center;
         justify-content: center;
+        text-align: center;
         overflow: hidden;
+        width: 100%;
     }
 
     .metric-title {
@@ -374,7 +378,7 @@ if 'datos_instalaciones' in st.session_state:
     ])
 
     with tab_principal:
-        # FILA 1: KPIs Superiores Compactos (Icono a la izquierda, Texto y Valor a la derecha)
+        # FILA 1: KPIs Superiores (Icono a la izquierda y textos perfectamente centrados a la derecha)
         k1, k2, k3, k4, k5, k6 = st.columns(6)
         
         with k1:
@@ -726,9 +730,36 @@ if 'datos_instalaciones' in st.session_state:
         ext_colonias = df_externo['colonia'].nunique() if 'colonia' in df_externo.columns and not df_externo.empty else 0
 
         e_k1, e_k2, e_k3 = st.columns(3)
-        with e_k1: st.metric("Total Instalados (Externo)", f"{ext_total:,}")
-        with e_k2: st.metric("Colonias Atendidas", f"{ext_colonias:,}")
-        with e_k3: st.metric("Sin Coordenadas", f"{ext_sin_coord:,}")
+        with e_k1:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon-box" style="color: #f59e0b;"><i class="fa-solid fa-hard-hat"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Total Instalados (Externo)</div>
+                        <div class="metric-value">{ext_total:,}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+        with e_k2:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-map-location-dot"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Colonias Atendidas</div>
+                        <div class="metric-value">{ext_colonias:,}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+        with e_k3:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon-box" style="color: #94a3b8;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Sin Coordenadas</div>
+                        <div class="metric-value">{ext_sin_coord:,}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
@@ -796,9 +827,36 @@ if 'datos_instalaciones' in st.session_state:
         miaa_colonias = df_miaa_pers['colonia'].nunique() if 'colonia' in df_miaa_pers.columns and not df_miaa_pers.empty else 0
 
         m_k1, m_k2, m_k3 = st.columns(3)
-        with m_k1: st.metric("Total Instalados (MIAA)", f"{miaa_total:,}")
-        with m_k2: st.metric("Colonias Atendidas", f"{miaa_colonias:,}")
-        with m_k3: st.metric("Sin Coordenadas", f"{miaa_sin_coord:,}")
+        with m_k1:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon-box" style="color: #10b981;"><i class="fa-solid fa-building-user"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Total Instalados (MIAA)</div>
+                        <div class="metric-value">{miaa_total:,}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+        with m_k2:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-map-location-dot"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Colonias Atendidas</div>
+                        <div class="metric-value">{miaa_colonias:,}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+        with m_k3:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon-box" style="color: #94a3b8;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Sin Coordenadas</div>
+                        <div class="metric-value">{miaa_sin_coord:,}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
@@ -866,9 +924,25 @@ if 'datos_instalaciones' in st.session_state:
 
         t_col1, t_col2 = st.columns(2)
         with t_col1:
-            st.metric("Total de Registros", f"{total_registros_tabla:,}")
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-table-list"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Total de Registros</div>
+                        <div class="metric-value">{total_registros_tabla:,}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
         with t_col2:
-            st.metric("Colonias Registradas", f"{total_colonias_tabla:,}")
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon-box" style="color: #4ade80;"><i class="fa-solid fa-map-pin"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Colonias Registradas</div>
+                        <div class="metric-value">{total_colonias_tabla:,}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
