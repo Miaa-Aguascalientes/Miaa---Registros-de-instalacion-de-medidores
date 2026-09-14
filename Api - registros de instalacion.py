@@ -235,7 +235,6 @@ if 'datos_instalaciones' in st.session_state:
         total_externo = int(df_filtrado['usuarioExterno'].fillna(False).astype(bool).sum())
         total_miaa = int((~df_filtrado['usuarioExterno'].fillna(False).astype(bool)).sum())
         
-        # Subconjuntos filtrados por tipo de personal
         df_externo = df_filtrado[df_filtrado['usuarioExterno'].fillna(False).astype(bool)].copy()
         df_miaa_pers = df_filtrado[~df_filtrado['usuarioExterno'].fillna(False).astype(bool)].copy()
     else:
@@ -283,7 +282,6 @@ if 'datos_instalaciones' in st.session_state:
     ])
 
     with tab_principal:
-        # FILA 1: KPIs Superiores
         k1, k2, k3, k4, k5, k6 = st.columns(6)
         with k1: st.metric("Meta Total", f"{meta_total:,}")
         with k2: st.metric("Instalados", f"{total_instalados:,}")
@@ -294,7 +292,6 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-        # FILA 2: Gráficas
         col_g1, col_g2 = st.columns([1.8, 1.2])
 
         with col_g1:
@@ -339,7 +336,6 @@ if 'datos_instalaciones' in st.session_state:
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
-        # FILA 3: Tabla de Eficiencia y Gráfica Mensual + Mapa
         col_inf1, col_inf2 = st.columns([1, 1.6])
 
         with col_inf1:
@@ -416,7 +412,6 @@ if 'datos_instalaciones' in st.session_state:
     with tab_externo:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>👷 Resumen de Instalaciones - Personal Externo</p>", unsafe_allow_html=True)
         
-        # KPIs específicos Externo
         ext_total = len(df_externo)
         ext_sin_coord = df_externo['latitud'].isna().sum() if not df_externo.empty else 0
         ext_colonias = df_externo['colonia'].nunique() if 'colonia' in df_externo.columns and not df_externo.empty else 0
@@ -483,7 +478,6 @@ if 'datos_instalaciones' in st.session_state:
     with tab_miaa:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🏢 Resumen de Instalaciones - Personal MIAA</p>", unsafe_allow_html=True)
         
-        # KPIs específicos MIAA
         miaa_total = len(df_miaa_pers)
         miaa_sin_coord = df_miaa_pers['latitud'].isna().sum() if not df_miaa_pers.empty else 0
         miaa_colonias = df_miaa_pers['colonia'].nunique() if 'colonia' in df_miaa_pers.columns and not df_miaa_pers.empty else 0
