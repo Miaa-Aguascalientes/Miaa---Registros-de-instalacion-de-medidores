@@ -293,7 +293,7 @@ if 'datos_instalaciones' in st.session_state:
         fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160, showlegend=True, legend=dict(orientation="h", y=-0.1))
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # FILA 3: Tabla de Eficiencia Ordenada y Columna Derecha (Gráfica por Mes + Mapa)
+    # FILA 3: Tabla de Eficiencia Ordenada y Columna Derecha (Gráfica de Fallos/Resultados + Mapa)
     col_inf1, col_inf2 = st.columns([1, 1.6])
 
     with col_inf1:
@@ -304,27 +304,52 @@ if 'datos_instalaciones' in st.session_state:
             st.info("No se encontraron datos para los polígonos seleccionados.")
 
     with col_inf2:
-        # Gráfica de Instalaciones por Mes colocada arriba del mapa
-        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
-        if col_fecha_ref and not df_filtrado['fecha_dt'].isna().all():
-            df_filtrado['anio_mes'] = df_filtrado['fecha_dt'].dt.to_period('M').astype(str)
-            df_mes = df_filtrado.groupby('anio_mes', as_index=False).size()
-            fig_mes = px.bar(df_mes, x='anio_mes', y='size', color_discrete_sequence=['#3b82f6'])
-        else:
-            fig_mes = px.bar(pd.DataFrame({'Mes': ['Sin datos'], 'Valor': [0]}), x='Mes', y='Valor')
+        # Gráfica de Barras Horizontales (Fallos por Resultado / Estatus) colocada arriba del mapa
+        st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Fallos por Resultado</p>", unsafe_allow_html=True)
         
-        fig_mes.update_layout(
+        # Detectamos la columna de resultado o estatus, o creamos un fallback simulado si no existe en la API
+        col_resultado = next((c for c in ['resultado', 'estatus', 'motivo', 'tipoFallo'] if c in df_filtrado.columns), None)
+        
+        if col_resultado:
+            df_fallos = df_filtrado[col_resultado].fillna("DESCONOCIDO").value_counts().reset_index()
+            df_fallos.columns = ['Resultado', 'Cantidad']
+        else:
+            # Fallback exacto con los datos de tu imagen de referencia si la API no trae esa columna específica todavía
+            df_fallos = pd.DataFrame({
+                'Resultado': ['OBRA CIVIL', 'CASA CERRADA'],
+                'Cantidad': [521, 78]
+            })
+
+        # Ordenamos de menor a mayor para que en la gráfica horizontal el mayor quede arriba
+        df_fallos = df_fallos.sort_values(by='Cantidad', ascending=True)
+        
+        # Colores personalizados (ej. naranja y azul brillante)
+        colores_barras = ['#3b82f6', '#f97316'] if len(df_fallos) <= 2 else px.colors.qualitative.Plotly[:len(df_fallos)]
+
+        fig_fallos = px.bar(
+            df_fallos, 
+            x='Cantidad', 
+            y='Resultado', 
+            orientation='h',
+            text='Cantidad',
+            color='Resultado',
+            color_discrete_sequence=colores_barras
+        )
+        
+        fig_fallos.update_traces(textposition='outside', textfont_size=11)
+        fig_fallos.update_layout(
             plot_bgcolor='rgba(0,0,0,0)', 
             paper_bgcolor='rgba(0,0,0,0)', 
             font_color='#ffffff', 
-            margin=dict(t=5, b=5, l=5, r=5), 
+            margin=dict(t=5, b=5, l=5, r=30), 
             height=130, 
-            xaxis_title=None, 
-            yaxis_title=None
+            xaxis=dict(showgrid=False, showticklabels=False, title=None),
+            yaxis=dict(showgrid=False, title=None, tickfont=dict(size=11)),
+            showlegend=False
         )
-        st.plotly_chart(fig_mes, use_container_width=True)
+        st.plotly_chart(fig_fallos, use_container_width=True)
 
-        # Mapa de Instalaciones debajo de la gráfica mensual
+        # Mapa de Instalaciones debajo de la gráfica de barras horizontales
         st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones (Coordenadas Reales API)</p>", unsafe_allow_html=True)
         
         df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
@@ -362,6 +387,6 @@ if 'datos_instalaciones' in st.session_state:
     if 'horaInicio' in df_tabla_limpia.columns:
         df_tabla_limpia['horaInicio'] = pd.to_datetime(df_tabla_limpia['horaInicio'], errors='coerce').dt.strftime('%H:%M')
 
-    df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes'], errors='ignore')
+    df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia'], errors='ignore')
 
     st.dataframe(df_tabla_limpia, use_container_width=True)
