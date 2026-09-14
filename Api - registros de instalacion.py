@@ -12,7 +12,7 @@ import numpy as np
 from pathlib import Path
 from pyproj import Transformer
 from shapely import wkt
--shapely_ok = True
+shapely_ok = True
 
 st.set_page_config(
     page_title="Dashboard Instalación Medidores Inteligentes", 
