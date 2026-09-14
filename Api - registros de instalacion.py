@@ -231,13 +231,18 @@ if 'datos_instalaciones' in st.session_state:
     total_instalados = len(df_filtrado)
     porc_avance = round((total_instalados / meta_total) * 100, 2) if meta_total > 0 else 0.0
 
-    # Cálculos para Externo y MIAA según el estado booleano/falsy de usuarioExterno
     if 'usuarioExterno' in df_filtrado.columns:
         total_externo = int(df_filtrado['usuarioExterno'].fillna(False).astype(bool).sum())
         total_miaa = int((~df_filtrado['usuarioExterno'].fillna(False).astype(bool)).sum())
+        
+        # Subconjuntos filtrados por tipo de personal
+        df_externo = df_filtrado[df_filtrado['usuarioExterno'].fillna(False).astype(bool)].copy()
+        df_miaa_pers = df_filtrado[~df_filtrado['usuarioExterno'].fillna(False).astype(bool)].copy()
     else:
         total_externo = 0
         total_miaa = len(df_filtrado)
+        df_externo = pd.DataFrame(columns=df_filtrado.columns)
+        df_miaa_pers = df_filtrado.copy()
 
     if not df_metas_filtrado.empty:
         df_tabla_eficiencia = df_metas_filtrado.copy()
@@ -268,12 +273,17 @@ if 'datos_instalaciones' in st.session_state:
         df_eficiencia = pd.DataFrame(columns=['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono'])
 
     # ---------------------------------------------------------
-    # PESTAÑAS PRINCIPALES SUPERIORES
+    # PESTAÑAS PRINCIPALES SUPERIORES (4 Pestañas)
     # ---------------------------------------------------------
-    tab_principal, tab_tabla = st.tabs(["📊 Dashboard Principal", "📋 Tabla Base de Datos Completa"])
+    tab_principal, tab_externo, tab_miaa, tab_tabla = st.tabs([
+        "📊 Dashboard Principal", 
+        "👷 Personal Externo", 
+        "🏢 Personal MIAA", 
+        "📋 Tabla Base de Datos Completa"
+    ])
 
     with tab_principal:
-        # FILA 1: KPIs Superiores (Actualizados con Externo y MIAA)
+        # FILA 1: KPIs Superiores
         k1, k2, k3, k4, k5, k6 = st.columns(6)
         with k1: st.metric("Meta Total", f"{meta_total:,}")
         with k2: st.metric("Instalados", f"{total_instalados:,}")
@@ -284,7 +294,7 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-        # FILA 2: Gráficas (Instalaciones por Día y Distribución por Usuario Externo con altura de 230 y eje Y a 500)
+        # FILA 2: Gráficas
         col_g1, col_g2 = st.columns([1.8, 1.2])
 
         with col_g1:
@@ -329,7 +339,7 @@ if 'datos_instalaciones' in st.session_state:
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
-        # FILA 3: Tabla de Eficiencia Ordenada y Columna Derecha (Gráfica horizontal por Mes con todos los datos + Mapa)
+        # FILA 3: Tabla de Eficiencia y Gráfica Mensual + Mapa
         col_inf1, col_inf2 = st.columns([1, 1.6])
 
         with col_inf1:
@@ -384,7 +394,6 @@ if 'datos_instalaciones' in st.session_state:
             )
             st.plotly_chart(fig_mes_h, use_container_width=True)
 
-            # Mapa de Instalaciones (Capa base CartoDB dark_matter y clave fija para evitar recargas)
             st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones (Coordenadas Reales API)</p>", unsafe_allow_html=True)
             
             df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
@@ -401,10 +410,146 @@ if 'datos_instalaciones' in st.session_state:
 
             st_folium(mapa_miaa, width=None, height=190, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
 
-    with tab_tabla:
-        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>Tabla Completa de Registros de la API</p>", unsafe_allow_html=True)
+    # ---------------------------------------------------------
+    # PESTAÑA: PERSONAL EXTERNO
+    # ---------------------------------------------------------
+    with tab_externo:
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>👷 Resumen de Instalaciones - Personal Externo</p>", unsafe_allow_html=True)
         
-        # Indicadores en la pestaña de datos
+        # KPIs específicos Externo
+        ext_total = len(df_externo)
+        ext_sin_coord = df_externo['latitud'].isna().sum() if not df_externo.empty else 0
+        ext_colonias = df_externo['colonia'].nunique() if 'colonia' in df_externo.columns and not df_externo.empty else 0
+
+        e_k1, e_k2, e_k3 = st.columns(3)
+        with e_k1: st.metric("Total Instalados (Externo)", f"{ext_total:,}")
+        with e_k2: st.metric("Colonias Atendidas", f"{ext_colonias:,}")
+        with e_k3: st.metric("Sin Coordenadas", f"{ext_sin_coord:,}")
+
+        st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+        col_ex1, col_ex2 = st.columns(2)
+        with col_ex1:
+            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día (Externo)</p>", unsafe_allow_html=True)
+            if col_fecha_ref and not df_externo.empty and not df_externo['fecha_dt'].isna().all():
+                df_ext_dia = df_externo.copy()
+                df_ext_dia['fecha_dia'] = df_ext_dia['fecha_dt'].dt.date
+                df_ed = df_ext_dia.groupby('fecha_dia', as_index=False).size()
+                df_ed['fecha_dia'] = pd.to_datetime(df_ed['fecha_dia']).dt.strftime('%d/%m/%Y')
+                fig_ext_dia = px.bar(df_ed, x='fecha_dia', y='size', text='size', color_discrete_sequence=['#f59e0b'])
+            else:
+                fig_ext_dia = px.bar(pd.DataFrame({'Aviso': ['Sin datos'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
+            
+            fig_ext_dia.update_traces(textposition='outside', textfont_size=10)
+            fig_ext_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=220, xaxis_title=None, yaxis_title=None)
+            st.plotly_chart(fig_ext_dia, use_container_width=True)
+
+        with col_ex2:
+            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Distribución por Nivel (Externo)</p>", unsafe_allow_html=True)
+            if 'nivel' in df_externo.columns and not df_externo.empty:
+                df_ext_nivel = df_externo['nivel'].fillna("SIN NIVEL").value_counts().reset_index()
+                df_ext_nivel.columns = ['Nivel', 'Cantidad']
+                fig_ext_niv = px.bar(df_ext_nivel, x='Nivel', y='Cantidad', text='Cantidad', color='Nivel', color_discrete_sequence=px.colors.qualitative.Safe)
+                fig_ext_niv.update_traces(textposition='outside', textfont_size=10)
+            else:
+                fig_ext_niv = px.bar(pd.DataFrame({'Nivel': ['Sin datos'], 'Cantidad': [0]}), x='Nivel', y='Cantidad', text='Cantidad')
+            
+            fig_ext_niv.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=220, xaxis_title=None, yaxis_title=None, showlegend=False)
+            st.plotly_chart(fig_ext_niv, use_container_width=True)
+
+        st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones - Personal Externo</p>", unsafe_allow_html=True)
+        df_ext_map = df_externo.dropna(subset=['latitud', 'longitud']) if not df_externo.empty else pd.DataFrame()
+        m_lat = df_ext_map['latitud'].mean() if not df_ext_map.empty else lat_centro
+        m_lon = df_ext_map['longitud'].mean() if not df_ext_map.empty else lon_centro
+        mapa_ext = folium.Map(location=[m_lat, m_lon], zoom_start=12, tiles="CartoDB dark_matter")
+        for _, row in df_ext_map.iterrows():
+            folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#f59e0b', fill=True, fill_color='#f59e0b', fill_opacity=0.7).add_to(mapa_ext)
+        st_folium(mapa_ext, width=None, height=220, use_container_width=True, key="mapa_externo", returned_objects=[])
+
+        st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal Externo</p>", unsafe_allow_html=True)
+        df_tabla_ext = df_externo.copy()
+        if not df_tabla_ext.empty:
+            terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
+            cols_ex = [c for c in df_tabla_ext.columns if any(term in c.lower() for term in terminos_excluidos)]
+            df_tabla_ext = df_tabla_ext.drop(columns=cols_ex, errors='ignore')
+            if 'fechaInstalacion' in df_tabla_ext.columns:
+                df_tabla_ext['fechaInstalacion'] = pd.to_datetime(df_tabla_ext['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
+            df_tabla_ext = df_tabla_ext.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
+        st.dataframe(df_tabla_ext, use_container_width=True)
+
+    # ---------------------------------------------------------
+    # PESTAÑA: PERSONAL MIAA
+    # ---------------------------------------------------------
+    with tab_miaa:
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🏢 Resumen de Instalaciones - Personal MIAA</p>", unsafe_allow_html=True)
+        
+        # KPIs específicos MIAA
+        miaa_total = len(df_miaa_pers)
+        miaa_sin_coord = df_miaa_pers['latitud'].isna().sum() if not df_miaa_pers.empty else 0
+        miaa_colonias = df_miaa_pers['colonia'].nunique() if 'colonia' in df_miaa_pers.columns and not df_miaa_pers.empty else 0
+
+        m_k1, m_k2, m_k3 = st.columns(3)
+        with m_k1: st.metric("Total Instalados (MIAA)", f"{miaa_total:,}")
+        with m_k2: st.metric("Colonias Atendidas", f"{miaa_colonias:,}")
+        with m_k3: st.metric("Sin Coordenadas", f"{miaa_sin_coord:,}")
+
+        st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+        col_mi1, col_mi2 = st.columns(2)
+        with col_mi1:
+            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día (MIAA)</p>", unsafe_allow_html=True)
+            if col_fecha_ref and not df_miaa_pers.empty and not df_miaa_pers['fecha_dt'].isna().all():
+                df_miaa_dia = df_miaa_pers.copy()
+                df_miaa_dia['fecha_dia'] = df_miaa_dia['fecha_dt'].dt.date
+                df_md = df_miaa_dia.groupby('fecha_dia', as_index=False).size()
+                df_md['fecha_dia'] = pd.to_datetime(df_md['fecha_dia']).dt.strftime('%d/%m/%Y')
+                fig_miaa_dia = px.bar(df_md, x='fecha_dia', y='size', text='size', color_discrete_sequence=['#10b981'])
+            else:
+                fig_miaa_dia = px.bar(pd.DataFrame({'Aviso': ['Sin datos'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
+            
+            fig_miaa_dia.update_traces(textposition='outside', textfont_size=10)
+            fig_miaa_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=220, xaxis_title=None, yaxis_title=None)
+            st.plotly_chart(fig_miaa_dia, use_container_width=True)
+
+        with col_mi2:
+            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Distribución por Nivel (MIAA)</p>", unsafe_allow_html=True)
+            if 'nivel' in df_miaa_pers.columns and not df_miaa_pers.empty:
+                df_miaa_nivel = df_miaa_pers['nivel'].fillna("SIN NIVEL").value_counts().reset_index()
+                df_miaa_nivel.columns = ['Nivel', 'Cantidad']
+                fig_miaa_niv = px.bar(df_miaa_nivel, x='Nivel', y='Cantidad', text='Cantidad', color='Nivel', color_discrete_sequence=px.colors.qualitative.Pastel)
+                fig_miaa_niv.update_traces(textposition='outside', textfont_size=10)
+            else:
+                fig_miaa_niv = px.bar(pd.DataFrame({'Nivel': ['Sin datos'], 'Cantidad': [0]}), x='Nivel', y='Cantidad', text='Cantidad')
+            
+            fig_miaa_niv.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=220, xaxis_title=None, yaxis_title=None, showlegend=False)
+            st.plotly_chart(fig_miaa_niv, use_container_width=True)
+
+        st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones - Personal MIAA</p>", unsafe_allow_html=True)
+        df_miaa_map = df_miaa_pers.dropna(subset=['latitud', 'longitud']) if not df_miaa_pers.empty else pd.DataFrame()
+        mm_lat = df_miaa_map['latitud'].mean() if not df_miaa_map.empty else lat_centro
+        mm_lon = df_miaa_map['longitud'].mean() if not df_miaa_map.empty else lon_centro
+        mapa_miaa_pers = folium.Map(location=[mm_lat, mm_lon], zoom_start=12, tiles="CartoDB dark_matter")
+        for _, row in df_miaa_map.iterrows():
+            folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#10b981', fill=True, fill_color='#10b981', fill_opacity=0.7).add_to(mapa_miaa_pers)
+        st_folium(mapa_miaa_pers, width=None, height=220, use_container_width=True, key="mapa_miaa_personal", returned_objects=[])
+
+        st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal MIAA</p>", unsafe_allow_html=True)
+        df_tabla_miaa = df_miaa_pers.copy()
+        if not df_tabla_miaa.empty:
+            terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
+            cols_ex = [c for c in df_tabla_miaa.columns if any(term in c.lower() for term in terminos_excluidos)]
+            df_tabla_miaa = df_tabla_miaa.drop(columns=cols_ex, errors='ignore')
+            if 'fechaInstalacion' in df_tabla_miaa.columns:
+                df_tabla_miaa['fechaInstalacion'] = pd.to_datetime(df_tabla_miaa['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
+            df_tabla_miaa = df_tabla_miaa.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
+        st.dataframe(df_tabla_miaa, use_container_width=True)
+
+    # ---------------------------------------------------------
+    # PESTAÑA: TABLA BASE DE DATOS COMPLETA
+    # ---------------------------------------------------------
+    with tab_tabla:
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📋 Tabla Completa de Registros de la API</p>", unsafe_allow_html=True)
+        
         total_registros_tabla = len(df_filtrado)
         total_colonias_tabla = df_filtrado['colonia'].nunique() if 'colonia' in df_filtrado.columns else 0
 
@@ -416,7 +561,6 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-        # Gráfico por Nivel Comercial / Doméstico
         st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:0;'>Distribución por Nivel (Comercial / Doméstico)</p>", unsafe_allow_html=True)
         if 'nivel' in df_filtrado.columns:
             df_nivel = df_filtrado['nivel'].fillna("SIN NIVEL").value_counts().reset_index()
@@ -447,7 +591,6 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-        # Preparar tabla limpia
         df_tabla_limpia = df_filtrado.copy()
         
         terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
