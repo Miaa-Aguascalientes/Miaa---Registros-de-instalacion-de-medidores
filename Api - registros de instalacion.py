@@ -403,8 +403,8 @@ if 'datos_instalaciones' in st.session_state:
                 for _, row in df_mapa_valido.iterrows():
                     folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
 
-                # Altura ajustada del mapa a 300 píxeles
-                st_folium(mapa_miaa, width=None, height=300, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
+                # Altura ajustada del mapa a 340 píxeles
+                st_folium(mapa_miaa, width=None, height=340, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
 
             with col_graf_h:
                 st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
