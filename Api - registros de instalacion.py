@@ -193,6 +193,11 @@ if 'datos_instalaciones' in st.session_state:
     if not df_metas_valido.empty and 'Poligono_de_instalacion' in df_metas_valido.columns:
         lista_poligonos = sorted([str(p) for p in df_metas_valido['Poligono_de_instalacion'].dropna().unique()], key=lambda x: int(x) if x.isdigit() else x)
 
+    # Inicializar todos los polígonos como marcados (True) por defecto desde el inicio
+    for p in lista_poligonos:
+        if f"chk_pol_{p}" not in st.session_state:
+            st.session_state[f"chk_pol_{p}"] = True
+
     col_c1, col_c2 = st.sidebar.columns(2)
     seleccionar_todos = col_c1.button("Marcar todos")
     deseleccionar_todos = col_c2.button("Desmarcar")
@@ -223,7 +228,6 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df_filtrado = df.copy()
 
-    # Meta Total global absoluta de la tabla Diccionario_instalacion_medidores (~60,000 medidores)
     meta_total = int(df_metas['Usuarios_nueva_instalacion'].sum()) if not df_metas.empty and 'Usuarios_nueva_instalacion' in df_metas.columns else len(df_filtrado)
     total_instalados = len(df_filtrado)
     porc_avance = round((total_instalados / meta_total) * 100, 2) if meta_total > 0 else 0.0
