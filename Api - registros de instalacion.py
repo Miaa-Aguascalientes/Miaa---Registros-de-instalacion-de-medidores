@@ -42,16 +42,20 @@ custom_style = """
         margin-top: 0px !important;
     }
 
-    /* Título Principal con Vida y Centrado (Sin caja fea) */
-    .dashboard-title-container {
-        text-align: center;
+    /* Cabecera Superior con Título y Fecha Alineados (Sin cuadros ni elementos extra) */
+    .dashboard-header-flex {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
         margin-top: 5px;
         margin-bottom: 15px;
-        padding: 0px;
+        padding: 0px 5px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding-bottom: 8px;
     }
 
     .dashboard-main-title {
-        font-size: 1.7rem;
+        font-size: 1.6rem;
         font-weight: 800;
         background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
         -webkit-background-clip: text;
@@ -62,12 +66,12 @@ custom_style = """
         text-shadow: 0px 2px 15px rgba(56, 189, 248, 0.2);
     }
 
-    .dashboard-subtitle {
+    .dashboard-subtitle-right {
         color: #94a3b8;
         font-size: 0.85rem;
         font-weight: 500;
-        margin-top: 4px;
         letter-spacing: 0.3px;
+        white-space: nowrap;
     }
 
     /* Tarjetas Compactas: Icono a la izquierda y textos centrados a la derecha */
@@ -148,11 +152,11 @@ custom_style = """
 """
 st.markdown(custom_style, unsafe_allow_html=True)
 
-# Cabecera superior visual del dashboard (Limpia, centrada y sin caja)
+# Cabecera superior visual con Título a la izquierda y Fecha actualizada a la derecha
 st.markdown("""
-    <div class="dashboard-title-container">
+    <div class="dashboard-header-flex">
         <h2 class="dashboard-main-title">📊 Dashboard Instalación Medidores Inteligentes</h2>
-        <div class="dashboard-subtitle">Actualizado al: 14/09/2026</div>
+        <div class="dashboard-subtitle-right">Actualizado al: 14/09/2026</div>
     </div>
 """, unsafe_allow_html=True)
 
@@ -594,7 +598,7 @@ if 'datos_instalaciones' in st.session_state:
                     plot_bgcolor='rgba(0,0,0,0)', 
                     paper_bgcolor='rgba(0,0,0,0)', 
                     font_color='#ffffff', 
-                    margin=dict(t=5, b=5, l=5, r=40),  # Margen derecho ajustado para evitar cortes
+                    margin=dict(t=5, b=5, l=5, r=40),  
                     height=130, 
                     xaxis=dict(showgrid=False, showticklabels=False, title=None, range=[0, max_cant * 1.25]), 
                     yaxis=dict(showgrid=False, title=None, tickfont=dict(size=10), categoryorder='array', categoryarray=df_mes['Mes'].tolist()),
