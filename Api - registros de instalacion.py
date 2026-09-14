@@ -127,7 +127,6 @@ def cargar_poligonos_db():
         df = pd.read_sql(query, con=engine)
         
         if not df.empty and 'coord' in df.columns:
-            # Separar el campo 'coord' que viene como "latitud, longitud" o similar
             coords_split = df['coord'].astype(str).str.split(',', expand=True)
             if coords_split.shape[1] >= 2:
                 df['Latitud'] = pd.to_numeric(coords_split[0].str.strip(), errors='coerce')
@@ -160,15 +159,8 @@ if 'datos_instalaciones' in st.session_state:
     df['fecha_dt'] = pd.to_datetime(df[col_fecha_ref], errors='coerce') if col_fecha_ref else pd.NaT
 
     lat_centro, lon_centro = 21.8853, -102.2916
-    if 'latitud' in df.columns:
-        df['latitud'] = pd.to_numeric(df['latitud'], errors='coerce')
-    else:
-        df['latitud'] = np.nan
-
-    if 'longitud' in df.columns:
-        df['longitud'] = pd.to_numeric(df['longitud'], errors='coerce')
-    else:
-        df['longitud'] = np.nan
+    df['latitud'] = pd.to_numeric(df['latitud'], errors='coerce') if 'latitud' in df.columns else np.nan
+    df['longitud'] = pd.to_numeric(df['longitud'], errors='coerce') if 'longitud' in df.columns else np.nan
 
     df_metas = cargar_metas_db()
     df_poligonos = cargar_poligonos_db()
@@ -177,14 +169,11 @@ if 'datos_instalaciones' in st.session_state:
         for col_num in ['Usuarios_Reales', 'Usuarios_con_medidor_inteligente', 'Usuarios_nueva_instalacion']:
             if col_num in df_metas.columns:
                 df_metas[col_num] = pd.to_numeric(df_metas[col_num].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
-
         df_metas_valido = df_metas[df_metas['Usuarios_con_medidor_inteligente'] > 0].copy()
     else:
         df_metas_valido = pd.DataFrame()
 
-    # ---------------------------------------------------------
     # BARRA LATERAL
-    # ---------------------------------------------------------
     logo_url = "https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg"
     st.sidebar.image(logo_url, use_container_width=True)
     st.sidebar.markdown("---")
@@ -234,24 +223,17 @@ if 'datos_instalaciones' in st.session_state:
     deseleccionar_todos = col_c2.button("Desmarcar")
 
     if seleccionar_todos:
-        for p in lista_poligonos:
-            st.session_state[f"chk_pol_{p}"] = True
-
+        for p in lista_poligonos: st.session_state[f"chk_pol_{p}"] = True
     if deseleccionar_todos:
-        for p in lista_poligonos:
-            st.session_state[f"chk_pol_{p}"] = False
+        for p in lista_poligonos: st.session_state[f"chk_pol_{p}"] = False
 
     with st.sidebar.container(height=220):
         poligonos_seleccionados = []
         for pol in lista_poligonos:
-            estado = st.checkbox(f"Polígono {pol}", key=f"chk_pol_{pol}")
-            if estado:
+            if st.checkbox(f"Polígono {pol}", key=f"chk_pol_{pol}"):
                 poligonos_seleccionados.append(pol)
 
-    if not df_metas_valido.empty and 'Poligono_de_instalacion' in df_metas_valido.columns:
-        df_metas_filtrado = df_metas_valido[df_metas_valido['Poligono_de_instalacion'].astype(str).isin(poligonos_seleccionados)].copy()
-    else:
-        df_metas_filtrado = df_metas_valido.copy()
+    df_metas_filtrado = df_metas_valido[df_metas_valido['Poligono_de_instalacion'].astype(str).isin(poligonos_seleccionados)].copy() if not df_metas_valido.empty else pd.DataFrame()
 
     if col_fecha_ref and not df['fecha_dt'].isna().all():
         mask = (df['fecha_dt'].dt.date >= fecha_inicio) & (df['fecha_dt'].dt.date <= fecha_fin)
@@ -263,56 +245,29 @@ if 'datos_instalaciones' in st.session_state:
     total_instalados = len(df_filtrado)
     porc_avance = round((total_instalados / meta_total) * 100, 2) if meta_total > 0 else 0.0
 
-    if 'usuarioExterno' in df_filtrado.columns:
-        total_externo = int(df_filtrado['usuarioExterno'].fillna(False).astype(bool).sum())
-        total_miaa = int((~df_filtrado['usuarioExterno'].fillna(False).astype(bool)).sum())
-        
-        df_externo = df_filtrado[df_filtrado['usuarioExterno'].fillna(False).astype(bool)].copy()
-        df_miaa_pers = df_filtrado[~df_filtrado['usuarioExterno'].fillna(False).astype(bool)].copy()
-    else:
-        total_externo = 0
-        total_miaa = len(df_filtrado)
-        df_externo = pd.DataFrame(columns=df_filtrado.columns)
-        df_miaa_pers = df_filtrado.copy()
+    total_externo = int(df_filtrado['usuarioExterno'].fillna(False).astype(bool).sum()) if 'usuarioExterno' in df_filtrado.columns else 0
+    total_miaa = int((~df_filtrado['usuarioExterno'].fillna(False).astype(bool)).sum()) if 'usuarioExterno' in df_filtrado.columns else len(df_filtrado)
+    df_externo = df_filtrado[df_filtrado['usuarioExterno'].fillna(False).astype(bool)].copy() if 'usuarioExterno' in df_filtrado.columns else pd.DataFrame()
+    df_miaa_pers = df_filtrado[~df_filtrado['usuarioExterno'].fillna(False).astype(bool)].copy() if 'usuarioExterno' in df_filtrado.columns else df_filtrado.copy()
 
     if not df_metas_filtrado.empty:
-        df_tabla_eficiencia = df_metas_filtrado.copy()
-
-        df_eficiencia = df_tabla_eficiencia.groupby(['Colonia_ATL', 'Poligono_de_instalacion'], as_index=False).agg({
+        df_eficiencia = df_metas_filtrado.groupby(['Colonia_ATL', 'Poligono_de_instalacion'], as_index=False).agg({
             'Usuarios_Reales': 'sum',
             'Usuarios_con_medidor_inteligente': 'sum'
         })
-        
-        df_eficiencia['pct_sort'] = np.where(
-            df_eficiencia['Usuarios_Reales'] > 0, 
-            (df_eficiencia['Usuarios_con_medidor_inteligente'] / df_eficiencia['Usuarios_Reales']) * 100, 
-            0.0
-        )
-        
+        df_eficiencia['pct_sort'] = np.where(df_eficiencia['Usuarios_Reales'] > 0, (df_eficiencia['Usuarios_con_medidor_inteligente'] / df_eficiencia['Usuarios_Reales']) * 100, 0.0)
         df_eficiencia = df_eficiencia.sort_values(by='pct_sort', ascending=False).reset_index(drop=True)
         df_eficiencia['%'] = df_eficiencia['pct_sort'].round(2).astype(str) + '%'
-        
-        df_eficiencia = df_eficiencia.rename(columns={
-            'Colonia_ATL': 'Colonia',
-            'Usuarios_Reales': 'Med. tot',
-            'Usuarios_con_medidor_inteligente': 'Med. inst',
-            'Poligono_de_instalacion': 'Polígono'
-        })
-        
-        df_eficiencia = df_eficiencia[['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono']]
+        df_eficiencia = df_eficiencia.rename(columns={'Colonia_ATL': 'Colonia', 'Usuarios_Reales': 'Med. tot', 'Usuarios_con_medidor_inteligente': 'Med. inst', 'Poligono_de_instalacion': 'Polígono'})[['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono']]
     else:
         df_eficiencia = pd.DataFrame(columns=['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono'])
 
-    # ---------------------------------------------------------
-    # PESTAÑAS PRINCIPALES SUPERIORES (5 Pestañas)
-    # ---------------------------------------------------------
+    # PESTAÑAS PRINCIPALES
     tab_principal, tab_externo, tab_miaa, tab_tabla, tab_poligonos = st.tabs([
-        "📊 Dashboard Principal", 
-        "👷 Personal Externo", 
-        "🏢 Personal MIAA", 
-        "📋 Tabla Base de Datos Completa",
-        "🗺️ Polígonos"
+        "📊 Dashboard Principal", "👷 Personal Externo", "🏢 Personal MIAA", "📋 Tabla Base de Datos Completa", "🗺️ Polígonos"
     ])
+
+    api_key_carto = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
 
     with tab_principal:
         k1, k2, k3, k4, k5, k6 = st.columns(6)
@@ -324,7 +279,6 @@ if 'datos_instalaciones' in st.session_state:
         with k6: st.metric("Sin Coordenadas", f"{df_filtrado['latitud'].isna().sum():,}")
 
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
-
         col_g1, col_g2 = st.columns([1.8, 1.2])
 
         with col_g1:
@@ -336,18 +290,8 @@ if 'datos_instalaciones' in st.session_state:
                 fig_dia = px.bar(df_dia, x='fecha_dia', y='size', text='size', color_discrete_sequence=['#3b82f6'])
             else:
                 fig_dia = px.bar(pd.DataFrame({'Aviso': ['Sin fechas'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
-            
             fig_dia.update_traces(textposition='outside', textfont_size=10)
-            fig_dia.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)', 
-                paper_bgcolor='rgba(0,0,0,0)', 
-                font_color='#ffffff', 
-                margin=dict(t=40, b=5, l=5, r=5), 
-                height=230, 
-                xaxis_title=None, 
-                yaxis_title=None,
-                yaxis=dict(range=[0, 500])
-            )
+            fig_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=40, b=5, l=5, r=5), height=230, xaxis_title=None, yaxis_title=None, yaxis=dict(range=[0, 500]))
             st.plotly_chart(fig_dia, use_container_width=True)
 
         with col_g2:
@@ -358,104 +302,63 @@ if 'datos_instalaciones' in st.session_state:
                 fig_pie = go.Figure(go.Pie(labels=df_ext['Externo'], values=df_ext['Cantidad'], hole=0.5))
             else:
                 fig_pie = go.Figure(go.Pie(labels=['Total'], values=[len(df_filtrado)], hole=0.5))
-            fig_pie.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)', 
-                paper_bgcolor='rgba(0,0,0,0)', 
-                font_color='#ffffff', 
-                margin=dict(t=5, b=5, l=5, r=5), 
-                height=230, 
-                showlegend=True, 
-                legend=dict(orientation="h", y=-0.1)
-            )
+            fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=230, showlegend=True, legend=dict(orientation="h", y=-0.1))
             st.plotly_chart(fig_pie, use_container_width=True)
 
         col_inf1, col_inf2 = st.columns([1, 1.6])
-
         with col_inf1:
             st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Eficiencia por Colonia y Polígono</p>", unsafe_allow_html=True)
-            if not df_eficiencia.empty:
-                st.dataframe(df_eficiencia, use_container_width=True, hide_index=True)
-            else:
-                st.info("No se encontraron datos para los polígonos seleccionados.")
+            if not df_eficiencia.empty: st.dataframe(df_eficiencia, use_container_width=True, hide_index=True)
+            else: st.info("No se encontraron datos.")
 
         with col_inf2:
             st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
-            
             if col_fecha_ref and not df['fecha_dt'].isna().all():
                 df_mes_total = df.copy()
                 df_mes_total['periodo_mes'] = df_mes_total['fecha_dt'].dt.to_period('M')
                 df_mes = df_mes_total.groupby('periodo_mes', as_index=False).size()
                 df_mes.columns = ['Periodo', 'Cantidad']
-                
-                meses_es = {
-                    1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 
-                    5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto', 
-                    9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
-                }
-                
+                meses_es = {1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
                 df_mes['Mes'] = df_mes['Periodo'].apply(lambda x: f"{meses_es[x.month]} {x.year}")
                 df_mes = df_mes.sort_values(by='Periodo', ascending=True)
             else:
                 df_mes = pd.DataFrame({'Mes': ['Sin datos'], 'Cantidad': [0]})
 
             colores_barras = ['#1e3a8a', '#3b82f6'] * ((len(df_mes) // 2) + 1)
-
-            fig_mes_h = px.bar(
-                df_mes, 
-                x='Cantidad', 
-                y='Mes', 
-                orientation='h',
-                text='Cantidad',
-                color='Mes',
-                color_discrete_sequence=colores_barras
-            )
-            
+            fig_mes_h = px.bar(df_mes, x='Cantidad', y='Mes', orientation='h', text='Cantidad', color='Mes', color_discrete_sequence=colores_barras)
             fig_mes_h.update_traces(textposition='outside', textfont_size=11)
-            fig_mes_h.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)', 
-                paper_bgcolor='rgba(0,0,0,0)', 
-                font_color='#ffffff', 
-                margin=dict(t=5, b=5, l=5, r=30), 
-                height=130, 
-                xaxis=dict(showgrid=False, showticklabels=False, title=None),
-                yaxis=dict(showgrid=False, title=None, tickfont=dict(size=11), categoryorder='array', categoryarray=df_mes['Mes'].tolist()),
-                showlegend=False
-            )
+            fig_mes_h.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=30), height=130, xaxis=dict(showgrid=False, showticklabels=False, title=None), yaxis=dict(showgrid=False, title=None, tickfont=dict(size=11), categoryorder='array', categoryarray=df_mes['Mes'].tolist()), showlegend=False)
             st.plotly_chart(fig_mes_h, use_container_width=True)
 
-            st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones (Coordenadas Reales API)</p>", unsafe_allow_html=True)
-            
+            st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones</p>", unsafe_allow_html=True)
             df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
-            if not df_mapa_valido.empty:
-                map_lat = df_mapa_valido['latitud'].mean()
-                map_lon = df_mapa_valido['longitud'].mean()
-            else:
-                map_lat, map_lon = lat_centro, lon_centro
-
-            mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12, tiles="CartoDB dark_matter")
+            map_lat = df_mapa_valido['latitud'].mean() if not df_mapa_valido.empty else lat_centro
+            map_lon = df_mapa_valido['longitud'].mean() if not df_mapa_valido.empty else lon_centro
+            
+            mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12)
+            folium.TileLayer(
+                tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key_carto}",
+                name="Vista Nocturna",
+                attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains="abcd",
+                max_zoom=20,
+                overlay=False,
+                control=True
+            ).add_to(mapa_miaa)
 
             for _, row in df_mapa_valido.iterrows():
                 folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
-
             st_folium(mapa_miaa, width=None, height=190, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
 
-    # ---------------------------------------------------------
     # PESTAÑA: PERSONAL EXTERNO
-    # ---------------------------------------------------------
     with tab_externo:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>👷 Resumen de Instalaciones - Personal Externo</p>", unsafe_allow_html=True)
-        
-        ext_total = len(df_externo)
-        ext_sin_coord = df_externo['latitud'].isna().sum() if not df_externo.empty else 0
-        ext_colonias = df_externo['colonia'].nunique() if 'colonia' in df_externo.columns and not df_externo.empty else 0
-
         e_k1, e_k2, e_k3 = st.columns(3)
-        with e_k1: st.metric("Total Instalados (Externo)", f"{ext_total:,}")
-        with e_k2: st.metric("Colonias Atendidas", f"{ext_colonias:,}")
-        with e_k3: st.metric("Sin Coordenadas", f"{ext_sin_coord:,}")
+        with e_k1: st.metric("Total Instalados (Externo)", f"{len(df_externo):,}")
+        with e_k2: st.metric("Colonias Atendidas", f"{df_externo['colonia'].nunique() if 'colonia' in df_externo.columns and not df_externo.empty else 0:,}")
+        with e_k3: st.metric("Sin Coordenadas", f"{df_externo['latitud'].isna().sum() if not df_externo.empty else 0:,}")
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
-
         col_ex1, col_ex2 = st.columns(2)
         with col_ex1:
             st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día (Externo)</p>", unsafe_allow_html=True)
@@ -467,7 +370,6 @@ if 'datos_instalaciones' in st.session_state:
                 fig_ext_dia = px.bar(df_ed, x='fecha_dia', y='size', text='size', color_discrete_sequence=['#f59e0b'])
             else:
                 fig_ext_dia = px.bar(pd.DataFrame({'Aviso': ['Sin datos'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
-            
             fig_ext_dia.update_traces(textposition='outside', textfont_size=10)
             fig_ext_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=220, xaxis_title=None, yaxis_title=None)
             st.plotly_chart(fig_ext_dia, use_container_width=True)
@@ -481,15 +383,22 @@ if 'datos_instalaciones' in st.session_state:
                 fig_ext_niv.update_traces(textposition='outside', textfont_size=10)
             else:
                 fig_ext_niv = px.bar(pd.DataFrame({'Nivel': ['Sin datos'], 'Cantidad': [0]}), x='Nivel', y='Cantidad', text='Cantidad')
-            
             fig_ext_niv.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=220, xaxis_title=None, yaxis_title=None, showlegend=False)
             st.plotly_chart(fig_ext_niv, use_container_width=True)
 
         st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones - Personal Externo</p>", unsafe_allow_html=True)
         df_ext_map = df_externo.dropna(subset=['latitud', 'longitud']) if not df_externo.empty else pd.DataFrame()
-        m_lat = df_ext_map['latitud'].mean() if not df_ext_map.empty else lat_centro
-        m_lon = df_ext_map['longitud'].mean() if not df_ext_map.empty else lon_centro
-        mapa_ext = folium.Map(location=[m_lat, m_lon], zoom_start=12, tiles="CartoDB dark_matter")
+        mapa_ext = folium.Map(location=[df_ext_map['latitud'].mean() if not df_ext_map.empty else lat_centro, df_ext_map['longitud'].mean() if not df_ext_map.empty else lon_centro], zoom_start=12)
+        folium.TileLayer(
+            tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key_carto}",
+            name="Vista Nocturna",
+            attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains="abcd",
+            max_zoom=20,
+            overlay=False,
+            control=True
+        ).add_to(mapa_ext)
+
         for _, row in df_ext_map.iterrows():
             folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#f59e0b', fill=True, fill_color='#f59e0b', fill_opacity=0.7).add_to(mapa_ext)
         st_folium(mapa_ext, width=None, height=220, use_container_width=True, key="mapa_externo", returned_objects=[])
@@ -497,31 +406,20 @@ if 'datos_instalaciones' in st.session_state:
         st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal Externo</p>", unsafe_allow_html=True)
         df_tabla_ext = df_externo.copy()
         if not df_tabla_ext.empty:
-            terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
-            cols_ex = [c for c in df_tabla_ext.columns if any(term in c.lower() for term in terminos_excluidos)]
-            df_tabla_ext = df_tabla_ext.drop(columns=cols_ex, errors='ignore')
-            if 'fechaInstalacion' in df_tabla_ext.columns:
-                df_tabla_ext['fechaInstalacion'] = pd.to_datetime(df_tabla_ext['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
+            df_tabla_ext = df_tabla_ext.drop(columns=[c for c in df_tabla_ext.columns if any(t in c.lower() for t in ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio'])], errors='ignore')
+            if 'fechaInstalacion' in df_tabla_ext.columns: df_tabla_ext['fechaInstalacion'] = pd.to_datetime(df_tabla_ext['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
             df_tabla_ext = df_tabla_ext.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
         st.dataframe(df_tabla_ext, use_container_width=True)
 
-    # ---------------------------------------------------------
     # PESTAÑA: PERSONAL MIAA
-    # ---------------------------------------------------------
     with tab_miaa:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🏢 Resumen de Instalaciones - Personal MIAA</p>", unsafe_allow_html=True)
-        
-        miaa_total = len(df_miaa_pers)
-        miaa_sin_coord = df_miaa_pers['latitud'].isna().sum() if not df_miaa_pers.empty else 0
-        miaa_colonias = df_miaa_pers['colonia'].nunique() if 'colonia' in df_miaa_pers.columns and not df_miaa_pers.empty else 0
-
         m_k1, m_k2, m_k3 = st.columns(3)
-        with m_k1: st.metric("Total Instalados (MIAA)", f"{miaa_total:,}")
-        with m_k2: st.metric("Colonias Atendidas", f"{miaa_colonias:,}")
-        with m_k3: st.metric("Sin Coordenadas", f"{miaa_sin_coord:,}")
+        with m_k1: st.metric("Total Instalados (MIAA)", f"{len(df_miaa_pers):,}")
+        with m_k2: st.metric("Colonias Atendidas", f"{df_miaa_pers['colonia'].nunique() if 'colonia' in df_miaa_pers.columns and not df_miaa_pers.empty else 0:,}")
+        with m_k3: st.metric("Sin Coordenadas", f"{df_miaa_pers['latitud'].isna().sum() if not df_miaa_pers.empty else 0:,}")
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
-
         col_mi1, col_mi2 = st.columns(2)
         with col_mi1:
             st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día (MIAA)</p>", unsafe_allow_html=True)
@@ -533,7 +431,6 @@ if 'datos_instalaciones' in st.session_state:
                 fig_miaa_dia = px.bar(df_md, x='fecha_dia', y='size', text='size', color_discrete_sequence=['#10b981'])
             else:
                 fig_miaa_dia = px.bar(pd.DataFrame({'Aviso': ['Sin datos'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
-            
             fig_miaa_dia.update_traces(textposition='outside', textfont_size=10)
             fig_miaa_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=220, xaxis_title=None, yaxis_title=None)
             st.plotly_chart(fig_miaa_dia, use_container_width=True)
@@ -547,15 +444,22 @@ if 'datos_instalaciones' in st.session_state:
                 fig_miaa_niv.update_traces(textposition='outside', textfont_size=10)
             else:
                 fig_miaa_niv = px.bar(pd.DataFrame({'Nivel': ['Sin datos'], 'Cantidad': [0]}), x='Nivel', y='Cantidad', text='Cantidad')
-            
             fig_miaa_niv.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=220, xaxis_title=None, yaxis_title=None, showlegend=False)
             st.plotly_chart(fig_miaa_niv, use_container_width=True)
 
         st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones - Personal MIAA</p>", unsafe_allow_html=True)
         df_miaa_map = df_miaa_pers.dropna(subset=['latitud', 'longitud']) if not df_miaa_pers.empty else pd.DataFrame()
-        mm_lat = df_miaa_map['latitud'].mean() if not df_miaa_map.empty else lat_centro
-        mm_lon = df_miaa_map['longitud'].mean() if not df_miaa_map.empty else lon_centro
-        mapa_miaa_pers = folium.Map(location=[mm_lat, mm_lon], zoom_start=12, tiles="CartoDB dark_matter")
+        mapa_miaa_pers = folium.Map(location=[df_miaa_map['latitud'].mean() if not df_miaa_map.empty else lat_centro, df_miaa_map['longitud'].mean() if not df_miaa_map.empty else lon_centro], zoom_start=12)
+        folium.TileLayer(
+            tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key_carto}",
+            name="Vista Nocturna",
+            attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains="abcd",
+            max_zoom=20,
+            overlay=False,
+            control=True
+        ).add_to(mapa_miaa_pers)
+
         for _, row in df_miaa_map.iterrows():
             folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#10b981', fill=True, fill_color='#10b981', fill_opacity=0.7).add_to(mapa_miaa_pers)
         st_folium(mapa_miaa_pers, width=None, height=220, use_container_width=True, key="mapa_miaa_personal", returned_objects=[])
@@ -563,80 +467,38 @@ if 'datos_instalaciones' in st.session_state:
         st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal MIAA</p>", unsafe_allow_html=True)
         df_tabla_miaa = df_miaa_pers.copy()
         if not df_tabla_miaa.empty:
-            terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
-            cols_ex = [c for c in df_tabla_miaa.columns if any(term in c.lower() for term in terminos_excluidos)]
-            df_tabla_miaa = df_tabla_miaa.drop(columns=cols_ex, errors='ignore')
-            if 'fechaInstalacion' in df_tabla_miaa.columns:
-                df_tabla_miaa['fechaInstalacion'] = pd.to_datetime(df_tabla_miaa['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
+            df_tabla_miaa = df_tabla_miaa.drop(columns=[c for c in df_tabla_miaa.columns if any(t in c.lower() for t in ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio'])], errors='ignore')
+            if 'fechaInstalacion' in df_tabla_miaa.columns: df_tabla_miaa['fechaInstalacion'] = pd.to_datetime(df_tabla_miaa['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
             df_tabla_miaa = df_tabla_miaa.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
         st.dataframe(df_tabla_miaa, use_container_width=True)
 
-    # ---------------------------------------------------------
     # PESTAÑA: TABLA BASE DE DATOS COMPLETA
-    # ---------------------------------------------------------
     with tab_tabla:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📋 Tabla Completa de Registros de la API</p>", unsafe_allow_html=True)
-        
-        total_registros_tabla = len(df_filtrado)
-        total_colonias_tabla = df_filtrado['colonia'].nunique() if 'colonia' in df_filtrado.columns else 0
-
         t_col1, t_col2 = st.columns(2)
-        with t_col1:
-            st.metric("Total de Registros", f"{total_registros_tabla:,}")
-        with t_col2:
-            st.metric("Colonias Registradas", f"{total_colonias_tabla:,}")
+        with t_col1: st.metric("Total de Registros", f"{len(df_filtrado):,}")
+        with t_col2: st.metric("Colonias Registradas", f"{df_filtrado['colonia'].nunique() if 'colonia' in df_filtrado.columns else 0:,}")
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
-
-        st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:0;'>Distribución por Nivel (Comercial / Doméstico)</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:0;'>Distribución por Nivel</p>", unsafe_allow_html=True)
         if 'nivel' in df_filtrado.columns:
             df_nivel = df_filtrado['nivel'].fillna("SIN NIVEL").value_counts().reset_index()
             df_nivel.columns = ['Nivel', 'Cantidad']
-            
-            fig_nivel = px.bar(
-                df_nivel, 
-                x='Nivel', 
-                y='Cantidad', 
-                text='Cantidad',
-                color='Nivel',
-                color_discrete_sequence=px.colors.qualitative.Prism
-            )
+            fig_nivel = px.bar(df_nivel, x='Nivel', y='Cantidad', text='Cantidad', color='Nivel', color_discrete_sequence=px.colors.qualitative.Prism)
             fig_nivel.update_traces(textposition='outside', textfont_size=11)
-            fig_nivel.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)', 
-                paper_bgcolor='rgba(0,0,0,0)', 
-                font_color='#ffffff', 
-                margin=dict(t=30, b=5, l=5, r=5), 
-                height=220, 
-                xaxis_title=None, 
-                yaxis_title=None,
-                showlegend=False
-            )
+            fig_nivel.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=220, xaxis_title=None, yaxis_title=None, showlegend=False)
             st.plotly_chart(fig_nivel, use_container_width=True)
         else:
-            st.info("La columna 'nivel' no se encuentra disponible en los registros.")
-
-        st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+            st.info("La columna 'nivel' no se encuentra disponible.")
 
         df_tabla_limpia = df_filtrado.copy()
-        
-        terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
-        columnas_a_excluir = [c for c in df_tabla_limpia.columns if any(term in c.lower() for term in terminos_excluidos)]
-        df_tabla_limpia = df_tabla_limpia.drop(columns=columnas_a_excluir, errors='ignore')
-        
-        if 'fechaInstalacion' in df_tabla_limpia.columns:
-            df_tabla_limpia['fechaInstalacion'] = pd.to_datetime(df_tabla_limpia['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
-
-        if 'horaInicio' in df_tabla_limpia.columns:
-            df_tabla_limpia['horaInicio'] = pd.to_datetime(df_tabla_limpia['horaInicio'], errors='coerce').dt.strftime('%H:%M')
-
+        df_tabla_limpia = df_tabla_limpia.drop(columns=[c for c in df_tabla_limpia.columns if any(t in c.lower() for t in ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio'])], errors='ignore')
+        if 'fechaInstalacion' in df_tabla_limpia.columns: df_tabla_limpia['fechaInstalacion'] = pd.to_datetime(df_tabla_limpia['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
+        if 'horaInicio' in df_tabla_limpia.columns: df_tabla_limpia['horaInicio'] = pd.to_datetime(df_tabla_limpia['horaInicio'], errors='coerce').dt.strftime('%H:%M')
         df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
-
         st.dataframe(df_tabla_limpia, use_container_width=True)
 
-    # ---------------------------------------------------------
     # PESTAÑA: POLÍGONOS (Diccionario_poligonos_instalacion)
-    # ---------------------------------------------------------
     with tab_poligonos:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Visualización de Polígonos de Instalación</p>", unsafe_allow_html=True)
         
@@ -657,10 +519,18 @@ if 'datos_instalaciones' in st.session_state:
                     map_lat_p = valid_coords['Latitud'].mean()
                     map_lon_p = valid_coords['Longitud'].mean()
 
-            mapa_poligonos = folium.Map(location=[map_lat_p, map_lon_p], zoom_start=12, tiles="CartoDB dark_matter")
+            mapa_poligonos = folium.Map(location=[map_lat_p, map_lon_p], zoom_start=12)
+            folium.TileLayer(
+                tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key_carto}",
+                name="Vista Nocturna",
+                attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains="abcd",
+                max_zoom=20,
+                overlay=False,
+                control=True
+            ).add_to(mapa_poligonos)
 
-            if {'FID', 'Vertice', 'Latitud', 'Longitud'}.issubset(df_poligonos.columns):
-                # Ordenar por FID y Orden_inst / Vertice
+            if {'FID', 'Vertice', 'Latitud', 'Longitud', 'Orden_inst'}.issubset(df_poligonos.columns):
                 df_sorted = df_poligonos.sort_values(by=['FID', 'Orden_inst', 'Vertice'])
                 
                 for fid_id, grupo_pol in df_sorted.groupby('FID'):
@@ -668,8 +538,8 @@ if 'datos_instalaciones' in st.session_state:
                     if len(puntos) > 2:
                         folium.Polygon(
                             locations=puntos,
-                            color='#3b82f6',
-                            weight=2,
+                            color='#2563eb',
+                            weight=2.5,
                             fill=True,
                             fill_color='#3b82f6',
                             fill_opacity=0.4,
@@ -682,7 +552,7 @@ if 'datos_instalaciones' in st.session_state:
                         folium.Marker(
                             location=[centro_lat, centro_lon],
                             icon=folium.DivIcon(
-                                html=f"""<div style="font-size: 10px; color: white; background: rgba(15, 23, 42, 0.75); padding: 2px 5px; border-radius: 4px; text-align: center; border: 1px solid #3b82f6;"><b>FID-{fid_id}</b></div>"""
+                                html=f"""<div style="font-size: 10px; color: #1e293b; background: rgba(255, 255, 255, 0.85); padding: 2px 5px; border-radius: 4px; text-align: center; border: 1px solid #2563eb;"><b>FID-{fid_id}</b></div>"""
                             )
                         ).add_to(mapa_poligonos)
 
