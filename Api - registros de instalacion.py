@@ -530,12 +530,22 @@ if 'datos_instalaciones' in st.session_state:
                 control=True
             ).add_to(mapa_poligonos)
 
-            if {'FID', 'Vertice', 'Latitud', 'Longitud', 'Orden_inst'}.issubset(df_poligonos.columns):
-                df_sorted = df_poligonos.sort_values(by=['FID', 'Orden_inst', 'Vertice'])
-                
-                for fid_id, grupo_pol in df_sorted.groupby('FID'):
-                    puntos = grupo_pol[['Latitud', 'Longitud']].dropna().values.tolist()
-                    if len(puntos) > 2:
+            if {'FID', 'Latitud', 'Longitud'}.issubset(df_poligonos.columns):
+                for fid_id, grupo_pol in df_poligonos.groupby('FID'):
+                    puntos_df = grupo_pol.dropna(subset=['Latitud', 'Longitud']).copy()
+                    if len(puntos_df) > 2:
+                        # Ordenamiento polar respecto al centroide para evitar efecto telaraña
+                        centro_lat = puntos_df['Latitud'].mean()
+                        centro_lon = puntos_df['Longitud'].mean()
+                        
+                        puntos_df['angulo'] = np.arctan2(
+                            puntos_df['Longitud'] - centro_lon,
+                            puntos_df['Latitud'] - centro_lat
+                        )
+                        puntos_df = puntos_df.sort_values('angulo')
+                        
+                        puntos = puntos_df[['Latitud', 'Longitud']].values.tolist()
+                        
                         folium.Polygon(
                             locations=puntos,
                             color='#2563eb',
@@ -546,9 +556,6 @@ if 'datos_instalaciones' in st.session_state:
                             tooltip=f"Polígono FID: {fid_id}"
                         ).add_to(mapa_poligonos)
 
-                        centro_lat = np.mean([p[0] for p in puntos])
-                        centro_lon = np.mean([p[1] for p in puntos])
-                        
                         folium.Marker(
                             location=[centro_lat, centro_lon],
                             icon=folium.DivIcon(
