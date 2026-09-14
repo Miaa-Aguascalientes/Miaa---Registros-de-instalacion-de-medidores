@@ -42,15 +42,32 @@ custom_style = """
         margin-top: 0px !important;
     }
 
-    .dashboard-header {
-        background-color: #0f172a;
-        padding: 10px 20px;
-        border-radius: 8px;
-        margin-bottom: 10px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+    /* Título Principal con Vida y Centrado (Sin caja fea) */
+    .dashboard-title-container {
+        text-align: center;
+        margin-top: 5px;
+        margin-bottom: 15px;
+        padding: 0px;
+    }
+
+    .dashboard-main-title {
+        font-size: 1.7rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin: 0;
+        text-shadow: 0px 2px 15px rgba(56, 189, 248, 0.2);
+    }
+
+    .dashboard-subtitle {
+        color: #94a3b8;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-top: 4px;
+        letter-spacing: 0.3px;
     }
 
     /* Tarjetas Compactas: Icono a la izquierda y textos centrados a la derecha */
@@ -131,11 +148,11 @@ custom_style = """
 """
 st.markdown(custom_style, unsafe_allow_html=True)
 
-# Cabecera superior visual del dashboard
+# Cabecera superior visual del dashboard (Limpia, centrada y sin caja)
 st.markdown("""
-    <div class="dashboard-header">
-        <h2 style='color: white; margin: 0; font-size: 1.4rem;'>📊 DASHBOARD INSTALACIÓN MEDIDORES INTELIGENTES</h2>
-        <span style='color: #94a3b8; font-size: 0.9rem;'>Actualizado al: 14/09/2026</span>
+    <div class="dashboard-title-container">
+        <h2 class="dashboard-main-title">📊 Dashboard Instalación Medidores Inteligentes</h2>
+        <div class="dashboard-subtitle">Actualizado al: 14/09/2026</div>
     </div>
 """, unsafe_allow_html=True)
 
