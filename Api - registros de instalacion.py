@@ -378,7 +378,7 @@ if 'datos_instalaciones' in st.session_state:
     ])
 
     with tab_principal:
-        # FILA 1: KPIs Superiores (Icono a la izquierda y textos perfectamente centrados a la derecha)
+        # FILA 1: KPIs Superiores
         k1, k2, k3, k4, k5, k6 = st.columns(6)
         
         with k1:
@@ -546,6 +546,7 @@ if 'datos_instalaciones' in st.session_state:
                     df_mes = pd.DataFrame({'Mes': ['Sin datos'], 'Cantidad': [0]})
 
                 colores_barras = ['#1e3a8a', '#3b82f6'] * ((len(df_mes) // 2) + 1)
+                max_cant = df_mes['Cantidad'].max() if not df_mes.empty else 10
 
                 fig_mes_h = px.bar(
                     df_mes, 
@@ -562,9 +563,9 @@ if 'datos_instalaciones' in st.session_state:
                     plot_bgcolor='rgba(0,0,0,0)', 
                     paper_bgcolor='rgba(0,0,0,0)', 
                     font_color='#ffffff', 
-                    margin=dict(t=5, b=5, l=5, r=25), 
+                    margin=dict(t=5, b=5, l=5, r=40),  # Margen derecho ampliado para evitar cortes
                     height=130, 
-                    xaxis=dict(showgrid=False, showticklabels=False, title=None),
+                    xaxis=dict(showgrid=False, showticklabels=False, title=None, range=[0, max_cant * 1.25]), # Eje X ampliado
                     yaxis=dict(showgrid=False, title=None, tickfont=dict(size=10), categoryorder='array', categoryarray=df_mes['Mes'].tolist()),
                     showlegend=False
                 )
