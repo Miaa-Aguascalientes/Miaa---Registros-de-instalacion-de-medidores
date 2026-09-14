@@ -424,62 +424,28 @@ if 'datos_instalaciones' in st.session_state:
             else:
                 map_lat, map_lon = lat_centro, lon_centro
 
-            mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12, tiles=None)
-
-            # Capas adicionales con selector y pantalla completa
-            api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
-            
-            folium.TileLayer(
-                tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
-                name="Vista Nocturna",
-                attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains="abcd",
-                max_zoom=20,
-                overlay=False,
-                control=True
-            ).add_to(mapa_miaa)
-
-            folium.TileLayer(
-                tiles="CartoDB positron",
-                name="Claro (Positron)",
-                attr='&copy; OpenStreetMap contributors &copy; CARTO',
-                max_zoom=20,
-                overlay=False,
-                control=True
-            ).add_to(mapa_miaa)
-
-            folium.TileLayer(
-                tiles="OpenStreetMap",
-                name="OpenStreetMap",
-                attr='&copy; OpenStreetMap contributors',
-                max_zoom=19,
-                overlay=False,
-                control=True
-            ).add_to(mapa_miaa)
-
+            mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12)
             Fullscreen(position="topright", title="Ampliar Mapa", cancel_title="Salir de pantalla completa").add_to(mapa_miaa)
 
             for _, row in df_mapa_valido.iterrows():
                 folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
 
-            folium.LayerControl(collapsed=False).add_to(mapa_miaa)
             st_folium(mapa_miaa, width=None, height=190, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
 
     # ---------------------------------------------------------
-    # PESTAÑA: MAPA POLÍGONOS (Diccionario_poligonos_instalacion)
+    # PESTAÑA: MAPA POLÍGONOS (Diccionario_poligonos_instalacion usando 'coord')
     # ---------------------------------------------------------
     with tab_poligonos:
-        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Mapa Detallado de Polígonos de Instalación</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Mapa Detallado de Polígonos de Instalación (Usando campo `coord` y `Orden_inst`)</p>", unsafe_allow_html=True)
         
         if not df_poligonos.empty:
             p_cols = st.columns([1, 3])
             with p_cols[0]:
-                fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist())
+                fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
                 fid_seleccionado = st.selectbox("Seleccionar Polígono (FID):", fids_disponibles)
                 
                 df_pol_sel = df_poligonos[df_poligonos['FID'] == fid_seleccionado]
                 
-                # Info del polígono
                 sec_comercial = df_pol_sel['Sector_comercial'].iloc[0] if 'Sector_comercial' in df_pol_sel.columns else "N/A"
                 area_val = df_pol_sel['Area_km2'].iloc[0] if 'Area_km2' in df_pol_sel.columns else 0
                 med_val = df_pol_sel['Medidores'].iloc[0] if 'Medidores' in df_pol_sel.columns else 0
@@ -490,20 +456,37 @@ if 'datos_instalaciones' in st.session_state:
                 st.markdown(f"**Vértices Totales:** {len(df_pol_sel)}")
 
             with p_cols[1]:
-                # Construir polígono a partir de 'coord' ("lat,lon" o "lon,lat")
                 coordenadas_poligono = []
-                for _, r_vertice in df_pol_sel.sort_values(by='Orden_inst', ascending=True).iterrows():
-                    c_str = str(r_vertice['coord'])
+                df_ordenado = df_pol_sel.sort_values(by='Orden_inst', ascending=True)
+                
+                for _, r_vertice in df_ordenado.iterrows():
+                    c_val = r_vertice['coord']
+                    if pd.isna(c_val):
+                        continue
+                    c_str = str(c_val).strip()
+                    for char in ['(', ')', '[', ']', '"', "'", 'POINT', 'POLYGON']:
+                        c_str = c_str.replace(char, '')
+                    c_str = c_str.strip()
+                    
                     if ',' in c_str:
                         partes = c_str.split(',')
+                    elif ' ' in c_str:
+                        partes = c_str.split()
+                    else:
+                        continue
+                        
+                    if len(partes) >= 2:
                         try:
-                            val1, val2 = float(partes[0].strip()), float(partes[1].strip())
-                            # Detectar orden lat/lon habitual de Aguascalientes (lat ~21.8, lon ~-102.2)
-                            if abs(val1) < abs(val2):
-                                coordenadas_poligono.append([val2, val1])
+                            p1 = float(partes[0].strip())
+                            p2 = float(partes[1].strip())
+                            
+                            if abs(p1) > abs(p2):
+                                lon, lat = p1, p2
                             else:
-                                coordenadas_poligono.append([val1, val2])
-                        except:
+                                lat, lon = p1, p2
+                                
+                            coordenadas_poligono.append([lat, lon])
+                        except Exception:
                             pass
 
                 if coordenadas_poligono:
@@ -512,63 +495,31 @@ if 'datos_instalaciones' in st.session_state:
                 else:
                     m_p_lat, m_p_lon = lat_centro, lon_centro
 
-                mapa_poligonos_tab = folium.Map(location=[m_p_lat, m_p_lon], zoom_start=14, tiles=None)
-
-                api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
-                
-                folium.TileLayer(
-                    tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
-                    name="Vista Nocturna",
-                    attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                    subdomains="abcd",
-                    max_zoom=20,
-                    overlay=False,
-                    control=True
-                ).add_to(mapa_poligonos_tab)
-
-                folium.TileLayer(
-                    tiles="CartoDB positron",
-                    name="Claro (Positron)",
-                    attr='&copy; OpenStreetMap contributors &copy; CARTO',
-                    max_zoom=20,
-                    overlay=False,
-                    control=True
-                ).add_to(mapa_poligonos_tab)
-
-                folium.TileLayer(
-                    tiles="OpenStreetMap",
-                    name="OpenStreetMap",
-                    attr='&copy; OpenStreetMap contributors',
-                    max_zoom=19,
-                    overlay=False,
-                    control=True
-                ).add_to(mapa_poligonos_tab)
-
+                mapa_poligonos_tab = folium.Map(location=[m_p_lat, m_p_lon], zoom_start=14)
                 Fullscreen(position="topright", title="Ampliar Mapa", cancel_title="Salir de pantalla completa").add_to(mapa_poligonos_tab)
 
                 if coordenadas_poligono:
                     folium.Polygon(
                         locations=coordenadas_poligono,
-                        color="#3b82f6",
-                        weight=3,
+                        color="#2563eb",
+                        weight=3.5,
                         fill=True,
                         fill_color="#3b82f6",
-                        fill_opacity=0.3,
+                        fill_opacity=0.4,
                         popup=f"Polígono FID: {fid_seleccionado} | Sector: {sec_comercial}"
                     ).add_to(mapa_poligonos_tab)
 
                     for idx_v, coord_v in enumerate(coordenadas_poligono):
                         folium.CircleMarker(
                             location=coord_v,
-                            radius=3,
-                            color='#f59e0b',
+                            radius=4,
+                            color='#1d4ed8',
                             fill=True,
-                            fill_color='#f59e0b',
-                            fill_opacity=0.9,
-                            popup=f"Vértice {idx_v+1}"
+                            fill_color='#93c5fd',
+                            fill_opacity=1.0,
+                            popup=f"Polígono: {fid_seleccionado} | Vértice #{idx_v+1}<br>Lat: {coord_v[0]}, Lon: {coord_v[1]}"
                         ).add_to(mapa_poligonos_tab)
 
-                folium.LayerControl(collapsed=False).add_to(mapa_poligonos_tab)
                 st_folium(mapa_poligonos_tab, width=None, height=480, use_container_width=True, key=f"mapa_poligono_{fid_seleccionado}", returned_objects=[])
         else:
             st.warning("No se pudo cargar la tabla `Diccionario_poligonos_instalacion` desde la base de datos.")
@@ -624,22 +575,12 @@ if 'datos_instalaciones' in st.session_state:
         m_lat = df_ext_map['latitud'].mean() if not df_ext_map.empty else lat_centro
         m_lon = df_ext_map['longitud'].mean() if not df_ext_map.empty else lon_centro
         
-        mapa_ext = folium.Map(location=[m_lat, m_lon], zoom_start=12, tiles=None)
-        
-        api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
-        folium.TileLayer(
-            tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
-            name="Vista Nocturna",
-            attr='&copy; OpenStreetMap contributors &copy; CARTO',
-            subdomains="abcd", max_zoom=20, overlay=False, control=True
-        ).add_to(mapa_ext)
-        folium.TileLayer(tiles="OpenStreetMap", name="OpenStreetMap", max_zoom=19, overlay=False, control=True).add_to(mapa_ext)
+        mapa_ext = folium.Map(location=[m_lat, m_lon], zoom_start=12)
         Fullscreen(position="topright", title="Ampliar Mapa").add_to(mapa_ext)
 
         for _, row in df_ext_map.iterrows():
             folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#f59e0b', fill=True, fill_color='#f59e0b', fill_opacity=0.7).add_to(mapa_ext)
         
-        folium.LayerControl(collapsed=False).add_to(mapa_ext)
         st_folium(mapa_ext, width=None, height=220, use_container_width=True, key="mapa_externo", returned_objects=[])
 
         st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal Externo</p>", unsafe_allow_html=True)
@@ -704,22 +645,12 @@ if 'datos_instalaciones' in st.session_state:
         mm_lat = df_miaa_map['latitud'].mean() if not df_miaa_map.empty else lat_centro
         mm_lon = df_miaa_map['longitud'].mean() if not df_miaa_map.empty else lon_centro
         
-        mapa_miaa_pers = folium.Map(location=[mm_lat, mm_lon], zoom_start=12, tiles=None)
-        
-        api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
-        folium.TileLayer(
-            tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
-            name="Vista Nocturna",
-            attr='&copy; OpenStreetMap contributors &copy; CARTO',
-            subdomains="abcd", max_zoom=20, overlay=False, control=True
-        ).add_to(mapa_miaa_pers)
-        folium.TileLayer(tiles="OpenStreetMap", name="OpenStreetMap", max_zoom=19, overlay=False, control=True).add_to(mapa_miaa_pers)
+        mapa_miaa_pers = folium.Map(location=[mm_lat, mm_lon], zoom_start=12)
         Fullscreen(position="topright", title="Ampliar Mapa").add_to(mapa_miaa_pers)
 
         for _, row in df_miaa_map.iterrows():
             folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#10b981', fill=True, fill_color='#10b981', fill_opacity=0.7).add_to(mapa_miaa_pers)
         
-        folium.LayerControl(collapsed=False).add_to(mapa_miaa_pers)
         st_folium(mapa_miaa_pers, width=None, height=220, use_container_width=True, key="mapa_miaa_personal", returned_objects=[])
 
         st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal MIAA</p>", unsafe_allow_html=True)
