@@ -18,6 +18,9 @@ st.set_page_config(
 
 custom_style = """
     <style>
+    /* Importar FontAwesome para los iconos */
+    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+
     header[data-testid="stHeader"] {visibility: hidden;}
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -46,22 +49,58 @@ custom_style = """
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    [data-testid="stMetric"] {
-        background: rgba(255, 255, 255, 0.03);
+    /* Tarjetas de Indicadores con Vida (Efectos Glow y Hover) */
+    .metric-card {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 4px 8px !important;
-        border-radius: 8px;
+        padding: 12px 10px;
+        border-radius: 10px;
         text-align: center;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
     }
 
-    [data-testid="stMetricLabel"] {
-        justify-content: center !important;
-        font-size: 11px !important;
+    .metric-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(59, 130, 246, 0.5);
+        box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2), 0 4px 6px -2px rgba(59, 130, 246, 0.1);
     }
 
-    [data-testid="stMetricValue"] {
-        justify-content: center !important;
-        font-size: 20px !important;
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+        transition: 0.5s;
+    }
+
+    .metric-card:hover::before {
+        left: 100%;
+    }
+
+    .metric-icon {
+        font-size: 20px;
+        margin-bottom: 4px;
+    }
+
+    .metric-title {
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 2px;
+    }
+
+    .metric-value {
+        color: #ffffff;
+        font-size: 20px;
+        font-weight: 700;
     }
     </style>
 """
@@ -318,14 +357,62 @@ if 'datos_instalaciones' in st.session_state:
     ])
 
     with tab_principal:
-        # FILA 1: KPIs Superiores
+        # FILA 1: KPIs Superiores con Tarjetas Interactivas e Iconos (Estilo Visual Moderno)
         k1, k2, k3, k4, k5, k6 = st.columns(6)
-        with k1: st.metric("Meta Total", f"{meta_total:,}")
-        with k2: st.metric("Instalados", f"{total_instalados:,}")
-        with k3: st.metric("Instalados por Externo", f"{total_externo:,}")
-        with k4: st.metric("Instalados por MIAA", f"{total_miaa:,}")
-        with k5: st.metric("Porcentaje Avance", f"{porc_avance}%")
-        with k6: st.metric("Sin Coordenadas", f"{df_filtrado['latitud'].isna().sum():,}")
+        
+        with k1:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon" style="color: #38bdf8;"><i class="fa-solid fa-bullseye"></i></div>
+                    <div class="metric-title">Meta Total</div>
+                    <div class="metric-value">{meta_total:,}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with k2:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon" style="color: #4ade80;"><i class="fa-solid fa-circle-check"></i></div>
+                    <div class="metric-title">Instalados</div>
+                    <div class="metric-value">{total_instalados:,}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with k3:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon" style="color: #f59e0b;"><i class="fa-solid fa-hard-hat"></i></div>
+                    <div class="metric-title">Instalados Externo</div>
+                    <div class="metric-value">{total_externo:,}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with k4:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon" style="color: #a855f7;"><i class="fa-solid fa-building-user"></i></div>
+                    <div class="metric-title">Instalados MIAA</div>
+                    <div class="metric-value">{total_miaa:,}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with k5:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon" style="color: #f43f5e;"><i class="fa-solid fa-chart-pie"></i></div>
+                    <div class="metric-title">% Avance</div>
+                    <div class="metric-value">{porc_avance}%</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+        with k6:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon" style="color: #94a3b8;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="metric-title">Sin Coordenadas</div>
+                    <div class="metric-value">{df_filtrado['latitud'].isna().sum():,}</div>
+                </div>
+            """, unsafe_allow_html=True)
 
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
@@ -403,7 +490,6 @@ if 'datos_instalaciones' in st.session_state:
                 for _, row in df_mapa_valido.iterrows():
                     folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
 
-                # Altura ajustada del mapa a 340 píxeles
                 st_folium(mapa_miaa, width=None, height=340, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
 
             with col_graf_h:
