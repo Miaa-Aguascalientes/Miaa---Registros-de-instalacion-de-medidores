@@ -9,6 +9,8 @@ import folium
 from folium.plugins import Fullscreen
 from streamlit_folium import st_folium
 import numpy as np
+import geopandas as gpd
+from shapely.geometry import Polygon
 
 st.set_page_config(
     page_title="Dashboard Instalación Medidores Inteligentes", 
@@ -113,9 +115,6 @@ def cargar_metas_db():
 @st.cache_data(ttl=600)
 def cargar_poligonos_geojson_db():
     try:
-        import geopandas as gpd
-        from shapely.geometry import Polygon
-        
         engine = create_engine(st.secrets["mysql"]["connection_string"])
         query = """
             SELECT FID, Sector_comercial, Orden_instalacion, Poligono, Anillo, Vertice, X, Y 
@@ -131,7 +130,6 @@ def cargar_poligonos_geojson_db():
         df_poly['Anillo'] = pd.to_numeric(df_poly['Anillo'], errors='coerce')
         df_poly = df_poly.dropna(subset=['X', 'Y', 'Poligono'])
         
-        # Agrupar vértices para formar los polígonos en UTM (Zona 13N típica de Aguascalientes, EPSG:32613)
         polygons_list = []
         for poligono_val, group in df_poly.groupby('Poligono'):
             sector_val = group['Sector_comercial'].iloc[0] if 'Sector_comercial' in group.columns else ''
@@ -160,7 +158,6 @@ def cargar_poligonos_geojson_db():
             return {"type": "FeatureCollection", "features": []}
             
         gdf = gpd.GeoDataFrame(polygons_list, crs="EPSG:32613")
-        # Convertir de UTM Zona 13N a WGS84 (Lat/Lon)
         gdf = gdf.to_crs("EPSG:4326")
         
         return json.loads(gdf.to_json())
@@ -330,10 +327,11 @@ if 'datos_instalaciones' in st.session_state:
         df_eficiencia = pd.DataFrame(columns=['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono'])
 
     # ---------------------------------------------------------
-    # PESTAÑAS PRINCIPALES SUPERIORES (4 Pestañas)
+    # PESTAÑAS PRINCIPALES SUPERIORES (5 Pestañas)
     # ---------------------------------------------------------
-    tab_principal, tab_externo, tab_miaa, tab_tabla = st.tabs([
+    tab_principal, tab_poligonos, tab_externo, tab_miaa, tab_tabla = st.tabs([
         "📊 Dashboard Principal", 
+        "🗺️ Mapa de Polígonos", 
         "👷 Personal Externo", 
         "🏢 Personal MIAA", 
         "📋 Tabla Base de Datos Completa"
@@ -510,6 +508,60 @@ if 'datos_instalaciones' in st.session_state:
                 folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
 
             st_folium(mapa_miaa, width=None, height=190, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
+
+    # ---------------------------------------------------------
+    # PESTAÑA: MAPA DE POLÍGONOS EXCLUSIVO
+    # ---------------------------------------------------------
+    with tab_poligonos:
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Visualización General de Polígonos de Instalación</p>", unsafe_allow_html=True)
+        
+        mapa_solo_pol = folium.Map(location=[lat_centro, lon_centro], zoom_start=12, tiles=None)
+        
+        folium.TileLayer(
+            tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
+            name="Vista Nocturna",
+            attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains="abcd",
+            max_zoom=20,
+            overlay=False,
+            control=True
+        ).add_to(mapa_solo_pol)
+        
+        Fullscreen().add_to(mapa_solo_pol)
+
+        try:
+            archivo_geojson_completo = cargar_poligonos_geojson_db()
+            features_todas = []
+            for feat in archivo_geojson_completo.get("features", []):
+                props = feat.get("properties", {})
+                id_pol = str(props.get("Poligono_de_instalacion") or "")
+                if id_pol in poligonos_seleccionados:
+                    features_todas.append(feat)
+
+            geojson_completo_mostrar = {
+                "type": "FeatureCollection",
+                "features": features_todas
+            }
+
+            folium.GeoJson(
+                geojson_completo_mostrar,
+                name="Polígonos",
+                style_function=lambda feature: {
+                    'fillColor': '#ff7f00',
+                    'color': '#ff7f00',
+                    'weight': 3,
+                    'fillOpacity': 0.35
+                },
+                tooltip=folium.GeoJsonTooltip(
+                    fields=[k for k in ['Poligono_de_instalacion', 'Sector_comercial'] if k in (archivo_geojson_completo.get("features", [{}])[0].get("properties", {}))],
+                    aliases=[k.replace('_', ' ').capitalize() + ":" for k in ['Poligono_de_instalacion', 'Sector_comercial'] if k in (archivo_geojson_completo.get("features", [{}])[0].get("properties", {}))],
+                    localize=True
+                )
+            ).add_to(mapa_solo_pol)
+        except Exception as e:
+            pass
+
+        st_folium(mapa_solo_pol, width=None, height=600, use_container_width=True, key="mapa_solo_poligonos_tab", returned_objects=[])
 
     # ---------------------------------------------------------
     # PESTAÑA: PERSONAL EXTERNO
@@ -723,7 +775,7 @@ if 'datos_instalaciones' in st.session_state:
         if 'fechaInstalacion' in df_tabla_limpia.columns:
             df_tabla_limpia['fechaInstalacion'] = pd.to_datetime(df_tabla_limpia['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
 
-        if 'horaInicio' in df_tabla_limpia.contours if hasattr(df_tabla_limpia, 'contours') else 'horaInicio' in df_tabla_limpia.columns:
+        if 'horaInicio' in df_tabla_limpia.columns:
             df_tabla_limpia['horaInicio'] = pd.to_datetime(df_tabla_limpia['horaInicio'], errors='coerce').dt.strftime('%H:%M')
 
         df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
