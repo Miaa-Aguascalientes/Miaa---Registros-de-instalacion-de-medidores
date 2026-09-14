@@ -376,7 +376,7 @@ if 'datos_instalaciones' in st.session_state:
             )
             st.plotly_chart(fig_mes_h, use_container_width=True)
 
-            # Mapa de Instalaciones debajo de la gráfica mensual
+            # Mapa de Instalaciones debajo de la gráfica mensual (Sin recargas al hacer zoom/pan)
             st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones (Coordenadas Reales API)</p>", unsafe_allow_html=True)
             
             df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
@@ -397,7 +397,7 @@ if 'datos_instalaciones' in st.session_state:
             for _, row in df_mapa_valido.iterrows():
                 folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
 
-            st_folium(mapa_miaa, width=None, height=190, use_container_width=True)
+            st_folium(mapa_miaa, width=None, height=190, use_container_width=True, returned_objects=[])
 
     with tab_tabla:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>Tabla Completa de Registros de la API</p>", unsafe_allow_html=True)
