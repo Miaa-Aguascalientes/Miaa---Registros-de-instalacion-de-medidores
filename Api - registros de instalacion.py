@@ -433,7 +433,7 @@ if 'datos_instalaciones' in st.session_state:
             st_folium(mapa_miaa, width=None, height=190, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
 
     # ---------------------------------------------------------
-    # PESTAÑA: MAPA POLÍGONOS (Selector a la Izquierda + Mapa + Tabla Abajo)
+    # PESTAÑA: MAPA POLÍGONOS (Selector a la Izquierda con todos seleccionados por defecto + Mapa + Tabla Abajo)
     # ---------------------------------------------------------
     with tab_poligonos:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Mapa Detallado de Polígonos de Instalación</p>", unsafe_allow_html=True)
@@ -441,12 +441,12 @@ if 'datos_instalaciones' in st.session_state:
         if not df_poligonos.empty:
             fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
             
-            # Inicializar todos los fids seleccionados por defecto si no existen en session_state
+            # Inicializar todos los fids seleccionados por defecto a True si no existen en session_state
             for fid in fids_disponibles:
                 if f"sel_map_fid_{fid}" not in st.session_state:
                     st.session_state[f"sel_map_fid_{fid}"] = True
 
-            # Layout de 2 columnas: Izquierda (Selector desplegable/checkboxes de polígonos), Derecha (Mapa)
+            # Layout de 2 columnas: Izquierda (Selector de polígonos), Derecha (Mapa)
             col_sel_izq, col_map_der = st.columns([0.3, 0.7])
 
             with col_sel_izq:
@@ -486,33 +486,56 @@ if 'datos_instalaciones' in st.session_state:
                         if pd.isna(c_val):
                             continue
                         c_str = str(c_val).strip()
+                        
+                        # Parser robusto adaptado para manejar WKT o múltiples puntos por celda si fuera necesario
                         for char in ['(', ')', '[', ']', '"', "'", 'POINT', 'POLYGON']:
                             c_str = c_str.replace(char, '')
                         c_str = c_str.strip()
                         
-                        if ',' in c_str:
-                            partes = c_str.split(',')
-                        elif ' ' in c_str:
-                            partes = c_str.split()
+                        # Manejar si vienen varios pares separados por comas en una misma fila (como ocurre en FID 913)
+                        pares = [p.strip() for p in c_str.split(',') if p.strip()]
+                        
+                        if len(pares) >= 2 and len(pares) % 2 == 0:
+                            # Iterar de 2 en 2 si hay múltiples coordenadas en el mismo registro
+                            for i in range(0, len(pares), 2):
+                                try:
+                                    p1 = float(pares[i])
+                                    p2 = float(pares[i+1])
+                                    if abs(p1) > abs(p2):
+                                        lon, lat = p1, p2
+                                    else:
+                                        lat, lon = p1, p2
+                                    coordenadas_poligono.append([lat, lon])
+                                    if fid in fids_seleccionados_mapa:
+                                        lat_acumuladas.append(lat)
+                                        lon_acumuladas.append(lon)
+                                except Exception:
+                                    pass
                         else:
-                            continue
-                            
-                        if len(partes) >= 2:
-                            try:
-                                p1 = float(partes[0].strip())
-                                p2 = float(partes[1].strip())
+                            # Formato estándar de un par por fila
+                            if ',' in c_str:
+                                partes = c_str.split(',')
+                            elif ' ' in c_str:
+                                partes = c_str.split()
+                            else:
+                                continue
                                 
-                                if abs(p1) > abs(p2):
-                                    lon, lat = p1, p2
-                                else:
-                                    lat, lon = p1, p2
+                            if len(partes) >= 2:
+                                try:
+                                    p1 = float(partes[0].strip())
+                                    p2 = float(partes[1].strip())
                                     
-                                coordenadas_poligono.append([lat, lon])
-                                if fid in fids_seleccionados_mapa:
-                                    lat_acumuladas.append(lat)
-                                    lon_acumuladas.append(lon)
-                            except Exception:
-                                pass
+                                    if abs(p1) > abs(p2):
+                                        lon, lat = p1, p2
+                                    else:
+                                        lat, lon = p1, p2
+                                        
+                                    coordenadas_poligono.append([lat, lon])
+                                    if fid in fids_seleccionados_mapa:
+                                        lat_acumuladas.append(lat)
+                                        lon_acumuladas.append(lon)
+                                except Exception:
+                                    pass
                     
                     if coordenadas_poligono:
                         poligonos_procesados[fid] = {
@@ -520,7 +543,7 @@ if 'datos_instalaciones' in st.session_state:
                             'sector': sec_comercial,
                             'area': area_val,
                             'medidores': med_val,
-                            'vertis': len(df_pol_sel)
+                            'vertis': len(coordenadas_poligono)
                         }
 
                 if lat_acumuladas and lon_acumuladas:
