@@ -433,32 +433,29 @@ if 'datos_instalaciones' in st.session_state:
             st_folium(mapa_miaa, width=None, height=190, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
 
     # ---------------------------------------------------------
-    # PESTAÑA: MAPA POLÍGONOS (Diccionario_poligonos_instalacion usando 'coord')
+    # PESTAÑA: MAPA POLÍGONOS (Todos los Polígonos + Tabla Debajo)
     # ---------------------------------------------------------
     with tab_poligonos:
-        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Mapa Detallado de Polígonos de Instalación (Usando campo `coord` y `Orden_inst`)</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Mapa General de Polígonos de Instalación</p>", unsafe_allow_html=True)
         
         if not df_poligonos.empty:
-            p_cols = st.columns([1, 3])
-            with p_cols[0]:
-                fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
-                fid_seleccionado = st.selectbox("Seleccionar Polígono (FID):", fids_disponibles)
-                
-                df_pol_sel = df_poligonos[df_poligonos['FID'] == fid_seleccionado]
+            # Procesar todos los polígonos para el mapa general
+            fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
+            
+            # Calcular centro global del mapa basado en todos los puntos válidos
+            lat_acumuladas = []
+            lon_acumuladas = []
+            
+            poligonos_procesados = {}
+            for fid in fids_disponibles:
+                df_pol_sel = df_poligonos[df_poligonos['FID'] == fid]
+                coordenadas_poligono = []
+                df_ordenado = df_pol_sel.sort_values(by='Orden_inst', ascending=True)
                 
                 sec_comercial = df_pol_sel['Sector_comercial'].iloc[0] if 'Sector_comercial' in df_pol_sel.columns else "N/A"
                 area_val = df_pol_sel['Area_km2'].iloc[0] if 'Area_km2' in df_pol_sel.columns else 0
                 med_val = df_pol_sel['Medidores'].iloc[0] if 'Medidores' in df_pol_sel.columns else 0
-                
-                st.markdown(f"**Sector Comercial:** {sec_comercial}")
-                st.markdown(f"**Área (km²):** {area_val}")
-                st.markdown(f"**Medidores:** {med_val}")
-                st.markdown(f"**Vértices Totales:** {len(df_pol_sel)}")
 
-            with p_cols[1]:
-                coordenadas_poligono = []
-                df_ordenado = df_pol_sel.sort_values(by='Orden_inst', ascending=True)
-                
                 for _, r_vertice in df_ordenado.iterrows():
                     c_val = r_vertice['coord']
                     if pd.isna(c_val):
@@ -486,41 +483,58 @@ if 'datos_instalaciones' in st.session_state:
                                 lat, lon = p1, p2
                                 
                             coordenadas_poligono.append([lat, lon])
+                            lat_acumuladas.append(lat)
+                            lon_acumuladas.append(lon)
                         except Exception:
                             pass
-
+                
                 if coordenadas_poligono:
-                    m_p_lat = sum([p[0] for p in coordenadas_poligono]) / len(coordenadas_poligono)
-                    m_p_lon = sum([p[1] for p in coordenadas_poligono]) / len(coordenadas_poligono)
-                else:
-                    m_p_lat, m_p_lon = lat_centro, lon_centro
+                    poligonos_procesados[fid] = {
+                        'coordenadas': coordenadas_poligono,
+                        'sector': sec_comercial,
+                        'area': area_val,
+                        'medidores': med_val,
+                        'vertis': len(df_pol_sel)
+                    }
 
-                mapa_poligonos_tab = folium.Map(location=[m_p_lat, m_p_lon], zoom_start=14)
-                Fullscreen(position="topright", title="Ampliar Mapa", cancel_title="Salir de pantalla completa").add_to(mapa_poligonos_tab)
+            if lat_acumuladas and lon_acumuladas:
+                m_p_lat = sum(lat_acumuladas) / len(lat_acumuladas)
+                m_p_lon = sum(lon_acumuladas) / len(lon_acumuladas)
+            else:
+                m_p_lat, m_p_lon = lat_centro, lon_centro
 
-                if coordenadas_poligono:
-                    folium.Polygon(
-                        locations=coordenadas_poligono,
-                        color="#2563eb",
-                        weight=3.5,
-                        fill=True,
-                        fill_color="#3b82f6",
-                        fill_opacity=0.4,
-                        popup=f"Polígono FID: {fid_seleccionado} | Sector: {sec_comercial}"
-                    ).add_to(mapa_poligonos_tab)
+            mapa_poligonos_tab = folium.Map(location=[m_p_lat, m_p_lon], zoom_start=12)
+            Fullscreen(position="topright", title="Ampliar Mapa", cancel_title="Salir de pantalla completa").add_to(mapa_poligonos_tab)
 
-                    for idx_v, coord_v in enumerate(coordenadas_poligono):
-                        folium.CircleMarker(
-                            location=coord_v,
-                            radius=4,
-                            color='#1d4ed8',
-                            fill=True,
-                            fill_color='#93c5fd',
-                            fill_opacity=1.0,
-                            popup=f"Polígono: {fid_seleccionado} | Vértice #{idx_v+1}<br>Lat: {coord_v[0]}, Lon: {coord_v[1]}"
-                        ).add_to(mapa_poligonos_tab)
+            # Dibujar todos los polígonos disponibles en el mapa
+            for fid, datos in poligonos_procesados.items():
+                folium.Polygon(
+                    locations=datos['coordenadas'],
+                    color="#2563eb",
+                    weight=2.5,
+                    fill=True,
+                    fill_color="#3b82f6",
+                    fill_opacity=0.3,
+                    popup=f"Polígono FID: {fid} | Sector: {datos['sector']} | Área: {datos['area']} km² | Medidores: {datos['medidores']}"
+                ).add_to(mapa_poligonos_tab)
 
-                st_folium(mapa_poligonos_tab, width=None, height=480, use_container_width=True, key=f"mapa_poligono_{fid_seleccionado}", returned_objects=[])
+            st_folium(mapa_poligonos_tab, width=None, height=480, use_container_width=True, key="mapa_todos_poligonos", returned_objects=[])
+
+            st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:20px; margin-bottom:10px;'>📋 Detalle de Polígonos Disponibles</p>", unsafe_allow_html=True)
+            
+            # Crear tabla resumen de todos los polígonos
+            resumen_poligonos = []
+            for fid, datos in poligonos_procesados.items():
+                resumen_poligonos.append({
+                    'FID': fid,
+                    'Sector Comercial': datos['sector'],
+                    'Área (km²)': datos['area'],
+                    'Medidores': datos['medidores'],
+                    'Vértices Totales': datos['vertis']
+                })
+            
+            df_resumen_tabla = pd.DataFrame(resumen_poligonos)
+            st.dataframe(df_resumen_tabla, use_container_width=True, hide_index=True)
         else:
             st.warning("No se pudo cargar la tabla `Diccionario_poligonos_instalacion` desde la base de datos.")
 
