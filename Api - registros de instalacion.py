@@ -530,22 +530,15 @@ if 'datos_instalaciones' in st.session_state:
                 control=True
             ).add_to(mapa_poligonos)
 
-            if {'FID', 'Latitud', 'Longitud'}.issubset(df_poligonos.columns):
+            if {'FID', 'Latitud', 'Longitud', 'Vertice'}.issubset(df_poligonos.columns):
                 for fid_id, grupo_pol in df_poligonos.groupby('FID'):
-                    puntos_df = grupo_pol.dropna(subset=['Latitud', 'Longitud']).copy()
-                    if len(puntos_df) > 2:
-                        # Ordenamiento polar respecto al centroide para evitar efecto telaraña
+                    puntos_df = grupo_pol.dropna(subset=['Latitud', 'Longitud']).sort_values('Vertice')
+                    
+                    if len(puntos_df) >= 3:
+                        puntos = puntos_df[['Latitud', 'Longitud']].values.tolist()
                         centro_lat = puntos_df['Latitud'].mean()
                         centro_lon = puntos_df['Longitud'].mean()
-                        
-                        puntos_df['angulo'] = np.arctan2(
-                            puntos_df['Longitud'] - centro_lon,
-                            puntos_df['Latitud'] - centro_lat
-                        )
-                        puntos_df = puntos_df.sort_values('angulo')
-                        
-                        puntos = puntos_df[['Latitud', 'Longitud']].values.tolist()
-                        
+
                         folium.Polygon(
                             locations=puntos,
                             color='#2563eb',
