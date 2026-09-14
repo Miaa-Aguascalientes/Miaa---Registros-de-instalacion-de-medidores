@@ -516,7 +516,7 @@ if 'datos_instalaciones' in st.session_state:
             if 'Latitud' in df_poligonos.columns and 'Longitud' in df_poligonos.columns:
                 valid_coords = df_poligonos.dropna(subset=['Latitud', 'Longitud'])
                 if not valid_coords.empty:
-                    map_lat_p = valid_coords['Latitud'].mean()
+                    map_lat_p = valid_corr_lat = valid_coords['Latitud'].mean()
                     map_lon_p = valid_coords['Longitud'].mean()
 
             mapa_poligonos = folium.Map(location=[map_lat_p, map_lon_p], zoom_start=12)
@@ -551,11 +551,25 @@ if 'datos_instalaciones' in st.session_state:
                             tooltip=f"Polígono FID: {fid_id}"
                         ).add_to(mapa_poligonos)
 
+                        # Ordenar por el número de vértice original en la base de datos para asegurar el orden secuencial correcto sin cruzarse
+                        puntos_df_ordenado = grupo_pol_copy.dropna(subset=['Latitud', 'Longitud']).sort_values(by='Vertice_num')
+                        puntos = puntos_df_ordenado[['Latitud', 'Longitud']].values.tolist()
+
+                        folium.Polygon(
+                            locations=puntos,
+                            color='#2563eb',
+                            weight=2.5,
+                            fill=True,
+                            fill_color='#3b82f6',
+                            fill_opacity=0.4,
+                            tooltip=f"Polígono FID: {fid_id}"
+                        ).add_to(mapa_poligonos)
+
                         folium.Marker(
                             location=[centro_lat, centro_lon],
                             icon=folium.DivIcon(
                                 html=f"""<div style="font-size: 10px; color: #1e293b; background: rgba(255, 255, 255, 0.85); padding: 2px 5px; border-radius: 4px; text-align: center; border: 1px solid #2563eb;"><b>FID-{fid_id}</b></div>"""
-                            )
+                    )
                         ).add_to(mapa_poligonos)
 
             st_folium(mapa_poligonos, width=None, height=500, use_container_width=True, key="mapa_diccionario_poligonos", returned_objects=[])
