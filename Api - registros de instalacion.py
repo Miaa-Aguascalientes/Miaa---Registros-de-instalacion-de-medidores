@@ -6,11 +6,8 @@ from sqlalchemy import create_engine
 import plotly.express as px
 import plotly.graph_objects as go
 import folium
-from folium.plugins import Fullscreen
 from streamlit_folium import st_folium
 import numpy as np
-import geopandas as gpd
-from shapely.geometry import Polygon
 
 st.set_page_config(
     page_title="Dashboard Instalación Medidores Inteligentes", 
@@ -111,58 +108,6 @@ def cargar_metas_db():
         return pd.read_sql(query, con=engine)
     except Exception as e:
         return pd.DataFrame()
-
-@st.cache_data(ttl=600)
-def cargar_poligonos_geojson_db():
-    try:
-        engine = create_engine(st.secrets["mysql"]["connection_string"])
-        query = """
-            SELECT FID, Sector_comercial, Orden_instalacion, Poligono, Anillo, Vertice, X, Y 
-            FROM Diccionario_poligonos_instalacion
-        """
-        df_poly = pd.read_sql(query, con=engine)
-        if df_poly.empty:
-            return {"type": "FeatureCollection", "features": []}
-        
-        df_poly['X'] = pd.to_numeric(df_poly['X'], errors='coerce')
-        df_poly['Y'] = pd.to_numeric(df_poly['Y'], errors='coerce')
-        df_poly['Vertice'] = pd.to_numeric(df_poly['Vertice'], errors='coerce')
-        df_poly['Anillo'] = pd.to_numeric(df_poly['Anillo'], errors='coerce')
-        df_poly = df_poly.dropna(subset=['X', 'Y', 'Poligono'])
-        
-        polygons_list = []
-        for poligono_val, group in df_poly.groupby('Poligono'):
-            sector_val = group['Sector_comercial'].iloc[0] if 'Sector_comercial' in group.columns else ''
-            
-            rings_dict = {}
-            for anillo_val, ring_group in group.groupby('Anillo' if 'Anillo' in group.columns else 0):
-                ring_sorted = ring_group.sort_values('Vertice')
-                coords = ring_sorted[['X', 'Y']].values.tolist()
-                if len(coords) >= 3:
-                    if coords[0] != coords[-1]:
-                        coords.append(coords[0])
-                    rings_dict[anillo_val] = coords
-            
-            exterior = rings_dict.get(0) or list(rings_dict.values())[0] if rings_dict else None
-            interiors = [r for k, r in rings_dict.items() if k != 0] if len(rings_dict) > 1 else []
-            
-            if exterior and len(exterior) >= 4:
-                poly_geom = Polygon(shell=exterior, holes=interiors if interiors else None)
-                polygons_list.append({
-                    'Poligono_de_instalacion': str(poligono_val),
-                    'Sector_comercial': str(sector_val),
-                    'geometry': poly_geom
-                })
-                
-        if not polygons_list:
-            return {"type": "FeatureCollection", "features": []}
-            
-        gdf = gpd.GeoDataFrame(polygons_list, crs="EPSG:32613")
-        gdf = gdf.to_crs("EPSG:4326")
-        
-        return json.loads(gdf.to_json())
-    except Exception as e:
-        return {"type": "FeatureCollection", "features": []}
 
 if 'datos_instalaciones' not in st.session_state:
     res = cargar_datos_api()
@@ -290,6 +235,7 @@ if 'datos_instalaciones' in st.session_state:
         total_externo = int(df_filtrado['usuarioExterno'].fillna(False).astype(bool).sum())
         total_miaa = int((~df_filtrado['usuarioExterno'].fillna(False).astype(bool)).sum())
         
+        # Subconjuntos filtrados por tipo de personal
         df_externo = df_filtrado[df_filtrado['usuarioExterno'].fillna(False).astype(bool)].copy()
         df_miaa_pers = df_filtrado[~df_filtrado['usuarioExterno'].fillna(False).astype(bool)].copy()
     else:
@@ -327,17 +273,17 @@ if 'datos_instalaciones' in st.session_state:
         df_eficiencia = pd.DataFrame(columns=['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono'])
 
     # ---------------------------------------------------------
-    # PESTAÑAS PRINCIPALES SUPERIORES (5 Pestañas)
+    # PESTAÑAS PRINCIPALES SUPERIORES (4 Pestañas)
     # ---------------------------------------------------------
-    tab_principal, tab_poligonos, tab_externo, tab_miaa, tab_tabla = st.tabs([
+    tab_principal, tab_externo, tab_miaa, tab_tabla = st.tabs([
         "📊 Dashboard Principal", 
-        "🗺️ Mapa de Polígonos", 
         "👷 Personal Externo", 
         "🏢 Personal MIAA", 
         "📋 Tabla Base de Datos Completa"
     ])
 
     with tab_principal:
+        # FILA 1: KPIs Superiores
         k1, k2, k3, k4, k5, k6 = st.columns(6)
         with k1: st.metric("Meta Total", f"{meta_total:,}")
         with k2: st.metric("Instalados", f"{total_instalados:,}")
@@ -348,6 +294,7 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
+        # FILA 2: Gráficas
         col_g1, col_g2 = st.columns([1.8, 1.2])
 
         with col_g1:
@@ -392,6 +339,7 @@ if 'datos_instalaciones' in st.session_state:
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
+        # FILA 3: Tabla de Eficiencia y Gráfica Mensual + Mapa
         col_inf1, col_inf2 = st.columns([1, 1.6])
 
         with col_inf1:
@@ -446,7 +394,7 @@ if 'datos_instalaciones' in st.session_state:
             )
             st.plotly_chart(fig_mes_h, use_container_width=True)
 
-            st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones y Polígonos</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones (Coordenadas Reales API)</p>", unsafe_allow_html=True)
             
             df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
             if not df_mapa_valido.empty:
@@ -455,54 +403,7 @@ if 'datos_instalaciones' in st.session_state:
             else:
                 map_lat, map_lon = lat_centro, lon_centro
 
-            mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12, tiles=None)
-
-            api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
-            
-            folium.TileLayer(
-                tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
-                name="Vista Nocturna",
-                attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains="abcd",
-                max_zoom=20,
-                overlay=False,
-                control=True
-            ).add_to(mapa_miaa)
-
-            Fullscreen().add_to(mapa_miaa)
-
-            try:
-                archivo_geojson = cargar_poligonos_geojson_db()
-
-                features_filtradas = []
-                for feat in archivo_geojson.get("features", []):
-                    props = feat.get("properties", {})
-                    id_pol = str(props.get("Poligono_de_instalacion") or "")
-                    if id_pol in poligonos_seleccionados:
-                        features_filtradas.append(feat)
-
-                geojson_a_mostrar = {
-                    "type": "FeatureCollection",
-                    "features": features_filtradas
-                }
-
-                folium.GeoJson(
-                    geojson_a_mostrar,
-                    name="Polígonos de Instalación",
-                    style_function=lambda feature: {
-                        'fillColor': '#ff7f00',
-                        'color': '#ff7f00',
-                        'weight': 2.5,
-                        'fillOpacity': 0.3
-                    },
-                    tooltip=folium.GeoJsonTooltip(
-                        fields=[k for k in ['Poligono_de_instalacion', 'Sector_comercial'] if k in (archivo_geojson.get("features", [{}])[0].get("properties", {}))],
-                        aliases=[k.replace('_', ' ').capitalize() + ":" for k in ['Poligono_de_instalacion', 'Sector_comercial'] if k in (archivo_geojson.get("features", [{}])[0].get("properties", {}))],
-                        localize=True
-                    )
-                ).add_to(mapa_miaa)
-            except Exception as e:
-                pass
+            mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12, tiles="CartoDB dark_matter")
 
             for _, row in df_mapa_valido.iterrows():
                 folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
@@ -510,65 +411,12 @@ if 'datos_instalaciones' in st.session_state:
             st_folium(mapa_miaa, width=None, height=190, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
 
     # ---------------------------------------------------------
-    # PESTAÑA: MAPA DE POLÍGONOS EXCLUSIVO
-    # ---------------------------------------------------------
-    with tab_poligonos:
-        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Visualización General de Polígonos de Instalación</p>", unsafe_allow_html=True)
-        
-        mapa_solo_pol = folium.Map(location=[lat_centro, lon_centro], zoom_start=12, tiles=None)
-        
-        folium.TileLayer(
-            tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
-            name="Vista Nocturna",
-            attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains="abcd",
-            max_zoom=20,
-            overlay=False,
-            control=True
-        ).add_to(mapa_solo_pol)
-        
-        Fullscreen().add_to(mapa_solo_pol)
-
-        try:
-            archivo_geojson_completo = cargar_poligonos_geojson_db()
-            features_todas = []
-            for feat in archivo_geojson_completo.get("features", []):
-                props = feat.get("properties", {})
-                id_pol = str(props.get("Poligono_de_instalacion") or "")
-                if id_pol in poligonos_seleccionados:
-                    features_todas.append(feat)
-
-            geojson_completo_mostrar = {
-                "type": "FeatureCollection",
-                "features": features_todas
-            }
-
-            folium.GeoJson(
-                geojson_completo_mostrar,
-                name="Polígonos",
-                style_function=lambda feature: {
-                    'fillColor': '#ff7f00',
-                    'color': '#ff7f00',
-                    'weight': 3,
-                    'fillOpacity': 0.35
-                },
-                tooltip=folium.GeoJsonTooltip(
-                    fields=[k for k in ['Poligono_de_instalacion', 'Sector_comercial'] if k in (archivo_geojson_completo.get("features", [{}])[0].get("properties", {}))],
-                    aliases=[k.replace('_', ' ').capitalize() + ":" for k in ['Poligono_de_instalacion', 'Sector_comercial'] if k in (archivo_geojson_completo.get("features", [{}])[0].get("properties", {}))],
-                    localize=True
-                )
-            ).add_to(mapa_solo_pol)
-        except Exception as e:
-            pass
-
-        st_folium(mapa_solo_pol, width=None, height=600, use_container_width=True, key="mapa_solo_poligonos_tab", returned_objects=[])
-
-    # ---------------------------------------------------------
     # PESTAÑA: PERSONAL EXTERNO
     # ---------------------------------------------------------
     with tab_externo:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>👷 Resumen de Instalaciones - Personal Externo</p>", unsafe_allow_html=True)
         
+        # KPIs específicos Externo
         ext_total = len(df_externo)
         ext_sin_coord = df_externo['latitud'].isna().sum() if not df_externo.empty else 0
         ext_colonias = df_externo['colonia'].nunique() if 'colonia' in df_externo.columns and not df_externo.empty else 0
@@ -613,19 +461,7 @@ if 'datos_instalaciones' in st.session_state:
         df_ext_map = df_externo.dropna(subset=['latitud', 'longitud']) if not df_externo.empty else pd.DataFrame()
         m_lat = df_ext_map['latitud'].mean() if not df_ext_map.empty else lat_centro
         m_lon = df_ext_map['longitud'].mean() if not df_ext_map.empty else lon_centro
-        
-        mapa_ext = folium.Map(location=[m_lat, m_lon], zoom_start=12, tiles=None)
-        folium.TileLayer(
-            tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
-            name="Vista Nocturna",
-            attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains="abcd",
-            max_zoom=20,
-            overlay=False,
-            control=True
-        ).add_to(mapa_ext)
-        Fullscreen().add_to(mapa_ext)
-
+        mapa_ext = folium.Map(location=[m_lat, m_lon], zoom_start=12, tiles="CartoDB dark_matter")
         for _, row in df_ext_map.iterrows():
             folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#f59e0b', fill=True, fill_color='#f59e0b', fill_opacity=0.7).add_to(mapa_ext)
         st_folium(mapa_ext, width=None, height=220, use_container_width=True, key="mapa_externo", returned_objects=[])
@@ -647,6 +483,7 @@ if 'datos_instalaciones' in st.session_state:
     with tab_miaa:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🏢 Resumen de Instalaciones - Personal MIAA</p>", unsafe_allow_html=True)
         
+        # KPIs específicos MIAA
         miaa_total = len(df_miaa_pers)
         miaa_sin_coord = df_miaa_pers['latitud'].isna().sum() if not df_miaa_pers.empty else 0
         miaa_colonias = df_miaa_pers['colonia'].nunique() if 'colonia' in df_miaa_pers.columns and not df_miaa_pers.empty else 0
@@ -691,19 +528,7 @@ if 'datos_instalaciones' in st.session_state:
         df_miaa_map = df_miaa_pers.dropna(subset=['latitud', 'longitud']) if not df_miaa_pers.empty else pd.DataFrame()
         mm_lat = df_miaa_map['latitud'].mean() if not df_miaa_map.empty else lat_centro
         mm_lon = df_miaa_map['longitud'].mean() if not df_miaa_map.empty else lon_centro
-        
-        mapa_miaa_pers = folium.Map(location=[mm_lat, mm_lon], zoom_start=12, tiles=None)
-        folium.TileLayer(
-            tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
-            name="Vista Nocturna",
-            attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains="abcd",
-            max_zoom=20,
-            overlay=False,
-            control=True
-        ).add_to(mapa_miaa_pers)
-        Fullscreen().add_to(mapa_miaa_pers)
-
+        mapa_miaa_pers = folium.Map(location=[mm_lat, mm_lon], zoom_start=12, tiles="CartoDB dark_matter")
         for _, row in df_miaa_map.iterrows():
             folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#10b981', fill=True, fill_color='#10b981', fill_opacity=0.7).add_to(mapa_miaa_pers)
         st_folium(mapa_miaa_pers, width=None, height=220, use_container_width=True, key="mapa_miaa_personal", returned_objects=[])
