@@ -117,15 +117,26 @@ def cargar_poligonos_db():
             SELECT 
                 FID, 
                 Sector_comercial, 
-                Orden_instalacion, 
-                Poligono, 
-                Anillo, 
                 Vertice, 
-                X, 
-                Y 
+                coord, 
+                Orden_inst, 
+                Area_km2, 
+                Medidores 
             FROM Diccionario_poligonos_instalacion
         """
-        return pd.read_sql(query, con=engine)
+        df = pd.read_sql(query, con=engine)
+        
+        if not df.empty and 'coord' in df.columns:
+            # Separar el campo 'coord' que viene como "latitud, longitud" o similar
+            coords_split = df['coord'].astype(str).str.split(',', expand=True)
+            if coords_split.shape[1] >= 2:
+                df['Latitud'] = pd.to_numeric(coords_split[0].str.strip(), errors='coerce')
+                df['Longitud'] = pd.to_numeric(coords_split[1].str.strip(), errors='coerce')
+            else:
+                df['Latitud'] = np.nan
+                df['Longitud'] = np.nan
+                
+        return df
     except Exception as e:
         return pd.DataFrame()
 
@@ -630,56 +641,50 @@ if 'datos_instalaciones' in st.session_state:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Visualización de Polígonos de Instalación</p>", unsafe_allow_html=True)
         
         if not df_poligonos.empty:
-            total_pols = df_poligonos['Poligono'].nunique() if 'Poligono' in df_poligonos.columns else 0
+            total_pols = df_poligonos['FID'].nunique() if 'FID' in df_poligonos.columns else 0
             total_verts = len(df_poligonos)
 
             p_col1, p_col2 = st.columns(2)
-            with p_col1: st.metric("Total de Polígonos", f"{total_pols:,}")
+            with p_col1: st.metric("Total de Polígonos (FID)", f"{total_pols:,}")
             with p_col2: st.metric("Vértices Totales", f"{total_verts:,}")
 
             st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-            # Crear mapa de polígonos
             map_lat_p, map_lon_p = lat_centro, lon_centro
-            if 'Y' in df_poligonos.columns and 'X' in df_poligonos.columns:
-                df_poligonos['Y'] = pd.to_numeric(df_poligonos['Y'], errors='coerce')
-                df_poligonos['X'] = pd.to_numeric(df_poligonos['X'], errors='coerce')
-                valid_coords = df_poligonos.dropna(subset=['Y', 'X'])
+            if 'Latitud' in df_poligonos.columns and 'Longitud' in df_poligonos.columns:
+                valid_coords = df_poligonos.dropna(subset=['Latitud', 'Longitud'])
                 if not valid_coords.empty:
-                    map_lat_p = valid_coords['Y'].mean()
-                    map_lon_p = valid_coords['X'].mean()
+                    map_lat_p = valid_coords['Latitud'].mean()
+                    map_lon_p = valid_coords['Longitud'].mean()
 
             mapa_poligonos = folium.Map(location=[map_lat_p, map_lon_p], zoom_start=12, tiles="CartoDB dark_matter")
 
-            if {'Poligono', 'Anillo', 'Vertice', 'X', 'Y'}.issubset(df_poligonos.columns):
-                # Ordenar por Polígono, Anillo y Orden de Vértice
-                df_sorted = df_poligonos.sort_values(by=['Poligono', 'Anillo', 'Vertice'])
+            if {'FID', 'Vertice', 'Latitud', 'Longitud'}.issubset(df_poligonos.columns):
+                # Ordenar por FID y Orden_inst / Vertice
+                df_sorted = df_poligonos.sort_values(by=['FID', 'Orden_inst', 'Vertice'])
                 
-                for poligono_id, grupo_pol in df_sorted.groupby('Poligono'):
-                    for anillo_id, grupo_anillo in grupo_pol.groupby('Anillo'):
-                        puntos = grupo_anillo[['Y', 'X']].dropna().values.tolist()
-                        if len(puntos) > 2:
-                            # Dibujar el polígono con estilo azul transparente
-                            folium.Polygon(
-                                locations=puntos,
-                                color='#3b82f6',
-                                weight=2,
-                                fill=True,
-                                fill_color='#3b82f6',
-                                fill_opacity=0.4,
-                                tooltip=f"Polígono: {poligono_id} | Anillo: {anillo_id}"
-                            ).add_to(mapa_poligonos)
+                for fid_id, grupo_pol in df_sorted.groupby('FID'):
+                    puntos = grupo_pol[['Latitud', 'Longitud']].dropna().values.tolist()
+                    if len(puntos) > 2:
+                        folium.Polygon(
+                            locations=puntos,
+                            color='#3b82f6',
+                            weight=2,
+                            fill=True,
+                            fill_color='#3b82f6',
+                            fill_opacity=0.4,
+                            tooltip=f"Polígono FID: {fid_id}"
+                        ).add_to(mapa_poligonos)
 
-                            # Añadir un marcador de etiqueta en el centroide aproximado de cada polígono
-                            centro_lat = np.mean([p[0] for p in puntos])
-                            centro_lon = np.mean([p[1] for p in puntos])
-                            
-                            folium.Marker(
-                                location=[centro_lat, centro_lon],
-                                icon=folium.DivIcon(
-                                    html=f"""<div style="font-size: 10px; color: white; background: rgba(15, 23, 42, 0.75); padding: 2px 5px; border-radius: 4px; text-align: center; border: 1px solid #3b82f6;"><b>P-{poligono_id}</b></div>"""
-                                )
-                            ).add_to(mapa_poligonos)
+                        centro_lat = np.mean([p[0] for p in puntos])
+                        centro_lon = np.mean([p[1] for p in puntos])
+                        
+                        folium.Marker(
+                            location=[centro_lat, centro_lon],
+                            icon=folium.DivIcon(
+                                html=f"""<div style="font-size: 10px; color: white; background: rgba(15, 23, 42, 0.75); padding: 2px 5px; border-radius: 4px; text-align: center; border: 1px solid #3b82f6;"><b>FID-{fid_id}</b></div>"""
+                            )
+                        ).add_to(mapa_poligonos)
 
             st_folium(mapa_poligonos, width=None, height=500, use_container_width=True, key="mapa_diccionario_poligonos", returned_objects=[])
             
