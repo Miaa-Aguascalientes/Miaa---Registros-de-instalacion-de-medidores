@@ -110,6 +110,56 @@ def cargar_metas_db():
     except Exception as e:
         return pd.DataFrame()
 
+@st.cache_data(ttl=600)
+def cargar_poligonos_geojson_db():
+    try:
+        engine = create_engine(st.secrets["mysql"]["connection_string"])
+        query = """
+            SELECT FID, Sector_comercial, Orden_instalacion, Poligono, Anillo, Vertice, X, Y 
+            FROM Diccionario_poligonos_instalacion
+        """
+        df_poly = pd.read_sql(query, con=engine)
+        if df_poly.empty:
+            return {"type": "FeatureCollection", "features": []}
+        
+        df_poly['X'] = pd.to_numeric(df_poly['X'], errors='coerce')
+        df_poly['Y'] = pd.to_numeric(df_poly['Y'], errors='coerce')
+        df_poly['Vertice'] = pd.to_numeric(df_poly['Vertice'], errors='coerce')
+        df_poly['Anillo'] = pd.to_numeric(df_poly['Anillo'], errors='coerce')
+        df_poly = df_poly.dropna(subset=['X', 'Y', 'Poligono'])
+        
+        features = []
+        for poligono_val, group in df_poly.groupby('Poligono'):
+            sector_val = group['Sector_comercial'].iloc[0] if 'Sector_comercial' in group.columns else ''
+            
+            rings_dict = {}
+            for anillo_val, ring_group in group.groupby('Anillo' if 'Anillo' in group.columns else 0):
+                ring_sorted = ring_group.sort_values('Vertice')
+                coords = ring_sorted[['X', 'Y']].values.tolist()
+                if coords:
+                    rings_dict[anillo_val] = coords
+            
+            polygon_coordinates = list(rings_dict.values())
+            if not polygon_coordinates:
+                continue
+                
+            feature = {
+                "type": "Feature",
+                "properties": {
+                    "Poligono_de_instalacion": str(poligono_val),
+                    "Sector_comercial": str(sector_val)
+                },
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": polygon_coordinates
+                }
+            }
+            features.append(feature)
+            
+        return {"type": "FeatureCollection", "features": features}
+    except Exception as e:
+        return {"type": "FeatureCollection", "features": []}
+
 if 'datos_instalaciones' not in st.session_state:
     res = cargar_datos_api()
     if res:
@@ -418,15 +468,14 @@ if 'datos_instalaciones' in st.session_state:
 
             Fullscreen().add_to(mapa_miaa)
 
-            # --- CARGA Y DIBUJADO DE POLÍGONOS DESDE GEOJSON ---
+            # --- CARGA Y DIBUJADO DE POLÍGONOS DESDE LA BD (Diccionario_poligonos_instalacion) ---
             try:
-                with open("poligonos.geojson", "r", encoding="utf-8") as f:
-                    archivo_geojson = json.load(f)
+                archivo_geojson = cargar_poligonos_geojson_db()
 
                 features_filtradas = []
                 for feat in archivo_geojson.get("features", []):
                     props = feat.get("properties", {})
-                    id_pol = str(props.get("Poligono_de_instalacion") or props.get("id") or "")
+                    id_pol = str(props.get("Poligono_de_instalacion") or "")
                     if id_pol in poligonos_seleccionados:
                         features_filtradas.append(feat)
 
@@ -445,13 +494,11 @@ if 'datos_instalaciones' in st.session_state:
                         'fillOpacity': 0.25
                     },
                     tooltip=folium.GeoJsonTooltip(
-                        fields=[k for k in ['Poligono_de_instalacion', 'Sector_comercial', 'Area_km2'] if k in (archivo_geojson.get("features", [{}])[0].get("properties", {}))],
-                        aliases=[k.replace('_', ' ').capitalize() + ":" for k in ['Poligono_de_instalacion', 'Sector_comercial', 'Area_km2'] if k in (archivo_geojson.get("features", [{}])[0].get("properties", {}))],
+                        fields=[k for k in ['Poligono_de_instalacion', 'Sector_comercial'] if k in (archivo_geojson.get("features", [{}])[0].get("properties", {}))],
+                        aliases=[k.replace('_', ' ').capitalize() + ":" for k in ['Poligono_de_instalacion', 'Sector_comercial'] if k in (archivo_geojson.get("features", [{}])[0].get("properties", {}))],
                         localize=True
                     )
                 ).add_to(mapa_miaa)
-            except FileNotFoundError:
-                pass
             except Exception as e:
                 pass
 
@@ -673,7 +720,7 @@ if 'datos_instalaciones' in st.session_state:
         if 'fechaInstalacion' in df_tabla_limpia.columns:
             df_tabla_limpia['fechaInstalacion'] = pd.to_datetime(df_tabla_limpia['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
 
-        if 'horaInicio' in df_tabla_limpia.columns:
+        if 'horaInicio' in df_tabla_limpia.contours if hasattr(df_tabla_limpia, 'contours') else 'horaInicio' in df_tabla_limpia.columns:
             df_tabla_limpia['horaInicio'] = pd.to_datetime(df_tabla_limpia['horaInicio'], errors='coerce').dt.strftime('%H:%M')
 
         df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
