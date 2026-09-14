@@ -532,7 +532,9 @@ if 'datos_instalaciones' in st.session_state:
 
             if {'FID', 'Latitud', 'Longitud', 'Vertice'}.issubset(df_poligonos.columns):
                 for fid_id, grupo_pol in df_poligonos.groupby('FID'):
-                    puntos_df = grupo_pol.dropna(subset=['Latitud', 'Longitud']).sort_values('Vertice')
+                    grupo_pol_copy = grupo_pol.copy()
+                    grupo_pol_copy['Vertice_num'] = pd.to_numeric(grupo_pol_copy['Vertice'], errors='coerce')
+                    puntos_df = grupo_pol_copy.dropna(subset=['Latitud', 'Longitud']).sort_values('Vertice_num')
                     
                     if len(puntos_df) >= 3:
                         puntos = puntos_df[['Latitud', 'Longitud']].values.tolist()
