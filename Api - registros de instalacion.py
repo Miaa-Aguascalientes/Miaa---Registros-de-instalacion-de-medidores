@@ -270,7 +270,7 @@ if 'datos_instalaciones' in st.session_state:
 
     st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-    # FILA 2: Gráficas (Instalaciones por Día con números arriba y Distribución por Usuario Externo)
+    # FILA 2: Gráficas (Instalaciones por Día con margen superior ampliado y Distribución por Usuario Externo)
     col_g1, col_g2 = st.columns([1.8, 1.2])
 
     with col_g1:
@@ -288,7 +288,7 @@ if 'datos_instalaciones' in st.session_state:
             plot_bgcolor='rgba(0,0,0,0)', 
             paper_bgcolor='rgba(0,0,0,0)', 
             font_color='#ffffff', 
-            margin=dict(t=20, b=5, l=5, r=5), 
+            margin=dict(t=40, b=5, l=5, r=5), 
             height=160, 
             xaxis_title=None, 
             yaxis_title=None
