@@ -132,46 +132,17 @@ def cargar_poligonos_db():
 def agregar_capas_base(m):
     api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
     
-    # 1. VISTA NOCTURNA (CARTO Dark Matter) - DEBE IR PRIMERO PARA SER LA PREDETERMINADA
+    # ÚNICA CAPA PERMITIDA: VISTA NOCTURNA (CARTO Dark Matter)
     folium.TileLayer(
         tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
         name="Vista Nocturna",
         attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         subdomains="abcd",
         max_zoom=20,
-        overlay=False,
-        control=True
-    ).add_to(m)
-
-    # 2. OpenStreetMap
-    folium.TileLayer(
-        tiles='OpenStreetMap',
-        name='OpenStreetMap',
-        attr='&copy; OpenStreetMap contributors',
-        overlay=False,
-        control=True
-    ).add_to(m)
-
-    # 3. Satélite (Esri)
-    folium.TileLayer(
-        tiles='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        name='Satélite',
-        attr='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-        overlay=False,
-        control=True
-    ).add_to(m)
-
-    # 4. Satélite con Calles
-    folium.TileLayer(
-        tiles='https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-        name='Satélite con Calles',
-        attr='Esri &mdash; World Boundaries and Places',
-        overlay=True,
-        control=True
+        control=False
     ).add_to(m)
 
     Fullscreen(position="topright", title="Ampliar Mapa", cancel_title="Salir de pantalla completa").add_to(m)
-    folium.LayerControl(collapsed=False).add_to(m)
 
 if 'datos_instalaciones' not in st.session_state:
     res = cargar_datos_api()
