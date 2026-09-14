@@ -270,7 +270,7 @@ if 'datos_instalaciones' in st.session_state:
 
     st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-    # FILA 2: Gráficas (Instalaciones por Día con margen superior ampliado y Distribución por Usuario Externo)
+    # FILA 2: Gráficas (Instalaciones por Día y Distribución por Usuario Externo con altura aumentada a 195)
     col_g1, col_g2 = st.columns([1.8, 1.2])
 
     with col_g1:
@@ -289,7 +289,7 @@ if 'datos_instalaciones' in st.session_state:
             paper_bgcolor='rgba(0,0,0,0)', 
             font_color='#ffffff', 
             margin=dict(t=40, b=5, l=5, r=5), 
-            height=160, 
+            height=195, 
             xaxis_title=None, 
             yaxis_title=None
         )
@@ -303,7 +303,15 @@ if 'datos_instalaciones' in st.session_state:
             fig_pie = go.Figure(go.Pie(labels=df_ext['Externo'], values=df_ext['Cantidad'], hole=0.5))
         else:
             fig_pie = go.Figure(go.Pie(labels=['Total'], values=[len(df_filtrado)], hole=0.5))
-        fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160, showlegend=True, legend=dict(orientation="h", y=-0.1))
+        fig_pie.update_layout(
+            plot_bgcolor='rgba(0,0,0,0)', 
+            paper_bgcolor='rgba(0,0,0,0)', 
+            font_color='#ffffff', 
+            margin=dict(t=5, b=5, l=5, r=5), 
+            height=195, 
+            showlegend=True, 
+            legend=dict(orientation="h", y=-0.1)
+        )
         st.plotly_chart(fig_pie, use_container_width=True)
 
     # FILA 3: Tabla de Eficiencia Ordenada y Columna Derecha (Gráfica horizontal por Mes con todos los datos + Mapa)
