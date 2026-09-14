@@ -270,7 +270,7 @@ if 'datos_instalaciones' in st.session_state:
 
     st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-    # FILA 2: Gráficas (Instalaciones por Día y Distribución por Usuario Externo con altura aumentada a 195)
+    # FILA 2: Gráficas (Instalaciones por Día y Distribución por Usuario Externo con altura de 230 y eje Y a 500)
     col_g1, col_g2 = st.columns([1.8, 1.2])
 
     with col_g1:
@@ -289,9 +289,10 @@ if 'datos_instalaciones' in st.session_state:
             paper_bgcolor='rgba(0,0,0,0)', 
             font_color='#ffffff', 
             margin=dict(t=40, b=5, l=5, r=5), 
-            height=195, 
+            height=230, 
             xaxis_title=None, 
-            yaxis_title=None
+            yaxis_title=None,
+            yaxis=dict(range=[0, 500])
         )
         st.plotly_chart(fig_dia, use_container_width=True)
 
@@ -308,7 +309,7 @@ if 'datos_instalaciones' in st.session_state:
             paper_bgcolor='rgba(0,0,0,0)', 
             font_color='#ffffff', 
             margin=dict(t=5, b=5, l=5, r=5), 
-            height=195, 
+            height=230, 
             showlegend=True, 
             legend=dict(orientation="h", y=-0.1)
         )
