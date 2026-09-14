@@ -296,7 +296,7 @@ if 'datos_instalaciones' in st.session_state:
         fig_pie.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=5, b=5, l=5, r=5), height=160, showlegend=True, legend=dict(orientation="h", y=-0.1))
         st.plotly_chart(fig_pie, use_container_width=True)
 
-    # FILA 3: Tabla de Eficiencia Ordenada y Columna Derecha (Gráfica horizontal por Mes con nombres en español + Mapa)
+    # FILA 3: Tabla de Eficiencia Ordenada y Columna Derecha (Gráfica horizontal por Mes usando df general + Mapa)
     col_inf1, col_inf2 = st.columns([1, 1.6])
 
     with col_inf1:
@@ -309,9 +309,11 @@ if 'datos_instalaciones' in st.session_state:
     with col_inf2:
         st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
         
-        if col_fecha_ref and not df_filtrado['fecha_dt'].isna().all():
-            df_filtrado['periodo_mes'] = df_filtrado['fecha_dt'].dt.to_period('M')
-            df_mes = df_filtrado.groupby('periodo_mes', as_index=False).size()
+        # Usamos 'df' (sin filtrar por fecha) para que se muestren todos los meses
+        if col_fecha_ref and not df['fecha_dt'].isna().all():
+            df_mes_total = df.copy()
+            df_mes_total['periodo_mes'] = df_mes_total['fecha_dt'].dt.to_period('M')
+            df_mes = df_mes_total.groupby('periodo_mes', as_index=False).size()
             df_mes.columns = ['Periodo', 'Cantidad']
             
             meses_es = {
@@ -325,7 +327,8 @@ if 'datos_instalaciones' in st.session_state:
         else:
             df_mes = pd.DataFrame({'Mes': ['Sin datos'], 'Cantidad': [0]})
 
-        colores_barras = ['#3b82f6', '#f97316'] * ((len(df_mes) // 2) + 1)
+        # Tonos exclusivamente azules para alternar las barras
+        colores_barras = ['#1e3a8a', '#3b82f6'] * ((len(df_mes) // 2) + 1)
 
         fig_mes_h = px.bar(
             df_mes, 
