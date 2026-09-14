@@ -10,12 +10,18 @@ from folium.plugins import Fullscreen
 from streamlit_folium import st_folium
 import numpy as np
 
+# ==========================================
+# SECCIÓN 1: CONFIGURACIÓN GENERAL DE LA PÁGINA
+# ==========================================
 st.set_page_config(
     page_title="Dashboard Instalación Medidores Inteligentes", 
     page_icon="https://www.miaa.mx/favicon.ico", 
     layout="wide"
 )
 
+# ==========================================
+# SECCIÓN 2: ESTILOS CSS PERSONALIZADOS
+# ==========================================
 custom_style = """
     <style>
     /* Importar FontAwesome para los iconos */
@@ -127,6 +133,7 @@ custom_style = """
 """
 st.markdown(custom_style, unsafe_allow_html=True)
 
+# Cabecera superior visual del dashboard
 st.markdown("""
     <div class="dashboard-header">
         <h2 style='color: white; margin: 0; font-size: 1.4rem;'>📊 DASHBOARD INSTALACIÓN MEDIDORES INTELIGENTES</h2>
@@ -134,11 +141,16 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
+
+# ==========================================
+# SECCIÓN 3: FUNCIONES DE CONEXIÓN Y DATOS (API Y BASE DE DATOS)
+# ==========================================
 url_login = "https://prelec.miaa.mx/auth/v2/login"
 url_instalaciones = "https://prelec.miaa.mx/msvc-tecnica/medidores/instalaciones"
 
 @st.cache_data(ttl=300)
 def cargar_datos_api():
+    """Conecta con la API externa de MIAA usando credenciales de st.secrets para obtener registros de instalaciones."""
     try:
         usuario = st.secrets["api"]["usuario"]
         password = st.secrets["api"]["password"]
@@ -155,6 +167,7 @@ def cargar_datos_api():
 
 @st.cache_data(ttl=600)
 def cargar_metas_db():
+    """Consulta la base de datos MySQL para obtener el diccionario de metas e instalaciones por colonia."""
     try:
         engine = create_engine(st.secrets["mysql"]["connection_string"])
         query = """
@@ -172,6 +185,7 @@ def cargar_metas_db():
 
 @st.cache_data(ttl=600)
 def cargar_poligonos_db():
+    """Consulta la base de datos MySQL para extraer los vértices y metadatos de los polígonos geográficos."""
     try:
         engine = create_engine(st.secrets["mysql"]["connection_string"])
         query = """
@@ -189,7 +203,12 @@ def cargar_poligonos_db():
     except Exception as e:
         return pd.DataFrame()
 
+
+# ==========================================
+# SECCIÓN 4: FUNCIONES AUXILIARES PARA MAPAS
+# ==========================================
 def agregar_capas_base(m):
+    """Agrega las capas base de mapa (Carto Dark Matter con API Key) y controles de pantalla completa."""
     api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
     
     folium.TileLayer(
@@ -203,6 +222,10 @@ def agregar_capas_base(m):
 
     Fullscreen(position="topright", title="Ampliar Mapa", cancel_title="Salir de pantalla completa").add_to(m)
 
+
+# ==========================================
+# SECCIÓN 5: PROCESAMIENTO Y LIMPIEZA INICIAL DE DATOS
+# ==========================================
 if 'datos_instalaciones' not in st.session_state:
     res = cargar_datos_api()
     if res:
@@ -223,15 +246,8 @@ if 'datos_instalaciones' in st.session_state:
     df['fecha_dt'] = pd.to_datetime(df[col_fecha_ref], errors='coerce') if col_fecha_ref else pd.NaT
 
     lat_centro, lon_centro = 21.8853, -102.2916
-    if 'latitud' in df.columns:
-        df['latitud'] = pd.to_numeric(df['latitud'], errors='coerce')
-    else:
-        df['latitud'] = np.nan
-
-    if 'longitud' in df.columns:
-        df['longitud'] = pd.to_numeric(df['longitud'], errors='coerce')
-    else:
-        df['longitud'] = np.nan
+    df['latitud'] = pd.to_numeric(df['latitud'], errors='coerce') if 'latitud' in df.columns else np.nan
+    df['longitud'] = pd.to_numeric(df['longitud'], errors='coerce') if 'longitud' in df.columns else np.nan
 
     df_metas = cargar_metas_db()
     df_poligonos = cargar_poligonos_db()
@@ -245,9 +261,9 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df_metas_valido = pd.DataFrame()
 
-    # ---------------------------------------------------------
-    # BARRA LATERAL
-    # ---------------------------------------------------------
+    # ==========================================
+    # SECCIÓN 6: BARRA LATERAL (FILTROS Y CONTROLES)
+    # ==========================================
     logo_url = "https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg"
     st.sidebar.image(logo_url, use_container_width=True)
     st.sidebar.markdown("---")
@@ -366,9 +382,10 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df_eficiencia = pd.DataFrame(columns=['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono'])
 
-    # ---------------------------------------------------------
-    # PESTAÑAS PRINCIPALES SUPERIORES (5 Pestañas)
-    # ---------------------------------------------------------
+
+    # ==========================================
+    # SECCIÓN 7: ESTRUCTURA DE PESTAÑAS PRINCIPALES
+    # ==========================================
     tab_principal, tab_poligonos, tab_externo, tab_miaa, tab_tabla = st.tabs([
         "📊 Dashboard Principal", 
         "🗺️ Mapa Polígonos",
@@ -377,8 +394,11 @@ if 'datos_instalaciones' in st.session_state:
         "📋 Tabla Base de Datos Completa"
     ])
 
+    # ------------------------------------------
+    # PESTAÑA 1: DASHBOARD PRINCIPAL
+    # ------------------------------------------
     with tab_principal:
-        # FILA 1: KPIs Superiores
+        # Fila de Indicadores KPI Superiores
         k1, k2, k3, k4, k5, k6 = st.columns(6)
         
         with k1:
@@ -449,7 +469,7 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-        # FILA 2: Gráficas
+        # Fila de Gráficos Principales (Instalaciones por Día y Distribución de Personal)
         col_g1, col_g2 = st.columns([1.8, 1.2])
 
         with col_g1:
@@ -494,7 +514,7 @@ if 'datos_instalaciones' in st.session_state:
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
-        # FILA 3: Tabla de Eficiencia y Gráfica Mensual + Mapa
+        # Fila Inferior: Tabla de Eficiencia, Mapa de Puntos y Gráfico Mensual Horizontal
         col_inf1, col_inf2 = st.columns([1, 1.6])
 
         with col_inf1:
@@ -563,17 +583,17 @@ if 'datos_instalaciones' in st.session_state:
                     plot_bgcolor='rgba(0,0,0,0)', 
                     paper_bgcolor='rgba(0,0,0,0)', 
                     font_color='#ffffff', 
-                    margin=dict(t=5, b=5, l=5, r=40),  # Margen derecho ampliado para evitar cortes
+                    margin=dict(t=5, b=5, l=5, r=40),  # Margen derecho ajustado para evitar cortes
                     height=130, 
-                    xaxis=dict(showgrid=False, showticklabels=False, title=None, range=[0, max_cant * 1.25]), # Eje X ampliado
+                    xaxis=dict(showgrid=False, showticklabels=False, title=None, range=[0, max_cant * 1.25]), 
                     yaxis=dict(showgrid=False, title=None, tickfont=dict(size=10), categoryorder='array', categoryarray=df_mes['Mes'].tolist()),
                     showlegend=False
                 )
                 st.plotly_chart(fig_mes_h, use_container_width=True)
 
-    # ---------------------------------------------------------
-    # PESTAÑA: MAPA POLÍGONOS
-    # ---------------------------------------------------------
+    # ------------------------------------------
+    # PESTAÑA 2: MAPA DE POLÍGONOS GEOGRÁFICOS
+    # ------------------------------------------
     with tab_poligonos:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Mapa Detallado de Polígonos de Instalación</p>", unsafe_allow_html=True)
         
@@ -720,9 +740,9 @@ if 'datos_instalaciones' in st.session_state:
         else:
             st.warning("No se pudo cargar la tabla `Diccionario_poligonos_instalacion` desde la base de datos.")
 
-    # ---------------------------------------------------------
-    # PESTAÑA: PERSONAL EXTERNO
-    # ---------------------------------------------------------
+    # ------------------------------------------
+    # PESTAÑA 3: PERSONAL EXTERNO
+    # ------------------------------------------
     with tab_externo:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>👷 Resumen de Instalaciones - Personal Externo</p>", unsafe_allow_html=True)
         
@@ -817,9 +837,9 @@ if 'datos_instalaciones' in st.session_state:
             df_tabla_ext = df_tabla_ext.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
         st.dataframe(df_tabla_ext, use_container_width=True)
 
-    # ---------------------------------------------------------
-    # PESTAÑA: PERSONAL MIAA
-    # ---------------------------------------------------------
+    # ------------------------------------------
+    # PESTAÑA 4: PERSONAL MIAA
+    # ------------------------------------------
     with tab_miaa:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🏢 Resumen de Instalaciones - Personal MIAA</p>", unsafe_allow_html=True)
         
@@ -914,9 +934,9 @@ if 'datos_instalaciones' in st.session_state:
             df_tabla_miaa = df_tabla_miaa.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
         st.dataframe(df_tabla_miaa, use_container_width=True)
 
-    # ---------------------------------------------------------
-    # PESTAÑA: TABLA BASE DE DATOS COMPLETA
-    # ---------------------------------------------------------
+    # ------------------------------------------
+    # PESTAÑA 5: TABLA BASE DE DATOS COMPLETA
+    # ------------------------------------------
     with tab_tabla:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📋 Tabla Completa de Registros de la API</p>", unsafe_allow_html=True)
         
