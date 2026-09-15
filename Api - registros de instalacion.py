@@ -233,6 +233,15 @@ def cargar_poligonos_db():
     except Exception as e:
         return pd.DataFrame()
 
+@st.cache_data(ttl=600)
+def cargar_tipos_instalacion_db():
+    """Consulta la base de datos MySQL para obtener el catálogo de tipos de instalación."""
+    try:
+        engine = create_engine(st.secrets["mysql"]["connection_string"])
+        query = "SELECT ID, tipo_instalacion FROM Diccionario_tipo_instalacion"
+        return pd.read_sql(query, con=engine)
+    except Exception as e:
+        return pd.DataFrame()
 
 
 # SECCIÓN 4: --------------------------------------------------------------------- FUNCIONES AUXILIARES PARA MAPAS -----------------------------------------------------------------------------------------------
@@ -280,6 +289,27 @@ if 'datos_instalaciones' in st.session_state:
 
     df_metas = cargar_metas_db()
     df_poligonos = cargar_poligonos_db()
+
+    # Mapeo del Diccionario de Tipos de Instalación
+    df_tipos_db = cargar_tipos_instalacion_db()
+    if not df_tipos_db.empty:
+        dict_tipos_map = dict(zip(df_tipos_db['ID'].astype(str), df_tipos_db['tipo_instalacion']))
+    else:
+        # Fallback predeterminado según catálogo de base de datos
+        dict_tipos_map = {
+            "1": "CAJA DE VALVULAS",
+            "2": "CUADRO DENTRO",
+            "3": "CUADRO FUERA",
+            "4": "REGISTRO",
+            "5": "EMPOTRADO DENTRO",
+            "6": "EMPOTRADO FUERA"
+        }
+
+    if 'lugarInstalacionId' in df.columns:
+        df['lugarInstalacion_id_str'] = df['lugarInstalacionId'].fillna('').astype(str).str.replace(r'\.0$', '', regex=True)
+        df['tipo_instalacion_nombre'] = df['lugarInstalacion_id_str'].map(dict_tipos_map).fillna("SIN ESPECIFICAR")
+    else:
+        df['tipo_instalacion_nombre'] = "SIN ESPECIFICAR"
     
     if not df_metas.empty:
         for col_num in ['Usuarios_Reales', 'Usuarios_con_medidor_inteligente', 'Usuarios_nueva_instalacion']:
@@ -354,6 +384,9 @@ if 'datos_instalaciones' in st.session_state:
             estado = st.checkbox(f"Polígono {pol}", key=f"chk_pol_{pol}")
             if estado:
                 poligonos_seleccionados.append(pol)
+
+    if not df_metas_filtrado.empty if 'df_metas_filtrado' in locals() else False:
+        pass
 
     if not df_metas_valido.empty and 'Poligono_de_instalacion' in df_metas_valido.columns:
         df_metas_filtrado = df_metas_valido[df_metas_valido['Poligono_de_instalacion'].astype(str).isin(poligonos_seleccionados)].copy()
@@ -496,7 +529,7 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-        # SECCION 7.2: --------------------------------------------- Fila de Gráficos Principales (Instalaciones por Día y Distribución de Personal) ------------------------------------------------------------------
+        # SECCION 7.2: --------------------------------------------- Fila de Gráficos Principales (Instalaciones por Día y Desglose por Tipo de Instalación) ------------------------------------------------------------------
         col_g1, col_g2 = st.columns([1.8, 1.2])
 
         with col_g1:
@@ -523,13 +556,24 @@ if 'datos_instalaciones' in st.session_state:
             st.plotly_chart(fig_dia, use_container_width=True)
 
         with col_g2:
-            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Distribución por Usuario Externo</p>", unsafe_allow_html=True)
-            if 'usuarioExterno' in df_filtrado.columns:
-                df_ext = df_filtrado['usuarioExterno'].value_counts().reset_index()
-                df_ext.columns = ['Externo', 'Cantidad']
-                fig_pie = go.Figure(go.Pie(labels=df_ext['Externo'], values=df_ext['Cantidad'], hole=0.5))
+            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Distribución por Tipo de Instalación</p>", unsafe_allow_html=True)
+            if 'tipo_instalacion_nombre' in df_filtrado.columns and not df_filtrado.empty:
+                df_tipo_inst = df_filtrado['tipo_instalacion_nombre'].value_counts().reset_index()
+                df_tipo_inst.columns = ['Tipo', 'Cantidad']
+                
+                # Paleta cromática acorde con la interfaz
+                colores_pie = ['#38bdf8', '#4ade80', '#f59e0b', '#a855f7', '#f43f5e', '#64748b']
+                
+                fig_pie = go.Figure(go.Pie(
+                    labels=df_tipo_inst['Tipo'], 
+                    values=df_tipo_inst['Cantidad'], 
+                    hole=0.5,
+                    textinfo='value+percent',
+                    marker=dict(colors=colores_pie)
+                ))
             else:
-                fig_pie = go.Figure(go.Pie(labels=['Total'], values=[len(df_filtrado)], hole=0.5))
+                fig_pie = go.Figure(go.Pie(labels=['Sin Datos'], values=[len(df_filtrado)], hole=0.5))
+                
             fig_pie.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)', 
                 paper_bgcolor='rgba(0,0,0,0)', 
@@ -537,7 +581,7 @@ if 'datos_instalaciones' in st.session_state:
                 margin=dict(t=5, b=5, l=5, r=5), 
                 height=230, 
                 showlegend=True, 
-                legend=dict(orientation="h", y=-0.1)
+                legend=dict(orientation="h", y=-0.2, font=dict(size=9))
             )
             st.plotly_chart(fig_pie, use_container_width=True)
 
@@ -811,7 +855,6 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-        # Dos columnas principales: Izquierda (Gráficas apiladas), Derecha (Mapa grande)
         col_ex_left, col_ex_right = st.columns([1.1, 1.3])
 
         with col_ex_left:
@@ -910,7 +953,6 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-        # Dos columnas principales: Izquierda (Gráficas apiladas), Derecha (Mapa grande)
         col_mi_left, col_mi_right = st.columns([1.1, 1.3])
 
         with col_mi_left:
