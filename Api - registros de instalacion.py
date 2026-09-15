@@ -843,7 +843,7 @@ if 'datos_instalaciones' in st.session_state:
                         paper_bgcolor='rgba(0,0,0,0)', 
                         font_color='#ffffff', 
                         margin=dict(t=5, b=5, l=5, r=40),  
-                        height=130, 
+                        height=230, 
                         xaxis=dict(showgrid=False, showticklabels=False, title=None, range=[0, max_cant * 1.25]), 
                         yaxis=dict(showgrid=False, title=None, tickfont=dict(size=10), categoryorder='array', categoryarray=df_mes['Mes'].tolist()),
                         showlegend=False
