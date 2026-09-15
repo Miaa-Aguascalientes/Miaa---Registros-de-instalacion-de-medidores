@@ -155,13 +155,22 @@ custom_style = """
 """
 st.markdown(custom_style, unsafe_allow_html=True)
 
-# Cabecera superior visual con Título a la izquierda y Fecha a la derecha alineados perfectamente
-st.markdown("""
-    <div class="dashboard-header-flex">
-        <h2 class="dashboard-main-title">DASHBOARD INSTALACIÓN MEDIDORES INTELIGENTES</h2>
-        <div class="dashboard-subtitle-right">Actualizado al: 14/09/2026</div>
+# SECCIÓN 2: ------------------------------------------------------------------- Cabecera superior del titulo de la pagina  ------------------------------------------------------------------------------------
+
+st.markdown(
+    """
+    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px;">
+        <div style="width: 180px;"></div>
+        <div style="flex-grow: 1; text-align: center;">
+            <h1 style="color: white; font-size: 26px; margin: 0; font-weight: bold;">DASHBOARD INSTALACIÓN MEDIDORES INTELIGENTES</h1>
+        </div>
+        <div style="width: 180px; text-align: right; color: #a0a0a0; font-size: 14px;">
+            Actualizado al: 14/09/2026
+        </div>
     </div>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True,
+)
 
 
 # SECCIÓN 3: ------------------------------------------------------------ FUNCIONES DE CONEXIÓN Y DATOS (API Y BASE DE DATOS) ------------------------------------------------------------------------------------
