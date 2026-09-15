@@ -1115,15 +1115,17 @@ if 'datos_instalaciones' in st.session_state:
 
                 # Asignación espacial y conteo de medidores instalados (df_filtrado) por polígono
                 conteo_medidores_instalados = {fid: 0 for fid in fids_disponibles}
+                punto_a_poligono = {}
                 if shapely_polygons and not df_filtrado.empty:
                     try:
-                        for _, row_m in df_filtrado.dropna(subset=['latitud', 'longitud']).iterrows():
+                        for idx_m, row_m in df_filtrado.dropna(subset=['latitud', 'longitud']).iterrows():
                             lat_m = row_m['latitud']
                             lon_m = row_m['longitud']
                             pt = Point(lat_m, lon_m)
                             for fid, poly in shapely_polygons.items():
                                 if poly.contains(pt):
                                     conteo_medidores_instalados[fid] += 1
+                                    punto_a_poligono[idx_m] = fid
                                     break
                     except Exception:
                         pass
@@ -1154,11 +1156,75 @@ if 'datos_instalaciones' in st.session_state:
                             popup=f"Polígono FID: {fid} | Sector: {datos['sector']} | Área: {datos['area']} km² | Medidores DB: {med_db} | Instalados (API): {inst_count} | Avance: {pct_avance_pol}%"
                         ).add_to(mapa_poligonos_tab)
 
-                # Agregar todos los puntos de los medidores instalados (API) al mapa de polígonos
+                # Agregar todos los puntos de los medidores instalados (API) al mapa de polígonos con información detallada y polígono asignado
                 df_puntos_mapa = df_filtrado.dropna(subset=['latitud', 'longitud'])
-                for _, row_pt in df_puntos_mapa.iterrows():
-                    serie_val = row_pt.get('serieMedidor', row_pt.get('serie', 'N/A'))
-                    colonia_val = row_pt.get('colonia', 'N/A')
+                for idx_pt, row_pt in df_puntos_mapa.iterrows():
+                    fid_asignado = punto_a_poligono.get(idx_pt, "Fuera de Polígono")
+
+                    def get_clean_p(keys, default=''):
+                        if isinstance(keys, str):
+                            keys = [keys]
+                        for k in keys:
+                            if k in row_pt:
+                                val = row_pt[k]
+                                if pd.notna(val) and str(val).strip().lower() not in ['nan', 'none', 'nat', '']:
+                                    return str(val).strip()
+                        return default
+
+                    nombre_p = get_clean_p('nombreCliente')
+                    predio_p = get_clean_p(['numeroPredio', 'predio'])
+                    cliente_p = get_clean_p(['cliente', 'numeroCliente'])
+                    domicilio_p = get_clean_p('domicilio')
+                    colonia_p = get_clean_p('colonia')
+                    nivel_p = get_clean_p('nivel')
+                    giro_p = get_clean_p('giro')
+                    serie_p = get_clean_p(['serieMedidor', 'serie'])
+                    lugar_inst_p = get_clean_p(['tipo_instalacion_nombre', 'lugarInstalacion'])
+                    anomalia_str_p = get_clean_p(['anomalia_nombre'])
+                    
+                    raw_fecha_p = row_pt.get('fechaInstalacion', None)
+                    fecha_inst_p = ""
+                    if pd.notna(raw_fecha_p) and str(raw_fecha_p).strip().lower() not in ['nan', 'none', 'nat', '']:
+                        dt_obj_p = pd.to_datetime(raw_fecha_p, errors='coerce')
+                        if pd.notna(dt_obj_p):
+                            fecha_inst_p = dt_obj_p.strftime('%d/%m/%Y')
+                        else:
+                            fecha_inst_p = str(raw_fecha_p).strip()
+
+                    raw_hora_p = row_pt.get('horaInicio', None)
+                    hora_inst_p = ""
+                    if pd.notna(raw_hora_p) and str(raw_hora_p).strip().lower() not in ['nan', 'none', 'nat', '']:
+                        hora_str_p = str(raw_hora_p).strip()
+                        if 'T' in hora_str_p:
+                            time_part_p = hora_str_p.split('T')[1]
+                            hora_inst_p = time_part_p[:5]
+                        elif ' ' in hora_str_p:
+                            time_part_p = hora_str_p.split(' ')[1]
+                            hora_inst_p = time_part_p[:5]
+                        else:
+                            hora_inst_p = hora_str_p[:5]
+
+                    info_popup_pol = f"""
+                    <div style="font-size: 11px; line-height: 1.4; color: #000000;">
+                        <b>Polígono Asignado:</b> {fid_asignado}<br>
+                        <b>Información del Servicio</b><br>
+                        <b>Nombre:</b> {nombre_p}<br>
+                        <b>Número de Predio:</b> {predio_p}<br>
+                        <b>Cliente:</b> {cliente_p}<br>
+                        <b>Domicilio:</b> {domicilio_p}<br>
+                        <b>Colonia:</b> {colonia_p}<br>
+                        <b>Nivel:</b> {nivel_p}<br>
+                        <b>Giro:</b> {giro_p}<br>
+                        <b>Serie del Medidor:</b> {serie_p}<br>
+                        <b>Fecha de Instalación:</b> {fecha_inst_p}<br>
+                        <b>Hora de Instalación:</b> {hora_inst_p}<br>
+                        <b>Lugar de Instalación:</b> {lugar_inst_p}<br>
+                        <b>Anomalía:</b> {anomalia_str_p}
+                    </div>
+                    """
+                    
+                    popup_obj_pol = folium.Popup(info_popup_pol, max_width=300)
+
                     folium.CircleMarker(
                         location=[float(row_pt['latitud']), float(row_pt['longitud'])],
                         radius=2.5,
@@ -1166,7 +1232,7 @@ if 'datos_instalaciones' in st.session_state:
                         fill=True,
                         fill_color="#38bdf8",
                         fill_opacity=0.9,
-                        popup=f"Medidor Instalado<br><b>Serie:</b> {serie_val}<br><b>Colonia:</b> {colonia_val}"
+                        popup=popup_obj_pol
                     ).add_to(mapa_poligonos_tab)
 
                 st_folium(mapa_poligonos_tab, width=None, height=450, key="mapa_selector_poligonos", returned_objects=[])
