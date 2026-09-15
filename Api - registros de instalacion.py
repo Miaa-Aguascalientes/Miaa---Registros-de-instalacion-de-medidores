@@ -9,6 +9,7 @@ import folium
 from folium.plugins import Fullscreen
 from streamlit_folium import st_folium
 import numpy as np
+from shapely.geometry import Point, Polygon
 
 # SECCIÓN 1: ---------------------------------------------------------------------- CONFIGURACIÓN GENERAL DE LA PÁGINA ---------------------------------------------------------------------------------------------
 
@@ -362,25 +363,6 @@ if 'datos_instalaciones' in st.session_state:
     else:
         df_metas_valido = pd.DataFrame()
 
-    # Preprocesamiento de nomenclaturas de polígonos (Polígono 01, Polígono 02...)
-    if not df_poligonos.empty and 'FID' in df_poligonos.columns:
-        df_poligonos['FID_str'] = df_poligonos['FID'].astype(str)
-        fids_disponibles = sorted(df_poligonos['FID_str'].dropna().unique().tolist(), key=lambda x: int(x) if x.isdigit() else x)
-        dict_nombres_poligono = {fid: f"Polígono {str(i+1).zfill(2)}" for i, fid in enumerate(fids_disponibles)}
-    else:
-        fids_disponibles = []
-        dict_nombres_poligono = {}
-
-    if not df_metas.empty and 'Poligono_de_instalacion' in df_metas.columns:
-        df_metas['Poligono_str'] = df_metas['Poligono_de_instalacion'].astype(str)
-        df_poly_stats = df_metas.groupby('Poligono_str', as_index=False).agg({
-            'Usuarios_Reales': 'sum',
-            'Usuarios_con_medidor_inteligente': 'sum',
-            'Usuarios_nueva_instalacion': 'sum'
-        })
-    else:
-        df_poly_stats = pd.DataFrame(columns=['Poligono_str', 'Usuarios_Reales', 'Usuarios_con_medidor_inteligente', 'Usuarios_nueva_instalacion'])
-
     # SECCIÓN 6: ----------------------------------------------------------------- BARRA LATERAL (FILTROS Y CONTROLES) --------------------------------------------------------------------------------------------
     
     logo_url = "https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg"
@@ -419,32 +401,32 @@ if 'datos_instalaciones' in st.session_state:
     st.sidebar.markdown("---")
     st.sidebar.subheader("Polígonos")
     
-    lista_poligonos_fids = fids_disponibles
+    lista_poligonos = []
+    if not df_metas_valido.empty and 'Poligono_de_instalacion' in df_metas_valido.columns:
+        lista_poligonos = sorted([str(p) for p in df_metas_valido['Poligono_de_instalacion'].dropna().unique()], key=lambda x: int(x) if x.isdigit() else x)
 
-    for fid in lista_poligonos_fids:
-        nombre_amigable = dict_nombres_poligono.get(fid, f"Polígono {fid}")
-        if f"chk_pol_{fid}" not in st.session_state:
-            st.session_state[f"chk_pol_{fid}"] = True
+    for p in lista_poligonos:
+        if f"chk_pol_{p}" not in st.session_state:
+            st.session_state[f"chk_pol_{p}"] = True
 
     col_c1, col_c2 = st.sidebar.columns(2)
     seleccionar_todos = col_c1.button("Marcar todos")
     deseleccionar_todos = col_c2.button("Desmarcar")
 
     if seleccionar_todos:
-        for fid in lista_poligonos_fids:
-            st.session_state[f"chk_pol_{fid}"] = True
+        for p in lista_poligonos:
+            st.session_state[f"chk_pol_{p}"] = True
 
     if deseleccionar_todos:
-        for fid in lista_poligonos_fids:
-            st.session_state[f"chk_pol_{fid}"] = False
+        for p in lista_poligonos:
+            st.session_state[f"chk_pol_{p}"] = False
 
     with st.sidebar.container(height=220):
         poligonos_seleccionados = []
-        for fid in lista_poligonos_fids:
-            nombre_amigable = dict_nombres_poligono.get(fid, f"Polígono {fid}")
-            estado = st.checkbox(nombre_amigable, key=f"chk_pol_{fid}")
+        for pol in lista_poligonos:
+            estado = st.checkbox(f"Polígono {pol}", key=f"chk_pol_{pol}")
             if estado:
-                poligonos_seleccionados.append(fid)
+                poligonos_seleccionados.append(pol)
 
     if not df_metas_valido.empty and 'Poligono_de_instalacion' in df_metas_valido.columns:
         df_metas_filtrado = df_metas_valido[df_metas_valido['Poligono_de_instalacion'].astype(str).isin(poligonos_seleccionados)].copy()
@@ -490,14 +472,11 @@ if 'datos_instalaciones' in st.session_state:
         df_eficiencia = df_eficiencia.sort_values(by='pct_sort', ascending=False).reset_index(drop=True)
         df_eficiencia['%'] = df_eficiencia['pct_sort'].round(2).astype(str) + '%'
         
-        # Traducir los números de polígono en la tabla de eficiencia a Polígono 01, 02...
-        df_eficiencia['Polígono_str'] = df_eficiencia['Poligono_de_instalacion'].astype(str)
-        df_eficiencia['Polígono'] = df_eficiencia['Polígono_str'].map(dict_nombres_poligono).fillna(df_eficiencia['Polígono_str'])
-        
         df_eficiencia = df_eficiencia.rename(columns={
             'Colonia_ATL': 'Colonia',
             'Usuarios_Reales': 'Med. tot',
-            'Usuarios_con_medidor_inteligente': 'Med. inst'
+            'Usuarios_con_medidor_inteligente': 'Med. inst',
+            'Poligono_de_instalacion': 'Polígono'
         })
         
         df_eficiencia = df_eficiencia[['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono']]
@@ -520,6 +499,7 @@ if 'datos_instalaciones' in st.session_state:
     # SECCION - PESTAÑA 7.1: DASHBOARD PRINCIPAL
     # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_principal:
+        # Fila de Indicadores KPI Superiores
         k1, k2, k3, k4, k5, k6 = st.columns(6)
         
         with k1:
@@ -590,8 +570,10 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
+        # SECCION 7.2: --------------------------------------------- Fila de Gráficos Principales (Instalaciones por Día, Desglose por Tipo y Cuadro vs Registro) ----------------------------------------------------
         col_g1, col_g2, col_g3 = st.columns([2.6, 1.2, 0.9])
 
+        # SECCION 7.3: ----------------------------------------------Grafico de Instalaciones por dia ----------------------------------------------------------------------------------------------------------------- 
         with col_g1:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día</p>", unsafe_allow_html=True)
@@ -616,6 +598,7 @@ if 'datos_instalaciones' in st.session_state:
                 )
                 st.plotly_chart(fig_dia, use_container_width=True)
 
+        # SECCION 7.4: ------------------------------------------------------Grafico de Instalaciones por Distrubucion por tipo de Instalacion ----------------------------------------------------------------------
         with col_g2:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Tipo de Instalación</p>", unsafe_allow_html=True)
@@ -658,6 +641,7 @@ if 'datos_instalaciones' in st.session_state:
                 )
                 st.plotly_chart(fig_pie, use_container_width=True)
 
+        # SECCION 7.5: -----------------------------------------------------Grafico de Instalaciones por desgloce de Cuadro vs Registro ------------------------------------------------------------------------
         with col_g3:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Cuadro vs Registro</p>", unsafe_allow_html=True)
@@ -711,6 +695,7 @@ if 'datos_instalaciones' in st.session_state:
 
                 st.plotly_chart(fig_cr, use_container_width=True)
 
+        # SECCION 7.6: ---------------------------------------------------  Fila Inferior: Tabla de Eficiencia, Mapa de Puntos y Gráfico Mensual Horizontal ---------------------------------------------------------------
         col_inf1, col_inf2 = st.columns([1, 1.6])
 
         with col_inf1:
@@ -724,6 +709,7 @@ if 'datos_instalaciones' in st.session_state:
         with col_inf2:
             col_map_h, col_graf_h = st.columns([2.2, 1])
 
+            # SECCION 7.7: --------------------------------------------------- Mapa de instalaciones Externo y Miaa --------------------------------------------------------------------------------------------------
             with col_map_h:
                 with st.container(border=True):
                     st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones (Externo vs MIAA)</p>", unsafe_allow_html=True)
@@ -817,6 +803,7 @@ if 'datos_instalaciones' in st.session_state:
 
                     st_folium(mapa_miaa, width=None, height=320, key="mapa_estatico_instalaciones", returned_objects=[])
                     
+           # SECCION 7.8: --------------------------------------------------- Gafico de instalaciones por mes y tarjeta de anomalías --------------------------------------------------------------------------------------
             with col_graf_h:
                 with st.container(border=True):
                     st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
@@ -876,7 +863,7 @@ if 'datos_instalaciones' in st.session_state:
                     """, unsafe_allow_html=True)
 
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # SECCION 7.9: PESTAÑA - ANÁLISIS DE ANOMALÍAS
+    # SECCION 7.9: NUEVA PESTAÑA - ANÁLISIS DE ANOMALÍAS
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_anomalias:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>⚠️ Análisis Completo de Anomalías en Instalaciones</p>", unsafe_allow_html=True)
@@ -1010,35 +997,35 @@ if 'datos_instalaciones' in st.session_state:
             st.success("¡Excelente! No hay registros con anomalías reportadas para los filtros seleccionados.")
 
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # SECCION 8: PESTAÑA MAPA DE POLÍGONOS GEOGRÁFICOS (ACTUALIZADA CON ANÁLISIS, % DE AVANCE Y NOMBRES FORMATEADOS)
+    # SECCION 8: PESTAÑA MAPA DE POLÍGONOS GEOGRÁFICOS Y ASIGNACIÓN DE MEDIDORES
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_poligonos:
-        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Análisis Detallado y Mapa de Polígonos de Instalación</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Mapa Detallado de Polígonos de Instalación y Conteo de Medidores</p>", unsafe_allow_html=True)
         
         if not df_poligonos.empty:
+            fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
+            
             for fid in fids_disponibles:
-                nombre_amigable = dict_nombres_poligono[fid]
-                if f"sel_map_poly_{fid}" not in st.session_state:
-                    st.session_state[f"sel_map_poly_{fid}"] = True
+                if f"sel_map_fid_{fid}" not in st.session_state:
+                    st.session_state[f"sel_map_fid_{fid}"] = True
 
-            col_sel_izq, col_map_der = st.columns([0.32, 0.68])
+            col_sel_izq, col_map_der = st.columns([0.3, 0.7])
 
             with col_sel_izq:
-                st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:5px;'>Seleccionar Polígonos:</p>", unsafe_allow_html=True)
+                st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:5px;'>Seleccionar Polígonos (FID):</p>", unsafe_allow_html=True)
                 
                 b_col1, b_col2 = st.columns(2)
-                if b_col1.button("Todos", key="btn_all_fids_poly"):
+                if b_col1.button("Todos", key="btn_all_fids"):
                     for fid in fids_disponibles:
-                        st.session_state[f"sel_map_poly_{fid}"] = True
-                if b_col2.button("Ninguno", key="btn_none_fids_poly"):
+                        st.session_state[f"sel_map_fid_{fid}"] = True
+                if b_col2.button("Ninguno", key="btn_none_fids"):
                     for fid in fids_disponibles:
-                        st.session_state[f"sel_map_poly_{fid}"] = False
+                        st.session_state[f"sel_map_fid_{fid}"] = False
 
                 with st.container(height=420):
                     fids_seleccionados_mapa = []
                     for fid in fids_disponibles:
-                        nombre_amigable = dict_nombres_poligono[fid]
-                        chk = st.checkbox(nombre_amigable, key=f"sel_map_poly_{fid}")
+                        chk = st.checkbox(f"Polígono {fid}", key=f"sel_map_fid_{fid}")
                         if chk:
                             fids_seleccionados_mapa.append(fid)
 
@@ -1047,35 +1034,27 @@ if 'datos_instalaciones' in st.session_state:
                 lon_acumuladas = []
                 
                 poligonos_procesados = {}
+                shapely_polygons = {}
+                
                 for fid in fids_disponibles:
-                    df_pol_sel = df_poligonos[df_poligonos['FID_str'] == fid]
+                    df_pol_sel = df_poligonos[df_poligonos['FID'] == fid]
                     coordenadas_poligono = []
                     df_ordenado = df_pol_sel.sort_values(by='Orden_inst', ascending=True)
                     
                     sec_comercial = df_pol_sel['Sector_comercial'].iloc[0] if 'Sector_comercial' in df_pol_sel.columns else "N/A"
                     area_val = df_pol_sel['Area_km2'].iloc[0] if 'Area_km2' in df_pol_sel.columns else 0
-                    med_meta_val = df_pol_sel['Medidores'].iloc[0] if 'Medidores' in df_pol_sel.columns else 0
-
-                    stat_row = df_poly_stats[df_poly_stats['Poligono_str'] == fid]
-                    if not stat_row.empty:
-                        med_inst_val = int(stat_row['Usuarios_con_medidor_inteligente'].values[0])
-                        meta_val = int(stat_row['Usuarios_nueva_instalacion'].values[0])
-                        if meta_val == 0:
-                            meta_val = int(med_meta_val)
-                    else:
-                        med_inst_val = 0
-                        meta_val = int(med_meta_val)
-
-                    pct_avance_poly = round((med_inst_val / meta_val) * 100, 2) if meta_val > 0 else 0.0
+                    med_val = df_pol_sel['Medidores'].iloc[0] if 'Medidores' in df_pol_sel.columns else 0
 
                     for _, r_vertice in df_ordenado.iterrows():
                         c_val = r_vertice['coord']
                         if pd.isna(c_val):
                             continue
                         c_str = str(c_val).strip()
+                        
                         for char in ['(', ')', '[', ']', '"', "'", 'POINT', 'POLYGON']:
                             c_str = c_str.replace(char, '')
                         c_str = c_str.strip()
+                        
                         pares = [p.strip() for p in c_str.split(',') if p.strip()]
                         
                         if len(pares) >= 2 and len(pares) % 2 == 0:
@@ -1100,14 +1079,17 @@ if 'datos_instalaciones' in st.session_state:
                                 partes = c_str.split()
                             else:
                                 continue
+                                
                             if len(partes) >= 2:
                                 try:
                                     p1 = float(partes[0].strip())
                                     p2 = float(partes[1].strip())
+                                    
                                     if abs(p1) > abs(p2):
                                         lon, lat = p1, p2
                                     else:
                                         lat, lon = p1, p2
+                                        
                                     coordenadas_poligono.append([lat, lon])
                                     if fid in fids_seleccionados_mapa:
                                         lat_acumuladas.append(lat)
@@ -1117,15 +1099,34 @@ if 'datos_instalaciones' in st.session_state:
                     
                     if coordenadas_poligono:
                         poligonos_procesados[fid] = {
-                            'nombre': dict_nombres_poligono[fid],
                             'coordenadas': coordenadas_poligono,
                             'sector': sec_comercial,
                             'area': area_val,
-                            'meta': meta_val,
-                            'instalados': med_inst_val,
-                            'avance': pct_avance_poly,
+                            'medidores_db': med_val,
                             'vertis': len(coordenadas_poligono)
                         }
+                        try:
+                            poly_geom = Polygon(coordenadas_poligono)
+                            if not poly_geom.is_valid:
+                                poly_geom = poly_geom.buffer(0)
+                            shapely_polygons[fid] = poly_geom
+                        except Exception:
+                            pass
+
+                # Asignación espacial y conteo de medidores instalados (df_filtrado) por polígono
+                conteo_medidores_instalados = {fid: 0 for fid in fids_disponibles}
+                if shapely_polygons and not df_filtrado.empty:
+                    try:
+                        for _, row_m in df_filtrado.dropna(subset=['latitud', 'longitud']).iterrows():
+                            lat_m = row_m['latitud']
+                            lon_m = row_m['longitud']
+                            pt = Point(lat_m, lon_m)
+                            for fid, poly in shapely_polygons.items():
+                                if poly.contains(pt):
+                                    conteo_medidores_instalados[fid] += 1
+                                    break
+                    except Exception:
+                        pass
 
                 if lat_acumuladas and lon_acumuladas:
                     m_p_lat = sum(lat_acumuladas) / len(lat_acumuladas)
@@ -1138,42 +1139,30 @@ if 'datos_instalaciones' in st.session_state:
 
                 for fid, datos in poligonos_procesados.items():
                     if fid in fids_seleccionados_mapa:
-                        popup_html = f"""
-                        <div style="font-size: 11px; line-height: 1.4; color: #000000; min-width: 170px;">
-                            <b>{datos['nombre']}</b><br>
-                            <b>FID Original:</b> {fid}<br>
-                            <b>Sector Comercial:</b> {datos['sector']}<br>
-                            <b>Área:</b> {datos['area']} km²<br>
-                            <b>Medidores Instalados:</b> {datos['instalados']:,}<br>
-                            <b>Meta de Medidores:</b> {datos['meta']:,}<br>
-                            <b>% Avance:</b> {datos['avance']}%
-                        </div>
-                        """
+                        inst_count = conteo_medidores_instalados.get(fid, 0)
                         folium.Polygon(
                             locations=datos['coordenadas'],
                             color="#2563eb",
                             weight=2.5,
                             fill=True,
                             fill_color="#3b82f6",
-                            fill_opacity=0.35,
-                            popup=folium.Popup(popup_html, max_width=250)
+                            fill_opacity=0.3,
+                            popup=f"Polígono FID: {fid} | Sector: {datos['sector']} | Área: {datos['area']} km² | Medidores DB: {datos['medidores_db']} | Medidores Instalados (API): {inst_count}"
                         ).add_to(mapa_poligonos_tab)
 
                 st_folium(mapa_poligonos_tab, width=None, height=450, key="mapa_selector_poligonos", returned_objects=[])
 
-            st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:20px; margin-bottom:10px;'>📊 Análisis Detallado y Resumen de Polígonos</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:20px; margin-bottom:10px;'>📋 Detalle de Polígonos de Instalación y Conteo de Medidores</p>", unsafe_allow_html=True)
             
             resumen_poligonos = []
             for fid, datos in poligonos_procesados.items():
                 if fid in fids_seleccionados_mapa:
                     resumen_poligonos.append({
-                        'Polígono': datos['nombre'],
-                        'FID Original': fid,
+                        'FID': fid,
                         'Sector Comercial': datos['sector'],
                         'Área (km²)': datos['area'],
-                        'Meta Medidores': datos['meta'],
-                        'Medidores Instalados': datos['instalados'],
-                        '% Avance': f"{datos['avance']}%",
+                        'Medidores (DB)': datos['medidores_db'],
+                        'Medidores Instalados (API)': conteo_medidores_instalados.get(fid, 0),
                         'Vértices Totales': datos['vertis']
                     })
             
