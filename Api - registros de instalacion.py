@@ -263,6 +263,16 @@ def cargar_tipos_instalacion_db():
     except Exception as e:
         return pd.DataFrame()
 
+@st.cache_data(ttl=600)
+def cargar_anomalias_db():
+    """Consulta la base de datos MySQL para obtener el diccionario de anomalías."""
+    try:
+        engine = create_engine(st.secrets["mysql"]["connection_string"])
+        query = "SELECT ID, anomalia FROM Diccionario_anomalias"
+        return pd.read_sql(query, con=engine)
+    except Exception as e:
+        return pd.DataFrame()
+
 
 # SECCIÓN 4: --------------------------------------------------------------------- FUNCIONES AUXILIARES PARA MAPAS -----------------------------------------------------------------------------------------------
 
@@ -309,6 +319,7 @@ if 'datos_instalaciones' in st.session_state:
 
     df_metas = cargar_metas_db()
     df_poligonos = cargar_poligonos_db()
+    df_anomalias_db = cargar_anomalias_db()
 
     # Mapeo del Diccionario de Tipos de Instalación
     df_tipos_db = cargar_tipos_instalacion_db()
@@ -329,6 +340,18 @@ if 'datos_instalaciones' in st.session_state:
         df['tipo_instalacion_nombre'] = df['lugarInstalacion_id_str'].map(dict_tipos_map).fillna("SIN ESPECIFICAR")
     else:
         df['tipo_instalacion_nombre'] = "SIN ESPECIFICAR"
+
+    # Mapeo del Diccionario de Anomalías
+    if not df_anomalias_db.empty:
+        dict_anomalias_map = dict(zip(df_anomalias_db['ID'].astype(str), df_anomalias_db['anomalia']))
+    else:
+        dict_anomalias_map = {}
+
+    if 'anomaliaId' in df.columns:
+        df['anomalia_id_str'] = df['anomaliaId'].fillna('').astype(str).str.replace(r'\.0$', '', regex=True)
+        df['anomalia_nombre'] = df['anomalia_id_str'].map(dict_anomalias_map).fillna("SIN ANOMALÍA / REGULAR")
+    else:
+        df['anomalia_nombre'] = "SIN ANOMALÍA / REGULAR"
     
     if not df_metas.empty:
         for col_num in ['Usuarios_Reales', 'Usuarios_con_medidor_inteligente', 'Usuarios_nueva_instalacion']:
@@ -462,8 +485,9 @@ if 'datos_instalaciones' in st.session_state:
 
     # SECCIÓN 7: ----------------------------------------------------------------- ESTRUCTURA DE PESTAÑAS PRINCIPALES ------------------------------------------------------------------------------------------------
     
-    tab_principal, tab_poligonos, tab_externo, tab_miaa, tab_tabla = st.tabs([
+    tab_principal, tab_anomalias, tab_poligonos, tab_externo, tab_miaa, tab_tabla = st.tabs([
         "📊 Dashboard Principal", 
+        "⚠️ Análisis de Anomalías",
         "🗺️ Mapa Polígonos",
         "👷 Personal Externo", 
         "🏢 Personal MIAA", 
@@ -703,7 +727,6 @@ if 'datos_instalaciones' in st.session_state:
                         es_externo = bool(row['usuarioExterno']) if 'usuarioExterno' in df_mapa_valido.columns else False
                         color_punto = '#f59e0b' if es_externo else '#a855f7'
                         
-                        # Función auxiliar para limpiar valores nulos o 'nan' y dejarlos en blanco
                         def get_clean(keys, default=''):
                             if isinstance(keys, str):
                                 keys = [keys]
@@ -714,7 +737,6 @@ if 'datos_instalaciones' in st.session_state:
                                         return str(val).strip()
                             return default
 
-                        # Extracción de campos limpios (sin valores nan)
                         nombre = get_clean('nombreCliente')
                         predio = get_clean(['numeroPredio', 'predio'])
                         cliente = get_clean(['cliente', 'numeroCliente'])
@@ -724,8 +746,8 @@ if 'datos_instalaciones' in st.session_state:
                         giro = get_clean('giro')
                         serie = get_clean(['serieMedidor', 'serie'])
                         lugar_inst = get_clean(['tipo_instalacion_nombre', 'lugarInstalacion'])
+                        anomalia_str = get_clean(['anomalia_nombre'])
                         
-                        # Extraer fecha de instalación
                         raw_fecha = row.get('fechaInstalacion', None)
                         fecha_inst = ""
                         if pd.notna(raw_fecha) and str(raw_fecha).strip().lower() not in ['nan', 'none', 'nat', '']:
@@ -735,23 +757,19 @@ if 'datos_instalaciones' in st.session_state:
                             else:
                                 fecha_inst = str(raw_fecha).strip()
 
-                        # Extraer estrictamente solo la hora en formato HH:MM mediante manipulación de texto
                         raw_hora = row.get('horaInicio', None)
                         hora_inst = ""
                         if pd.notna(raw_hora) and str(raw_hora).strip().lower() not in ['nan', 'none', 'nat', '']:
                             hora_str = str(raw_hora).strip()
                             if 'T' in hora_str:
-                                # Ejemplo: '2026-09-14T12:41:59.999252' -> toma '12:41:59.999252' -> corta a '12:41'
                                 time_part = hora_str.split('T')[1]
                                 hora_inst = time_part[:5]
                             elif ' ' in hora_str:
-                                # Ejemplo: '2026-09-14 12:41:59' -> toma '12:41:59' -> corta a '12:41'
                                 time_part = hora_str.split(' ')[1]
                                 hora_inst = time_part[:5]
                             else:
                                 hora_inst = hora_str[:5]
 
-                        # Estructura HTML del popup (vacía si el campo no tiene datos)
                         info_popup = f"""
                         <div style="font-size: 11px; line-height: 1.4; color: #000000;">
                             <b>Información del Servicio</b><br>
@@ -765,7 +783,8 @@ if 'datos_instalaciones' in st.session_state:
                             <b>Serie del Medidor:</b> {serie}<br>
                             <b>Fecha de Instalación:</b> {fecha_inst}<br>
                             <b>Hora de Instalación:</b> {hora_inst}<br>
-                            <b>Lugar de Instalación:</b> {lugar_inst}
+                            <b>Lugar de Instalación:</b> {lugar_inst}<br>
+                            <b>Anomalía:</b> {anomalia_str}
                         </div>
                         """
                         
@@ -829,6 +848,143 @@ if 'datos_instalaciones' in st.session_state:
                         showlegend=False
                     )
                     st.plotly_chart(fig_mes_h, use_container_width=True)
+
+    # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # SECCION 7.9: NUEVA PESTAÑA - ANÁLISIS DE ANOMALÍAS
+    # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    with tab_anomalias:
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>⚠️ Análisis Completo de Anomalías en Instalaciones</p>", unsafe_allow_html=True)
+        
+        # Filtrado para anomalías reales (excluyendo los registros regulares/sin anomalía)
+        df_con_anomalia = df_filtrado[df_filtrado['anomalia_nombre'] != "SIN ANOMALÍA / REGULAR"].copy()
+        
+        total_anomalias_reg = len(df_con_anomalia)
+        total_registros_filtrados = len(df_filtrado)
+        pct_anomalias = round((total_anomalias_reg / total_registros_filtrados) * 100, 2) if total_registros_filtrados > 0 else 0.0
+        tipos_unicos_anomalias = df_con_anomalia['anomalia_nombre'].nunique() if not df_con_anomalia.empty else 0
+
+        # Tarjetas KPI de Anomalías
+        a_k1, a_k2, a_k3, a_k4 = st.columns(4)
+        with a_k1:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon-box" style="color: #f43f5e;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Total con Anomalía</div>
+                        <div class="metric-value">{total_anomalias_reg:,}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+        with a_k2:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon-box" style="color: #f59e0b;"><i class="fa-solid fa-list-check"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Tipos de Anomalías</div>
+                        <div class="metric-value">{tipos_unicos_anomalias:,}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+        with a_k3:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon-box" style="color: #a855f7;"><i class="fa-solid fa-percent"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">% Incidencia</div>
+                        <div class="metric-value">{pct_anomalias}%</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+        with a_k4:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-clipboard-check"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Instalaciones Regulares</div>
+                        <div class="metric-value">{(total_registros_filtrados - total_anomalias_reg):,}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+
+        # Gráficos de Análisis de Anomalías
+        col_anom_g1, col_anom_g2 = st.columns([1.5, 1])
+
+        with col_anom_g1:
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Tipo de Anomalía</p>", unsafe_allow_html=True)
+                if not df_con_anomalia.empty:
+                    df_counts_anom = df_con_anomalia['anomalia_nombre'].value_counts().reset_index()
+                    df_counts_anom.columns = ['Anomalía', 'Cantidad']
+                    
+                    fig_anom_bar = px.bar(
+                        df_counts_anom, 
+                        x='Cantidad', 
+                        y='Anomalía', 
+                        orientation='h', 
+                        text='Cantidad',
+                        color='Anomalía',
+                        color_discrete_sequence=px.colors.qualitative.Bold
+                    )
+                    fig_anom_bar.update_traces(textposition='outside', textfont_size=10)
+                    fig_anom_bar.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)', 
+                        paper_bgcolor='rgba(0,0,0,0)', 
+                        font_color='#ffffff', 
+                        margin=dict(t=10, b=10, l=10, r=30), 
+                        height=270, 
+                        xaxis=dict(showgrid=True, title=None), 
+                        yaxis=dict(showgrid=False, title=None, categoryorder='total ascending'),
+                        showlegend=False
+                    )
+                    st.plotly_chart(fig_anom_bar, use_container_width=True)
+                else:
+                    st.info("No se registran anomalías en el periodo o filtros seleccionados.")
+
+        with col_anom_g2:
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Proporción: Con Anomalía vs Regular</p>", unsafe_allow_html=True)
+                if total_registros_filtrados > 0:
+                    df_prop = pd.DataFrame({
+                        'Estado': ['Con Anomalía', 'Regular / Sin Anomalía'],
+                        'Cantidad': [total_anomalias_reg, total_registros_filtrados - total_anomalias_reg]
+                    })
+                    
+                    fig_prop_pie = px.pie(
+                        df_prop, 
+                        names='Estado', 
+                        values='Cantidad', 
+                        hole=0.5,
+                        color='Estado',
+                        color_discrete_map={'Con Anomalía': '#f43f5e', 'Regular / Sin Anomalía': '#3b82f6'}
+                    )
+                    fig_prop_pie.update_traces(textinfo='value+percent', textfont=dict(size=11))
+                    fig_prop_pie.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)', 
+                        paper_bgcolor='rgba(0,0,0,0)', 
+                        font_color='#ffffff', 
+                        margin=dict(t=10, b=10, l=10, r=10), 
+                        height=270,
+                        showlegend=True,
+                        legend=dict(orientation="h", y=-0.2, font=dict(size=9))
+                    )
+                    st.plotly_chart(fig_prop_pie, use_container_width=True)
+                else:
+                    st.info("Sin datos para mostrar proporción.")
+
+        st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:20px; margin-bottom:8px;'>📋 Detalle de Registros con Anomalías Detectadas</p>", unsafe_allow_html=True)
+        if not df_con_anomalia.empty:
+            df_tabla_anom = df_con_anomalia.copy()
+            terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
+            cols_ex = [c for c in df_tabla_anom.columns if any(term in c.lower() for term in terminos_excluidos)]
+            df_tabla_anom = df_tabla_anom.drop(columns=cols_ex, errors='ignore')
+            if 'fechaInstalacion' in df_tabla_anom.columns:
+                df_tabla_anom['fechaInstalacion'] = pd.to_datetime(df_tabla_anom['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
+            df_tabla_anom = df_tabla_anom.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
+            st.dataframe(df_tabla_anom, use_container_width=True)
+        else:
+            st.success("¡Excelente! No hay registros con anomalías reportadas para los filtros seleccionados.")
 
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # SECCION 8: PESTAÑA MAPA DE POLÍGONOS GEOGRÁFICOS
