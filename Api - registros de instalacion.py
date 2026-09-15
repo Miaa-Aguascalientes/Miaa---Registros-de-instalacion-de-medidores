@@ -735,18 +735,20 @@ if 'datos_instalaciones' in st.session_state:
                             else:
                                 fecha_inst = str(raw_fecha).strip()
 
-                        # Extraer solo la hora en formato HH:MM
+                        # Extraer estrictamente solo la hora en formato HH:MM mediante manipulación de texto
                         raw_hora = row.get('horaInicio', None)
                         hora_inst = ""
                         if pd.notna(raw_hora) and str(raw_hora).strip().lower() not in ['nan', 'none', 'nat', '']:
-                            dt_hora = pd.to_datetime(raw_hora, errors='coerce')
-                            if pd.notna(dt_hora):
-                                hora_inst = dt_hora.strftime('%H:%M')
+                            hora_str = str(raw_hora).strip()
+                            if 'T' in hora_str:
+                                # Ejemplo: '2026-09-14T12:41:59.999252' -> toma '12:41:59.999252' -> corta a '12:41'
+                                time_part = hora_str.split('T')[1]
+                                hora_inst = time_part[:5]
+                            elif ' ' in hora_str:
+                                # Ejemplo: '2026-09-14 12:41:59' -> toma '12:41:59' -> corta a '12:41'
+                                time_part = hora_str.split(' ')[1]
+                                hora_inst = time_part[:5]
                             else:
-                                # Intento de limpieza manual si viene como texto plano largo
-                                hora_str = str(raw_hora).strip()
-                                if 'T' in hora_str:
-                                    hora_str = hora_str.split('T')[1]
                                 hora_inst = hora_str[:5]
 
                         # Estructura HTML del popup (vacía si el campo no tiene datos)
