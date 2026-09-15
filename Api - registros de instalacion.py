@@ -651,7 +651,7 @@ if 'datos_instalaciones' in st.session_state:
                         if chk:
                             fids_seleccionados_mapa.append(fid)
 
-            poligonos_procesados = {}
+                poligonos_procesados = {}
                 for fid in fids_disponibles:
                     df_pol_sel = df_poligonos[df_poligonos['FID'] == fid]
                     coordenadas_poligono = []
@@ -714,6 +714,7 @@ if 'datos_instalaciones' in st.session_state:
                             'medidores': med_val,
                             'vertis': len(coordenadas_poligono)
                         }
+                        
                 if lat_acumuladas and lon_acumuladas:
                     m_p_lat = sum(lat_acumuladas) / len(lat_acumuladas)
                     m_p_lon = sum(lon_acumuladas) / len(lon_acumuladas)
