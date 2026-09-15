@@ -585,9 +585,9 @@ if 'datos_instalaciones' in st.session_state:
                         labels=df_tipo_inst['Tipo'], 
                         values=df_tipo_inst['Cantidad'], 
                         hole=0.5,
-                        textinfo='none',  # Oculta el texto en las rebanadas para evitar amontonamiento
-                        marker=dict(colors=colores_pie),
-                        hovertemplate="<b>%{label}</b><br>Cantidad: %{value:,}<br>Porcentaje: %{percent}<extra></extra>"
+                        textinfo='value+percent',  # Muestra valor y porcentaje
+                        textposition='outside',     # Fuerza las etiquetas fuera del gráfico con líneas
+                        marker=dict(colors=colores_pie)
                     ))
                 else:
                     fig_pie = go.Figure(go.Pie(labels=['Sin Datos'], values=[len(df_filtrado)], hole=0.5))
@@ -596,17 +596,10 @@ if 'datos_instalaciones' in st.session_state:
                     plot_bgcolor='rgba(0,0,0,0)', 
                     paper_bgcolor='rgba(0,0,0,0)', 
                     font_color='#ffffff', 
-                    margin=dict(t=5, b=5, l=5, r=130),  # Margen derecho ampliado para alojar la leyenda
+                    margin=dict(t=25, b=25, l=40, r=40),  # Márgenes amplios para que las líneas exteriores no se corten
                     height=230, 
-                    showlegend=True, 
-                    legend=dict(
-                        orientation="v", 
-                        yanchor="middle", 
-                        y=0.5, 
-                        xanchor="left", 
-                        x=1.02, 
-                        font=dict(size=9)
-                    )
+                    showlegend=False,  # Ocultamos la leyenda externa ya que las etiquetas con líneas están en el gráfico
+                    uniformtext=dict(minsize=8, mode='hide') # Oculta automáticamente textos muy pequeños si colapsan
                 )
                 st.plotly_chart(fig_pie, use_container_width=True)
 
