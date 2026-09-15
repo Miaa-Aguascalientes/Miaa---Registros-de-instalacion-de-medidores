@@ -850,17 +850,16 @@ if 'datos_instalaciones' in st.session_state:
                     )
                     st.plotly_chart(fig_mes_h, use_container_width=True)
 
-                # INSERCIÓN: Tarjeta de Total de Anomalías justo debajo del gráfico anterior
-                total_anomalias_actual = len(df_filtrado[df_filtrado['anomalia_nombre'] != "SIN ANOMALÍA / REGULAR"]) if not df_filtrado.empty else 0
-                st.markdown(f"""
-                    <div class="metric-card" style="margin-top: 8px;">
-                        <div class="metric-icon-box" style="color: #f43f5e;"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                        <div class="metric-content">
-                            <div class="metric-title">Total Anomalías</div>
-                            <div class="metric-value">{total_anomalias_actual:,}</div>
+                # Tarjeta de Resultados de Total de Anomalías con el mismo contenedor y estilo de tarjeta
+                with st.container(border=True):
+                    st.markdown("<p style='font-size:12px; margin-bottom:8px; font-weight:bold;'>Total de Anomalías</p>", unsafe_allow_html=True)
+                    total_anomalias_actual = len(df_filtrado[df_filtrado['anomalia_nombre'] != "SIN ANOMALÍA / REGULAR"]) if not df_filtrado.empty else 0
+                    st.markdown(f"""
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 20px; padding: 12px 0;">
+                            <div style="font-size: 32px; color: #f43f5e;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div style="font-size: 28px; font-weight: bold; color: #ffffff;">{total_anomalias_actual:,}</div>
                         </div>
-                    </div>
-                """, unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
 
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # SECCION 7.9: NUEVA PESTAÑA - ANÁLISIS DE ANOMALÍAS
