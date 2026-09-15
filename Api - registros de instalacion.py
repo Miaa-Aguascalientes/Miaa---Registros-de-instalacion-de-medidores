@@ -585,11 +585,12 @@ if 'datos_instalaciones' in st.session_state:
                         labels=df_tipo_inst['Tipo'], 
                         values=df_tipo_inst['Cantidad'], 
                         hole=0.5,
+                        domain=dict(x=[0.05, 0.72], y=[0.05, 0.95]), # Reduce el área y el tamaño físico del gráfico de dona
                         textinfo='value+percent',
                         texttemplate='%{value}<br>%{percent}',
                         textposition='inside',
                         insidetextorientation='radial',
-                        textfont=dict(color='black', size=11, family='Arial Black'), # Negro intenso y negrita para máxima visibilidad
+                        textfont=dict(color='black', size=11, family='Arial Black'), # Negro intenso y negrita
                         marker=dict(colors=colores_pie),
                         hovertemplate="<b>%{label}</b><br>Cantidad: %{value:,}<br>Porcentaje: %{percent}<extra></extra>"
                     ))
@@ -614,7 +615,6 @@ if 'datos_instalaciones' in st.session_state:
                     uniformtext=dict(minsize=9, mode='hide')
                 )
                 st.plotly_chart(fig_pie, use_container_width=True)
-
         with col_g3:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Cuadro vs Registro</p>", unsafe_allow_html=True)
