@@ -651,14 +651,14 @@ if 'datos_instalaciones' in st.session_state:
                         if chk:
                             fids_seleccionados_mapa.append(fid)
 
-                poligonos_procesados = {}
+            with col_map_der:
                 lat_acumuladas = []
                 lon_acumuladas = []
                 
+                poligonos_procesados = {}
                 for fid in fids_disponibles:
                     df_pol_sel = df_poligonos[df_poligonos['FID'] == fid]
                     coordenadas_poligono = []
-                    
                     df_ordenado = df_pol_sel.sort_values(by='Orden_inst', ascending=True)
                     
                     sec_comercial = df_pol_sel['Sector_comercial'].iloc[0] if 'Sector_comercial' in df_pol_sel.columns else "N/A"
@@ -674,33 +674,48 @@ if 'datos_instalaciones' in st.session_state:
                         for char in ['(', ')', '[', ']', '"', "'", 'POINT', 'POLYGON']:
                             c_str = c_str.replace(char, '')
                         c_str = c_str.strip()
-                        c_str = c_str.replace(';', ',')
                         
-                        tokens = [t.strip() for t in c_str.split(',') if t.strip()]
+                        pares = [p.strip() for p in c_str.split(',') if p.strip()]
                         
-                        numeros = []
-                        for t in tokens:
-                            try:
-                                numeros.append(float(t))
-                            except ValueError:
-                                pass
-                        
-                        if len(numeros) >= 2:
-                            for i in range(0, len(numeros) - 1, 2):
-                                p1 = numeros[i]
-                                p2 = numeros[i+1]
-                                
-                                if abs(p1) > abs(p2):
-                                    lon, lat = p1, p2
-                                else:
-                                    lat, lon = p1, p2
-                                    
-                                punto = [lat, lon]
-                                if not coordenadas_poligono or coordenadas_poligono[-1] != punto:
-                                    coordenadas_poligono.append(punto)
+                        if len(pares) >= 2 and len(pares) % 2 == 0:
+                            for i in range(0, len(pares), 2):
+                                try:
+                                    p1 = float(pares[i])
+                                    p2 = float(pares[i+1])
+                                    if abs(p1) > abs(p2):
+                                        lon, lat = p1, p2
+                                    else:
+                                        lat, lon = p1, p2
+                                    coordenadas_poligono.append([lat, lon])
                                     if fid in fids_seleccionados_mapa:
                                         lat_acumuladas.append(lat)
                                         lon_acumuladas.append(lon)
+                                except Exception:
+                                    pass
+                        else:
+                            if ',' in c_str:
+                                partes = c_str.split(',')
+                            elif ' ' in c_str:
+                                partes = c_str.split()
+                            else:
+                                continue
+                                
+                            if len(partes) >= 2:
+                                try:
+                                    p1 = float(partes[0].strip())
+                                    p2 = float(partes[1].strip())
+                                    
+                                    if abs(p1) > abs(p2):
+                                        lon, lat = p1, p2
+                                    else:
+                                        lat, lon = p1, p2
+                                        
+                                    coordenadas_poligono.append([lat, lon])
+                                    if fid in fids_seleccionados_mapa:
+                                        lat_acumuladas.append(lat)
+                                        lon_acumuladas.append(lon)
+                                except Exception:
+                                    pass
                     
                     if coordenadas_poligono:
                         poligonos_procesados[fid] = {
@@ -710,7 +725,7 @@ if 'datos_instalaciones' in st.session_state:
                             'medidores': med_val,
                             'vertis': len(coordenadas_poligono)
                         }
-                        
+
                 if lat_acumuladas and lon_acumuladas:
                     m_p_lat = sum(lat_acumuladas) / len(lat_acumuladas)
                     m_p_lon = sum(lon_acumuladas) / len(lon_acumuladas)
@@ -722,19 +737,13 @@ if 'datos_instalaciones' in st.session_state:
 
                 for fid, datos in poligonos_procesados.items():
                     if fid in fids_seleccionados_mapa:
-                        # Estilo condicional para resaltar o depurar el polígono 913 si lo deseas
-                        is_913 = str(fid) == "913"
-                        color_borde = "#ef4444" if is_913 else "#2563eb"
-                        color_relleno = "#f87171" if is_913 else "#3b82f6"
-                        opacidad_relleno = 0.5 if is_913 else 0.3
-
                         folium.Polygon(
                             locations=datos['coordenadas'],
-                            color=color_borde,
-                            weight=3 if is_913 else 2.5,
+                            color="#2563eb",
+                            weight=2.5,
                             fill=True,
-                            fill_color=color_relleno,
-                            fill_opacity=opacidad_relleno,
+                            fill_color="#3b82f6",
+                            fill_opacity=0.3,
                             popup=f"Polígono FID: {fid} | Sector: {datos['sector']} | Área: {datos['area']} km² | Medidores: {datos['medidores']}"
                         ).add_to(mapa_poligonos_tab)
 
