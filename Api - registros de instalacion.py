@@ -500,7 +500,7 @@ if 'datos_instalaciones' in st.session_state:
         col_g1, col_g2 = st.columns([1.8, 1.2])
 
         with col_g1:
-            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día (Real API)</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día</p>", unsafe_allow_html=True)
             if col_fecha_ref and not df_filtrado['fecha_dt'].isna().all():
                 df_filtrado['fecha_dia'] = df_filtrado['fecha_dt'].dt.date
                 df_dia = df_filtrado.groupby('fecha_dia', as_index=False).size()
@@ -555,7 +555,7 @@ if 'datos_instalaciones' in st.session_state:
             col_map_h, col_graf_h = st.columns([2.2, 1])
 
             with col_map_h:
-                st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones (Coordenadas Reales API)</p>", unsafe_allow_html=True)
+                st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones </p>", unsafe_allow_html=True)
                 
                 df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
                 if not df_mapa_valido.empty:
