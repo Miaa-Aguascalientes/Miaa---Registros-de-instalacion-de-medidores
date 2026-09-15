@@ -37,26 +37,27 @@ custom_style = """
     [data-testid="collapsedControl"] { display: none !important; }
 
     .block-container {
-        padding-top: 0.4rem !important;
+        padding-top: 0rem !important;
         padding-bottom: 0.5rem !important;
-        margin-top: 0px !important;
+        margin-top: -25px !important;
     }
 
-    /* Cabecera Superior: Título centrado en azul y fecha a la derecha */
+    /* Cabecera Superior: Alineada perfectamente arriba con fecha y título */
     .dashboard-header-flex {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-top: 5px;
-        margin-bottom: 15px;
+        margin-top: 0px;
+        margin-bottom: 5px;
         padding: 0px 5px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        padding-bottom: 8px;
+        padding-bottom: 5px;
         position: relative;
+        height: 35px;
     }
 
     .dashboard-main-title {
-        font-size: 1.6rem;
+        font-size: 1.4rem;
         font-weight: 800;
         color: #38bdf8;
         text-transform: uppercase;
@@ -161,7 +162,7 @@ st.markdown(custom_style, unsafe_allow_html=True)
 # Cabecera superior visual con Título centrado en azul y Fecha actualizada a la derecha
 st.markdown("""
     <div class="dashboard-header-flex">
-        <h2 class="dashboard-main-title">📊 Dashboard Instalación Medidores Inteligentes</h2>
+        <h2 class="dashboard-main-title">DASHBOARD INSTALACIÓN MEDIDORES INTELIGENTES</h2>
         <div class="dashboard-subtitle-right">Actualizado al: 14/09/2026</div>
     </div>
 """, unsafe_allow_html=True)
