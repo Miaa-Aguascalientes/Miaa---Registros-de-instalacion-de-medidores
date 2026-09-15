@@ -660,7 +660,6 @@ if 'datos_instalaciones' in st.session_state:
                     df_pol_sel = df_poligonos[df_poligonos['FID'] == fid]
                     coordenadas_poligono = []
                     
-                    # Ordenamiento robusto para evitar cruces en los trazos
                     if 'Vertice' in df_pol_sel.columns:
                         df_ordenado = df_pol_sel.sort_values(by=['Vertice', 'Orden_inst'], ascending=[True, True])
                     else:
@@ -679,10 +678,7 @@ if 'datos_instalaciones' in st.session_state:
                         for char in ['(', ')', '[', ']', '"', "'", 'POINT', 'POLYGON']:
                             c_str = c_str.replace(char, '')
                         c_str = c_str.strip()
-                        
-                        # Corrección específica para el FID 913 si agrupa múltiples pares o requiere limpieza especial
-                        if str(fid) == "913":
-                            c_str = c_str.replace(';', ',')
+                        c_str = c_str.replace(';', ',')
                         
                         pares = [p.strip() for p in c_str.split(',') if p.strip()]
                         
@@ -727,12 +723,30 @@ if 'datos_instalaciones' in st.session_state:
                                     pass
                     
                     if coordenadas_poligono:
+                        # Eliminar puntos duplicados
+                        coords_unicas = []
+                        for pt in coordenadas_poligono:
+                            if pt not in coords_unicas:
+                                coords_unicas.append(pt)
+                                
+                        # Ordenar por ángulo respecto al centroide para evitar el efecto telaraña
+                        if len(coords_unicas) >= 3:
+                            arr_pts = np.array(coords_unicas)
+                            centroid_lat = np.mean(arr_pts[:, 0])
+                            centroid_lon = np.mean(arr_pts[:, 1])
+                            
+                            angles = np.arctan2(arr_pts[:, 0] - centroid_lat, arr_pts[:, 1] - centroid_lon)
+                            sorted_indices = np.argsort(angles)
+                            coords_ordenadas = arr_pts[sorted_indices].tolist()
+                        else:
+                            coords_ordenadas = coords_unicas
+
                         poligonos_procesados[fid] = {
-                            'coordenadas': coordenadas_poligono,
+                            'coordenadas': coords_ordenadas,
                             'sector': sec_comercial,
                             'area': area_val,
                             'medidores': med_val,
-                            'vertis': len(coordenadas_poligono)
+                            'vertis': len(coords_ordenadas)
                         }
 
                 if lat_acumuladas and lon_acumuladas:
