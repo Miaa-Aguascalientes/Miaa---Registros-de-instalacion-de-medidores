@@ -545,11 +545,12 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-       # SECCION 7.2: --------------------------------------------- Fila de Gráficos Principales ------------------------------------------------------------------
-        # Proporción [1.2, 1.6, 1.2]: La columna central es más ancha para la dona, pero los extremos mantienen buen tamaño sin encogerse como antes.
-        col_g1, col_g2, col_g3 = st.columns([1.2, 1.6, 1.2])
+       # SECCIÓN 7.2: --------------------------------------------- BLOQUE DE GRÁFICOS Y DISTRIBUCIÓN ------------------------------------------------------------------
+        
+        # --- FILA SUPERIOR: Instalaciones por Día y Distribución por Tipo ---
+        col_g1, col_g2 = st.columns([1, 1.5])
 
-        # COLUMNA 1: Instalaciones por Día
+        # 1. Instalaciones por Día
         with col_g1:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día</p>", unsafe_allow_html=True)
@@ -574,7 +575,7 @@ if 'datos_instalaciones' in st.session_state:
                 )
                 st.plotly_chart(fig_dia, use_container_width=True)
 
-        # COLUMNA 2: Distribución por Tipo de Instalación (Tarjeta Ancha)
+        # 2. Distribución por Tipo de Instalación
         with col_g2:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Tipo de Instalación</p>", unsafe_allow_html=True)
@@ -605,8 +606,11 @@ if 'datos_instalaciones' in st.session_state:
                 )
                 st.plotly_chart(fig_pie, use_container_width=True)
 
-        # COLUMNA 3: Cuadro vs Registro
-        with col_g3:
+        # --- FILA INFERIOR: Tabla de Eficiencia, Mapa y Cuadro vs Registro ---
+        # (Asegúrate de conservar tus variables de columnas de la fila de abajo, por ejemplo: col_t, col_m, col_der)
+        # col_t, col_m, col_der = st.columns([1.5, 2, 1])
+
+        with col_der:  # Columna derecha de la fila inferior donde estaba Instalaciones por Mes
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Cuadro vs Registro</p>", unsafe_allow_html=True)
                 if 'tipo_instalacion_nombre' in df_filtrado.columns and not df_filtrado.empty:
