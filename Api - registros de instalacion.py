@@ -585,8 +585,9 @@ if 'datos_instalaciones' in st.session_state:
                         labels=df_tipo_inst['Tipo'], 
                         values=df_tipo_inst['Cantidad'], 
                         hole=0.5,
-                        textinfo='value+percent',
-                        marker=dict(colors=colores_pie)
+                        textinfo='none',  # Oculta el texto en las rebanadas para evitar amontonamiento
+                        marker=dict(colors=colores_pie),
+                        hovertemplate="<b>%{label}</b><br>Cantidad: %{value:,}<br>Porcentaje: %{percent}<extra></extra>"
                     ))
                 else:
                     fig_pie = go.Figure(go.Pie(labels=['Sin Datos'], values=[len(df_filtrado)], hole=0.5))
@@ -595,10 +596,17 @@ if 'datos_instalaciones' in st.session_state:
                     plot_bgcolor='rgba(0,0,0,0)', 
                     paper_bgcolor='rgba(0,0,0,0)', 
                     font_color='#ffffff', 
-                    margin=dict(t=5, b=5, l=5, r=5), 
+                    margin=dict(t=5, b=5, l=5, r=130),  # Margen derecho ampliado para alojar la leyenda
                     height=230, 
                     showlegend=True, 
-                    legend=dict(orientation="h", y=-0.2, font=dict(size=9))
+                    legend=dict(
+                        orientation="v", 
+                        yanchor="middle", 
+                        y=0.5, 
+                        xanchor="left", 
+                        x=1.02, 
+                        font=dict(size=9)
+                    )
                 )
                 st.plotly_chart(fig_pie, use_container_width=True)
 
