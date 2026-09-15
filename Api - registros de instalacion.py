@@ -42,7 +42,7 @@ custom_style = """
         margin-top: -30px !important;
     }
 
-    /* Cabecera Superior: Título a la izquierda, Fecha a la derecha en la misma línea */
+    /* Cabecera Superior */
     .dashboard-header-flex {
         display: flex;
         justify-content: space-between;
@@ -77,7 +77,7 @@ custom_style = """
         margin-top: 5px;
     }
 
-    /* Tarjetas Compactas: Icono a la izquierda y textos centrados a la derecha */
+    /* Tarjetas Compactas: Indicadores KPI */
     .metric-card {
         background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
         border: 1px solid rgba(255, 255, 255, 0.08);
@@ -150,6 +150,26 @@ custom_style = """
         font-size: 17px;
         font-weight: 700;
         line-height: 1.2;
+    }
+
+    /* Estilos para Tarjetas Contenedoras de Gráficos (st.container(border=True)) */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 12px !important;
+        padding: 12px !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2) !important;
+        transition: all 0.3s ease;
+    }
+
+    div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        border-color: rgba(59, 130, 246, 0.4) !important;
+        box-shadow: 0 8px 12px -3px rgba(59, 130, 246, 0.15) !important;
+    }
+
+    /* Fondo transparente para los gráficos Plotly */
+    .js-plotly-plot .plotly .main-svg {
+        background: transparent !important;
     }
     </style>
 """
@@ -529,185 +549,191 @@ if 'datos_instalaciones' in st.session_state:
         col_g1, col_g2, col_g3 = st.columns([1.3, 1, 1])
 
         with col_g1:
-            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día</p>", unsafe_allow_html=True)
-            if col_fecha_ref and not df_filtrado['fecha_dt'].isna().all():
-                df_filtrado['fecha_dia'] = df_filtrado['fecha_dt'].dt.date
-                df_dia = df_filtrado.groupby('fecha_dia', as_index=False).size()
-                df_dia['fecha_dia'] = pd.to_datetime(df_dia['fecha_dia']).dt.strftime('%d/%m/%Y')
-                fig_dia = px.bar(df_dia, x='fecha_dia', y='size', text='size', color_discrete_sequence=['#3b82f6'])
-            else:
-                fig_dia = px.bar(pd.DataFrame({'Aviso': ['Sin fechas'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
-            
-            fig_dia.update_traces(textposition='outside', textfont_size=10)
-            fig_dia.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)', 
-                paper_bgcolor='rgba(0,0,0,0)', 
-                font_color='#ffffff', 
-                margin=dict(t=40, b=5, l=5, r=5), 
-                height=230, 
-                xaxis_title=None, 
-                yaxis_title=None,
-                yaxis=dict(range=[0, 500])
-            )
-            st.plotly_chart(fig_dia, use_container_width=True)
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día</p>", unsafe_allow_html=True)
+                if col_fecha_ref and not df_filtrado['fecha_dt'].isna().all():
+                    df_filtrado['fecha_dia'] = df_filtrado['fecha_dt'].dt.date
+                    df_dia = df_filtrado.groupby('fecha_dia', as_index=False).size()
+                    df_dia['fecha_dia'] = pd.to_datetime(df_dia['fecha_dia']).dt.strftime('%d/%m/%Y')
+                    fig_dia = px.bar(df_dia, x='fecha_dia', y='size', text='size', color_discrete_sequence=['#3b82f6'])
+                else:
+                    fig_dia = px.bar(pd.DataFrame({'Aviso': ['Sin fechas'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
+                
+                fig_dia.update_traces(textposition='outside', textfont_size=10)
+                fig_dia.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)', 
+                    paper_bgcolor='rgba(0,0,0,0)', 
+                    font_color='#ffffff', 
+                    margin=dict(t=25, b=5, l=5, r=5), 
+                    height=230, 
+                    xaxis_title=None, 
+                    yaxis_title=None,
+                    yaxis=dict(range=[0, 500])
+                )
+                st.plotly_chart(fig_dia, use_container_width=True)
 
         with col_g2:
-            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Distribución por Tipo de Instalación</p>", unsafe_allow_html=True)
-            if 'tipo_instalacion_nombre' in df_filtrado.columns and not df_filtrado.empty:
-                df_tipo_inst = df_filtrado['tipo_instalacion_nombre'].value_counts().reset_index()
-                df_tipo_inst.columns = ['Tipo', 'Cantidad']
-                
-                colores_pie = ['#38bdf8', '#4ade80', '#f59e0b', '#a855f7', '#f43f5e', '#64748b']
-                
-                fig_pie = go.Figure(go.Pie(
-                    labels=df_tipo_inst['Tipo'], 
-                    values=df_tipo_inst['Cantidad'], 
-                    hole=0.5,
-                    textinfo='value+percent',
-                    marker=dict(colors=colores_pie)
-                ))
-            else:
-                fig_pie = go.Figure(go.Pie(labels=['Sin Datos'], values=[len(df_filtrado)], hole=0.5))
-                
-            fig_pie.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)', 
-                paper_bgcolor='rgba(0,0,0,0)', 
-                font_color='#ffffff', 
-                margin=dict(t=5, b=5, l=5, r=5), 
-                height=230, 
-                showlegend=True, 
-                legend=dict(orientation="h", y=-0.2, font=dict(size=9))
-            )
-            st.plotly_chart(fig_pie, use_container_width=True)
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Tipo de Instalación</p>", unsafe_allow_html=True)
+                if 'tipo_instalacion_nombre' in df_filtrado.columns and not df_filtrado.empty:
+                    df_tipo_inst = df_filtrado['tipo_instalacion_nombre'].value_counts().reset_index()
+                    df_tipo_inst.columns = ['Tipo', 'Cantidad']
+                    
+                    colores_pie = ['#38bdf8', '#4ade80', '#f59e0b', '#a855f7', '#f43f5e', '#64748b']
+                    
+                    fig_pie = go.Figure(go.Pie(
+                        labels=df_tipo_inst['Tipo'], 
+                        values=df_tipo_inst['Cantidad'], 
+                        hole=0.5,
+                        textinfo='value+percent',
+                        marker=dict(colors=colores_pie)
+                    ))
+                else:
+                    fig_pie = go.Figure(go.Pie(labels=['Sin Datos'], values=[len(df_filtrado)], hole=0.5))
+                    
+                fig_pie.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)', 
+                    paper_bgcolor='rgba(0,0,0,0)', 
+                    font_color='#ffffff', 
+                    margin=dict(t=5, b=5, l=5, r=5), 
+                    height=230, 
+                    showlegend=True, 
+                    legend=dict(orientation="h", y=-0.2, font=dict(size=9))
+                )
+                st.plotly_chart(fig_pie, use_container_width=True)
 
         with col_g3:
-            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Cuadro vs Registro</p>", unsafe_allow_html=True)
-            if 'tipo_instalacion_nombre' in df_filtrado.columns and not df_filtrado.empty:
-                def clasificar_cuadro_registro(nombre):
-                    n_str = str(nombre).upper()
-                    if 'CUADRO' in n_str:
-                        return 'CUADRO'
-                    elif 'REGISTRO' in n_str:
-                        return 'REGISTRO'
-                    return None
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Cuadro vs Registro</p>", unsafe_allow_html=True)
+                if 'tipo_instalacion_nombre' in df_filtrado.columns and not df_filtrado.empty:
+                    def clasificar_cuadro_registro(nombre):
+                        n_str = str(nombre).upper()
+                        if 'CUADRO' in n_str:
+                            return 'CUADRO'
+                        elif 'REGISTRO' in n_str:
+                            return 'REGISTRO'
+                        return None
 
-                df_cr = df_filtrado.copy()
-                df_cr['categoria_cr'] = df_cr['tipo_instalacion_nombre'].apply(clasificar_cuadro_registro)
-                df_cr_val = df_cr.dropna(subset=['categoria_cr'])
-                
-                if not df_cr_val.empty:
-                    df_counts_cr = df_cr_val['categoria_cr'].value_counts().reset_index()
-                    df_counts_cr.columns = ['Tipo', 'Cantidad']
+                    df_cr = df_filtrado.copy()
+                    df_cr['categoria_cr'] = df_cr['tipo_instalacion_nombre'].apply(clasificar_cuadro_registro)
+                    df_cr_val = df_cr.dropna(subset=['categoria_cr'])
                     
-                    tot_cr = df_counts_cr['Cantidad'].sum()
-                    txt_centro = f"{tot_cr/1000:.1f} mil".replace('.', ',') if tot_cr >= 1000 else f"{tot_cr:,}"
+                    if not df_cr_val.empty:
+                        df_counts_cr = df_cr_val['categoria_cr'].value_counts().reset_index()
+                        df_counts_cr.columns = ['Tipo', 'Cantidad']
+                        
+                        tot_cr = df_counts_cr['Cantidad'].sum()
+                        txt_centro = f"{tot_cr/1000:.1f} mil".replace('.', ',') if tot_cr >= 1000 else f"{tot_cr:,}"
 
-                    color_cr_map = {'CUADRO': '#0066cc', 'REGISTRO': '#e83e8c'}
-                    colores_cr = [color_cr_map.get(t, '#3b82f6') for t in df_counts_cr['Tipo']]
+                        color_cr_map = {'CUADRO': '#0066cc', 'REGISTRO': '#e83e8c'}
+                        colores_cr = [color_cr_map.get(t, '#3b82f6') for t in df_counts_cr['Tipo']]
 
-                    fig_cr = go.Figure(go.Pie(
-                        labels=df_counts_cr['Tipo'], 
-                        values=df_counts_cr['Cantidad'], 
-                        hole=0.6,
-                        textinfo='value+percent',
-                        marker=dict(colors=colores_cr)
-                    ))
+                        fig_cr = go.Figure(go.Pie(
+                            labels=df_counts_cr['Tipo'], 
+                            values=df_counts_cr['Cantidad'], 
+                            hole=0.6,
+                            textinfo='value+percent',
+                            marker=dict(colors=colores_cr)
+                        ))
 
-                    fig_cr.update_layout(
-                        annotations=[dict(text=txt_centro, x=0.5, y=0.5, font_size=16, font_color="white", font_weight="bold", showarrow=False)],
-                        plot_bgcolor='rgba(0,0,0,0)', 
-                        paper_bgcolor='rgba(0,0,0,0)', 
-                        font_color='#ffffff', 
-                        margin=dict(t=5, b=5, l=5, r=5), 
-                        height=230, 
-                        showlegend=True, 
-                        legend=dict(orientation="h", y=-0.2, font=dict(size=9))
-                    )
+                        fig_cr.update_layout(
+                            annotations=[dict(text=txt_centro, x=0.5, y=0.5, font_size=16, font_color="white", font_weight="bold", showarrow=False)],
+                            plot_bgcolor='rgba(0,0,0,0)', 
+                            paper_bgcolor='rgba(0,0,0,0)', 
+                            font_color='#ffffff', 
+                            margin=dict(t=5, b=5, l=5, r=5), 
+                            height=230, 
+                            showlegend=True, 
+                            legend=dict(orientation="h", y=-0.2, font=dict(size=9))
+                        )
+                    else:
+                        fig_cr = go.Figure(go.Pie(labels=['Sin Datos'], values=[0], hole=0.6))
+                        fig_cr.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', height=230)
                 else:
                     fig_cr = go.Figure(go.Pie(labels=['Sin Datos'], values=[0], hole=0.6))
                     fig_cr.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', height=230)
-            else:
-                fig_cr = go.Figure(go.Pie(labels=['Sin Datos'], values=[0], hole=0.6))
-                fig_cr.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', height=230)
 
-            st.plotly_chart(fig_cr, use_container_width=True)
+                st.plotly_chart(fig_cr, use_container_width=True)
 
         # SECCION 7.3: ---------------------------------------------------  Fila Inferior: Tabla de Eficiencia, Mapa de Puntos y Gráfico Mensual Horizontal ---------------------------------------------------------------
         col_inf1, col_inf2 = st.columns([1, 1.6])
 
         with col_inf1:
-            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Eficiencia por Colonia y Polígono</p>", unsafe_allow_html=True)
-            if not df_eficiencia.empty:
-                st.dataframe(df_eficiencia, use_container_width=True, hide_index=True)
-            else:
-                st.info("No se encontraron datos para los polígonos seleccionados.")
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Eficiencia por Colonia y Polígono</p>", unsafe_allow_html=True)
+                if not df_eficiencia.empty:
+                    st.dataframe(df_eficiencia, use_container_width=True, hide_index=True)
+                else:
+                    st.info("No se encontraron datos para los polígonos seleccionados.")
 
         with col_inf2:
             col_map_h, col_graf_h = st.columns([2.2, 1])
 
             with col_map_h:
-                st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones </p>", unsafe_allow_html=True)
-                
-                df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
-                if not df_mapa_valido.empty:
-                    map_lat = df_mapa_valido['latitud'].mean()
-                    map_lon = df_mapa_valido['longitud'].mean()
-                else:
-                    map_lat, map_lon = lat_centro, lon_centro
+                with st.container(border=True):
+                    st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones </p>", unsafe_allow_html=True)
+                    
+                    df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
+                    if not df_mapa_valido.empty:
+                        map_lat = df_mapa_valido['latitud'].mean()
+                        map_lon = df_mapa_valido['longitud'].mean()
+                    else:
+                        map_lat, map_lon = lat_centro, lon_centro
 
-                mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12, tiles=None)
-                agregar_capas_base(mapa_miaa)
+                    mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12, tiles=None)
+                    agregar_capas_base(mapa_miaa)
 
-                for _, row in df_mapa_valido.iterrows():
-                    folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
+                    for _, row in df_mapa_valido.iterrows():
+                        folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
 
-                st_folium(mapa_miaa, width=None, height=340, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
+                    st_folium(mapa_miaa, width=None, height=320, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
 
             with col_graf_h:
-                st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
-                
-                if col_fecha_ref and not df['fecha_dt'].isna().all():
-                    df_mes_total = df.copy()
-                    df_mes_total['periodo_mes'] = df_mes_total['fecha_dt'].dt.to_period('M')
-                    df_mes = df_mes_total.groupby('periodo_mes', as_index=False).size()
-                    df_mes.columns = ['Periodo', 'Cantidad']
+                with st.container(border=True):
+                    st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
                     
-                    meses_es = {
-                        1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 
-                        5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto', 
-                        9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
-                    }
+                    if col_fecha_ref and not df['fecha_dt'].isna().all():
+                        df_mes_total = df.copy()
+                        df_mes_total['periodo_mes'] = df_mes_total['fecha_dt'].dt.to_period('M')
+                        df_mes = df_mes_total.groupby('periodo_mes', as_index=False).size()
+                        df_mes.columns = ['Periodo', 'Cantidad']
+                        
+                        meses_es = {
+                            1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 
+                            5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto', 
+                            9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
+                        }
+                        
+                        df_mes['Mes'] = df_mes['Periodo'].apply(lambda x: f"{meses_es[x.month]} {x.year}")
+                        df_mes = df_mes.sort_values(by='Periodo', ascending=True)
+                    else:
+                        df_mes = pd.DataFrame({'Mes': ['Sin datos'], 'Cantidad': [0]})
+
+                    colores_barras = ['#1e3a8a', '#3b82f6'] * ((len(df_mes) // 2) + 1)
+                    max_cant = df_mes['Cantidad'].max() if not df_mes.empty else 10
+
+                    fig_mes_h = px.bar(
+                        df_mes, 
+                        x='Cantidad', 
+                        y='Mes', 
+                        orientation='h',
+                        text='Cantidad',
+                        color='Mes',
+                        color_discrete_sequence=colores_barras
+                    )
                     
-                    df_mes['Mes'] = df_mes['Periodo'].apply(lambda x: f"{meses_es[x.month]} {x.year}")
-                    df_mes = df_mes.sort_values(by='Periodo', ascending=True)
-                else:
-                    df_mes = pd.DataFrame({'Mes': ['Sin datos'], 'Cantidad': [0]})
-
-                colores_barras = ['#1e3a8a', '#3b82f6'] * ((len(df_mes) // 2) + 1)
-                max_cant = df_mes['Cantidad'].max() if not df_mes.empty else 10
-
-                fig_mes_h = px.bar(
-                    df_mes, 
-                    x='Cantidad', 
-                    y='Mes', 
-                    orientation='h',
-                    text='Cantidad',
-                    color='Mes',
-                    color_discrete_sequence=colores_barras
-                )
-                
-                fig_mes_h.update_traces(textposition='outside', textfont_size=10)
-                fig_mes_h.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)', 
-                    paper_bgcolor='rgba(0,0,0,0)', 
-                    font_color='#ffffff', 
-                    margin=dict(t=5, b=5, l=5, r=40),  
-                    height=130, 
-                    xaxis=dict(showgrid=False, showticklabels=False, title=None, range=[0, max_cant * 1.25]), 
-                    yaxis=dict(showgrid=False, title=None, tickfont=dict(size=10), categoryorder='array', categoryarray=df_mes['Mes'].tolist()),
-                    showlegend=False
-                )
-                st.plotly_chart(fig_mes_h, use_container_width=True)
+                    fig_mes_h.update_traces(textposition='outside', textfont_size=10)
+                    fig_mes_h.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)', 
+                        paper_bgcolor='rgba(0,0,0,0)', 
+                        font_color='#ffffff', 
+                        margin=dict(t=5, b=5, l=5, r=40),  
+                        height=130, 
+                        xaxis=dict(showgrid=False, showticklabels=False, title=None, range=[0, max_cant * 1.25]), 
+                        yaxis=dict(showgrid=False, title=None, tickfont=dict(size=10), categoryorder='array', categoryarray=df_mes['Mes'].tolist()),
+                        showlegend=False
+                    )
+                    st.plotly_chart(fig_mes_h, use_container_width=True)
 
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # SECCION 8: PESTAÑA MAPA DE POLÍGONOS GEOGRÁFICOS
@@ -905,45 +931,48 @@ if 'datos_instalaciones' in st.session_state:
         col_ex_left, col_ex_right = st.columns([1.1, 1.3])
 
         with col_ex_left:
-            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día (Externo)</p>", unsafe_allow_html=True)
-            if col_fecha_ref and not df_externo.empty and not df_externo['fecha_dt'].isna().all():
-                df_ext_dia = df_externo.copy()
-                df_ext_dia['fecha_dia'] = df_ext_dia['fecha_dt'].dt.date
-                df_ed = df_ext_dia.groupby('fecha_dia', as_index=False).size()
-                df_ed['fecha_dia'] = pd.to_datetime(df_ed['fecha_dia']).dt.strftime('%d/%m/%Y')
-                fig_ext_dia = px.bar(df_ed, x='fecha_dia', y='size', text='size', color_discrete_sequence=['#f59e0b'])
-            else:
-                fig_ext_dia = px.bar(pd.DataFrame({'Aviso': ['Sin datos'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
-            
-            fig_ext_dia.update_traces(textposition='outside', textfont_size=10)
-            fig_ext_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None)
-            st.plotly_chart(fig_ext_dia, use_container_width=True)
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día (Externo)</p>", unsafe_allow_html=True)
+                if col_fecha_ref and not df_externo.empty and not df_externo['fecha_dt'].isna().all():
+                    df_ext_dia = df_externo.copy()
+                    df_ext_dia['fecha_dia'] = df_ext_dia['fecha_dt'].dt.date
+                    df_ed = df_ext_dia.groupby('fecha_dia', as_index=False).size()
+                    df_ed['fecha_dia'] = pd.to_datetime(df_ed['fecha_dia']).dt.strftime('%d/%m/%Y')
+                    fig_ext_dia = px.bar(df_ed, x='fecha_dia', y='size', text='size', color_discrete_sequence=['#f59e0b'])
+                else:
+                    fig_ext_dia = px.bar(pd.DataFrame({'Aviso': ['Sin datos'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
+                
+                fig_ext_dia.update_traces(textposition='outside', textfont_size=10)
+                fig_ext_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None)
+                st.plotly_chart(fig_ext_dia, use_container_width=True)
 
-            st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Distribución por Nivel Tarifario (Externo)</p>", unsafe_allow_html=True)
-            if 'nivel' in df_externo.columns and not df_externo.empty:
-                df_ext_nivel = df_externo['nivel'].fillna("SIN NIVEL").value_counts().reset_index()
-                df_ext_nivel.columns = ['Nivel', 'Cantidad']
-                fig_ext_niv = px.bar(df_ext_nivel, x='Nivel', y='Cantidad', text='Cantidad', color='Nivel', color_discrete_sequence=px.colors.qualitative.Safe)
-                fig_ext_niv.update_traces(textposition='outside', textfont_size=10)
-            else:
-                fig_ext_niv = px.bar(pd.DataFrame({'Nivel': ['Sin datos'], 'Cantidad': [0]}), x='Nivel', y='Cantidad', text='Cantidad')
-            
-            fig_ext_niv.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None, showlegend=False)
-            st.plotly_chart(fig_ext_niv, use_container_width=True)
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Nivel Tarifario (Externo)</p>", unsafe_allow_html=True)
+                if 'nivel' in df_externo.columns and not df_externo.empty:
+                    df_ext_nivel = df_externo['nivel'].fillna("SIN NIVEL").value_counts().reset_index()
+                    df_ext_nivel.columns = ['Nivel', 'Cantidad']
+                    fig_ext_niv = px.bar(df_ext_nivel, x='Nivel', y='Cantidad', text='Cantidad', color='Nivel', color_discrete_sequence=px.colors.qualitative.Safe)
+                    fig_ext_niv.update_traces(textposition='outside', textfont_size=10)
+                else:
+                    fig_ext_niv = px.bar(pd.DataFrame({'Nivel': ['Sin datos'], 'Cantidad': [0]}), x='Nivel', y='Cantidad', text='Cantidad')
+                
+                fig_ext_niv.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None, showlegend=False)
+                st.plotly_chart(fig_ext_niv, use_container_width=True)
 
         with col_ex_right:
-            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones - Personal Externo</p>", unsafe_allow_html=True)
-            df_ext_map = df_externo.dropna(subset=['latitud', 'longitud']) if not df_externo.empty else pd.DataFrame()
-            m_lat = df_ext_map['latitud'].mean() if not df_ext_map.empty else lat_centro
-            m_lon = df_ext_map['longitud'].mean() if not df_ext_map.empty else lon_centro
-            
-            mapa_ext = folium.Map(location=[m_lat, m_lon], zoom_start=12, tiles=None)
-            agregar_capas_base(mapa_ext)
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones - Personal Externo</p>", unsafe_allow_html=True)
+                df_ext_map = df_externo.dropna(subset=['latitud', 'longitud']) if not df_externo.empty else pd.DataFrame()
+                m_lat = df_ext_map['latitud'].mean() if not df_ext_map.empty else lat_centro
+                m_lon = df_ext_map['longitud'].mean() if not df_ext_map.empty else lon_centro
+                
+                mapa_ext = folium.Map(location=[m_lat, m_lon], zoom_start=12, tiles=None)
+                agregar_capas_base(mapa_ext)
 
-            for _, row in df_ext_map.iterrows():
-                folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#f59e0b', fill=True, fill_color='#f59e0b', fill_opacity=0.7).add_to(mapa_ext)
-            
-            st_folium(mapa_ext, width=None, height=460, use_container_width=True, key="mapa_externo", returned_objects=[])
+                for _, row in df_ext_map.iterrows():
+                    folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#f59e0b', fill=True, fill_color='#f59e0b', fill_opacity=0.7).add_to(mapa_ext)
+                
+                st_folium(mapa_ext, width=None, height=460, use_container_width=True, key="mapa_externo", returned_objects=[])
 
         st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal Externo</p>", unsafe_allow_html=True)
         df_tabla_ext = df_externo.copy()
@@ -1003,45 +1032,48 @@ if 'datos_instalaciones' in st.session_state:
         col_mi_left, col_mi_right = st.columns([1.1, 1.3])
 
         with col_mi_left:
-            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día (MIAA)</p>", unsafe_allow_html=True)
-            if col_fecha_ref and not df_miaa_pers.empty and not df_miaa_pers['fecha_dt'].isna().all():
-                df_miaa_dia = df_miaa_pers.copy()
-                df_miaa_dia['fecha_dia'] = df_miaa_dia['fecha_dt'].dt.date
-                df_md = df_miaa_dia.groupby('fecha_dia', as_index=False).size()
-                df_md['fecha_dia'] = pd.to_datetime(df_md['fecha_dia']).dt.strftime('%d/%m/%Y')
-                fig_miaa_dia = px.bar(df_md, x='fecha_dia', y='size', text='size', color_discrete_sequence=['#10b981'])
-            else:
-                fig_miaa_dia = px.bar(pd.DataFrame({'Aviso': ['Sin datos'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
-            
-            fig_miaa_dia.update_traces(textposition='outside', textfont_size=10)
-            fig_miaa_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None)
-            st.plotly_chart(fig_miaa_dia, use_container_width=True)
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día (MIAA)</p>", unsafe_allow_html=True)
+                if col_fecha_ref and not df_miaa_pers.empty and not df_miaa_pers['fecha_dt'].isna().all():
+                    df_miaa_dia = df_miaa_pers.copy()
+                    df_miaa_dia['fecha_dia'] = df_miaa_dia['fecha_dt'].dt.date
+                    df_md = df_miaa_dia.groupby('fecha_dia', as_index=False).size()
+                    df_md['fecha_dia'] = pd.to_datetime(df_md['fecha_dia']).dt.strftime('%d/%m/%Y')
+                    fig_miaa_dia = px.bar(df_md, x='fecha_dia', y='size', text='size', color_discrete_sequence=['#10b981'])
+                else:
+                    fig_miaa_dia = px.bar(pd.DataFrame({'Aviso': ['Sin datos'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
+                
+                fig_miaa_dia.update_traces(textposition='outside', textfont_size=10)
+                fig_miaa_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None)
+                st.plotly_chart(fig_miaa_dia, use_container_width=True)
 
-            st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Distribución por Nivel Tarifario (MIAA)</p>", unsafe_allow_html=True)
-            if 'nivel' in df_miaa_pers.columns and not df_miaa_pers.empty:
-                df_miaa_nivel = df_miaa_pers['nivel'].fillna("SIN NIVEL").value_counts().reset_index()
-                df_miaa_nivel.columns = ['Nivel', 'Cantidad']
-                fig_miaa_niv = px.bar(df_miaa_nivel, x='Nivel', y='Cantidad', text='Cantidad', color='Nivel', color_discrete_sequence=px.colors.qualitative.Pastel)
-                fig_miaa_niv.update_traces(textposition='outside', textfont_size=10)
-            else:
-                fig_miaa_niv = px.bar(pd.DataFrame({'Nivel': ['Sin datos'], 'Cantidad': [0]}), x='Nivel', y='Cantidad', text='Cantidad')
-            
-            fig_miaa_niv.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None, showlegend=False)
-            st.plotly_chart(fig_miaa_niv, use_container_width=True)
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Nivel Tarifario (MIAA)</p>", unsafe_allow_html=True)
+                if 'nivel' in df_miaa_pers.columns and not df_miaa_pers.empty:
+                    df_miaa_nivel = df_miaa_pers['nivel'].fillna("SIN NIVEL").value_counts().reset_index()
+                    df_miaa_nivel.columns = ['Nivel', 'Cantidad']
+                    fig_miaa_niv = px.bar(df_miaa_nivel, x='Nivel', y='Cantidad', text='Cantidad', color='Nivel', color_discrete_sequence=px.colors.qualitative.Pastel)
+                    fig_miaa_niv.update_traces(textposition='outside', textfont_size=10)
+                else:
+                    fig_miaa_niv = px.bar(pd.DataFrame({'Nivel': ['Sin datos'], 'Cantidad': [0]}), x='Nivel', y='Cantidad', text='Cantidad')
+                
+                fig_miaa_niv.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None, showlegend=False)
+                st.plotly_chart(fig_miaa_niv, use_container_width=True)
 
         with col_mi_right:
-            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones - Personal MIAA</p>", unsafe_allow_html=True)
-            df_miaa_map = df_miaa_pers.dropna(subset=['latitud', 'longitud']) if not df_miaa_pers.empty else pd.DataFrame()
-            mm_lat = df_miaa_map['latitud'].mean() if not df_miaa_map.empty else lat_centro
-            mm_lon = df_miaa_map['longitud'].mean() if not df_miaa_map.empty else lon_centro
-            
-            mapa_miaa_pers = folium.Map(location=[mm_lat, mm_lon], zoom_start=12, tiles=None)
-            agregar_capas_base(mapa_miaa_pers)
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones - Personal MIAA</p>", unsafe_allow_html=True)
+                df_miaa_map = df_miaa_pers.dropna(subset=['latitud', 'longitud']) if not df_miaa_pers.empty else pd.DataFrame()
+                mm_lat = df_miaa_map['latitud'].mean() if not df_miaa_map.empty else lat_centro
+                mm_lon = df_miaa_map['longitud'].mean() if not df_miaa_map.empty else lon_centro
+                
+                mapa_miaa_pers = folium.Map(location=[mm_lat, mm_lon], zoom_start=12, tiles=None)
+                agregar_capas_base(mapa_miaa_pers)
 
-            for _, row in df_miaa_map.iterrows():
-                folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#10b981', fill=True, fill_color='#10b981', fill_opacity=0.7).add_to(mapa_miaa_pers)
-            
-            st_folium(mapa_miaa_pers, width=None, height=460, use_container_width=True, key="mapa_miaa_personal", returned_objects=[])
+                for _, row in df_miaa_map.iterrows():
+                    folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#10b981', fill=True, fill_color='#10b981', fill_opacity=0.7).add_to(mapa_miaa_pers)
+                
+                st_folium(mapa_miaa_pers, width=None, height=460, use_container_width=True, key="mapa_miaa_personal", returned_objects=[])
 
         st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal MIAA</p>", unsafe_allow_html=True)
         df_tabla_miaa = df_miaa_pers.copy()
@@ -1087,33 +1119,34 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-        st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:0;'>Distribución por Nivel (Comercial / Doméstico)</p>", unsafe_allow_html=True)
-        if 'nivel' in df_filtrado.columns:
-            df_nivel = df_filtrado['nivel'].fillna("SIN NIVEL").value_counts().reset_index()
-            df_nivel.columns = ['Nivel', 'Cantidad']
-            
-            fig_nivel = px.bar(
-                df_nivel, 
-                x='Nivel', 
-                y='Cantidad', 
-                text='Cantidad',
-                color='Nivel',
-                color_discrete_sequence=px.colors.qualitative.Prism
-            )
-            fig_nivel.update_traces(textposition='outside', textfont_size=11)
-            fig_nivel.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)', 
-                paper_bgcolor='rgba(0,0,0,0)', 
-                font_color='#ffffff', 
-                margin=dict(t=30, b=5, l=5, r=5), 
-                height=220, 
-                xaxis_title=None, 
-                yaxis_title=None,
-                showlegend=False
-            )
-            st.plotly_chart(fig_nivel, use_container_width=True)
-        else:
-            st.info("La columna 'nivel' no se encuentra disponible en los registros.")
+        with st.container(border=True):
+            st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>Distribución por Nivel (Comercial / Doméstico)</p>", unsafe_allow_html=True)
+            if 'nivel' in df_filtrado.columns:
+                df_nivel = df_filtrado['nivel'].fillna("SIN NIVEL").value_counts().reset_index()
+                df_nivel.columns = ['Nivel', 'Cantidad']
+                
+                fig_nivel = px.bar(
+                    df_nivel, 
+                    x='Nivel', 
+                    y='Cantidad', 
+                    text='Cantidad',
+                    color='Nivel',
+                    color_discrete_sequence=px.colors.qualitative.Prism
+                )
+                fig_nivel.update_traces(textposition='outside', textfont_size=11)
+                fig_nivel.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)', 
+                    paper_bgcolor='rgba(0,0,0,0)', 
+                    font_color='#ffffff', 
+                    margin=dict(t=30, b=5, l=5, r=5), 
+                    height=220, 
+                    xaxis_title=None, 
+                    yaxis_title=None,
+                    showlegend=False
+                )
+                st.plotly_chart(fig_nivel, use_container_width=True)
+            else:
+                st.info("La columna 'nivel' no se encuentra disponible en los registros.")
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
