@@ -546,7 +546,7 @@ if 'datos_instalaciones' in st.session_state:
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
         # SECCION 7.2: --------------------------------------------- Fila de Gráficos Principales (Instalaciones por Día, Desglose por Tipo y Cuadro vs Registro) ------------------------------------------------------------------
-        col_g1, col_g2, col_g3 = st.columns([1.8, 1.2, 0.9])
+        col_g1, col_g2, col_g3 = st.columns([2, 1.2, 0.9])
 
         with col_g1:
             with st.container(border=True):
