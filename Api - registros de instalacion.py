@@ -545,11 +545,11 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-       # SECCION 7.2: --------------------------------------------- Fila de Gráficos Principales (Instalaciones por Día, Desglose por Tipo y Cuadro vs Registro) ------------------------------------------------------------------
-        # Se regresa a proporciones 1:1:1 para no reducir el ancho de "Instalaciones por Día" ni "Cuadro vs Registro"
-        col_g1, col_g2, col_g3 = st.columns([1, 1, 1])
+       # SECCION 7.2: --------------------------------------------- Fila de Gráficos Principales ------------------------------------------------------------------
+        # Proporción [1.2, 1.6, 1.2]: La columna central es más ancha para la dona, pero los extremos mantienen buen tamaño sin encogerse como antes.
+        col_g1, col_g2, col_g3 = st.columns([1.2, 1.6, 1.2])
 
-        # COLUMNA 1: Instalaciones por Día (Ancho restaurado)
+        # COLUMNA 1: Instalaciones por Día
         with col_g1:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día</p>", unsafe_allow_html=True)
@@ -567,14 +567,14 @@ if 'datos_instalaciones' in st.session_state:
                     paper_bgcolor='rgba(0,0,0,0)', 
                     font_color='#ffffff', 
                     margin=dict(t=25, b=5, l=5, r=5), 
-                    height=250, 
+                    height=260, 
                     xaxis_title=None, 
                     yaxis_title=None,
                     yaxis=dict(range=[0, 500])
                 )
                 st.plotly_chart(fig_dia, use_container_width=True)
 
-        # COLUMNA 2: Distribución por Tipo de Instalación (Aprovecha mejor el espacio interno sin deformar las columnas)
+        # COLUMNA 2: Distribución por Tipo de Instalación (Tarjeta Ancha)
         with col_g2:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Tipo de Instalación</p>", unsafe_allow_html=True)
@@ -587,25 +587,25 @@ if 'datos_instalaciones' in st.session_state:
                     fig_pie = go.Figure(go.Pie(
                         labels=df_tipo_inst['Tipo'], 
                         values=df_tipo_inst['Cantidad'], 
-                        hole=0.5,
+                        hole=0.55,
                         textinfo='value+percent',
                         marker=dict(colors=colores_pie)
                     ))
                 else:
-                    fig_pie = go.Figure(go.Pie(labels=['Sin Datos'], values=[len(df_filtrado)], hole=0.5))
+                    fig_pie = go.Figure(go.Pie(labels=['Sin Datos'], values=[len(df_filtrado)], hole=0.55))
                     
                 fig_pie.update_layout(
                     plot_bgcolor='rgba(0,0,0,0)', 
                     paper_bgcolor='rgba(0,0,0,0)', 
                     font_color='#ffffff', 
-                    margin=dict(t=0, b=0, l=0, r=0), 
-                    height=250, 
+                    margin=dict(t=10, b=10, l=10, r=10), 
+                    height=260, 
                     showlegend=True, 
-                    legend=dict(orientation="h", y=-0.18, font=dict(size=9))
+                    legend=dict(orientation="h", y=-0.15, font=dict(size=9))
                 )
                 st.plotly_chart(fig_pie, use_container_width=True)
 
-        # COLUMNA 3: Cuadro vs Registro (Mismo ancho relativo que Instalaciones por Mes)
+        # COLUMNA 3: Cuadro vs Registro
         with col_g3:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Cuadro vs Registro</p>", unsafe_allow_html=True)
@@ -641,21 +641,21 @@ if 'datos_instalaciones' in st.session_state:
                         ))
 
                         fig_cr.update_layout(
-                            annotations=[dict(text=txt_centro, x=0.5, y=0.5, font_size=16, font_color="white", font_weight="bold", showarrow=False)],
+                            annotations=[dict(text=txt_centro, x=0.5, y=0.5, font_size=15, font_color="white", font_weight="bold", showarrow=False)],
                             plot_bgcolor='rgba(0,0,0,0)', 
                             paper_bgcolor='rgba(0,0,0,0)', 
                             font_color='#ffffff', 
                             margin=dict(t=10, b=10, l=10, r=10), 
-                            height=250, 
+                            height=260, 
                             showlegend=True, 
-                            legend=dict(orientation="h", y=-0.18, font=dict(size=9))
+                            legend=dict(orientation="h", y=-0.15, font=dict(size=9))
                         )
                     else:
                         fig_cr = go.Figure(go.Pie(labels=['Sin Datos'], values=[0], hole=0.6))
-                        fig_cr.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', height=250)
+                        fig_cr.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', height=260)
                 else:
                     fig_cr = go.Figure(go.Pie(labels=['Sin Datos'], values=[0], hole=0.6))
-                    fig_cr.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', height=250)
+                    fig_cr.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', height=260)
 
                 st.plotly_chart(fig_cr, use_container_width=True)
 
