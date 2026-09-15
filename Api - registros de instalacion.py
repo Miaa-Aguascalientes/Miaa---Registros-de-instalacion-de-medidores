@@ -702,7 +702,7 @@ if 'datos_instalaciones' in st.session_state:
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Eficiencia por Colonia y Polígono</p>", unsafe_allow_html=True)
                 if not df_eficiencia.empty:
                     # Ajusta el parámetro height (por ejemplo a 280 píxeles) para acortar el cuadro
-                    st.dataframe(df_eficiencia, use_container_width=True, hide_index=True, height=280)
+                    st.dataframe(df_eficiencia, use_container_width=True, hide_index=True, height=300)
                 else:
                     st.info("No se encontraron datos para los polígonos seleccionados.")
 
