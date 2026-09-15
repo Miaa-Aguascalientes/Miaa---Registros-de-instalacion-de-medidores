@@ -687,7 +687,7 @@ if 'datos_instalaciones' in st.session_state:
             # SECCION 7.7: --------------------------------------------------- Mapa de instalaciones Externo y Miaa --------------------------------------------------------------------------------------------------
             with col_map_h:
                 with st.container(border=True):
-                    st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones (Externo: Anaranjado | MIAA: Morado)</p>", unsafe_allow_html=True)
+                    st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones (Externo vs MIAA)</p>", unsafe_allow_html=True)
                     
                     df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
                     if not df_mapa_valido.empty:
