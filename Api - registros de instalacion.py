@@ -811,8 +811,10 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-        col_ex1, col_ex2 = st.columns(2)
-        with col_ex1:
+        # Dos columnas principales: Izquierda (Gráficas apiladas), Derecha (Mapa grande)
+        col_ex_left, col_ex_right = st.columns([1.1, 1.3])
+
+        with col_ex_left:
             st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día (Externo)</p>", unsafe_allow_html=True)
             if col_fecha_ref and not df_externo.empty and not df_externo['fecha_dt'].isna().all():
                 df_ext_dia = df_externo.copy()
@@ -824,11 +826,10 @@ if 'datos_instalaciones' in st.session_state:
                 fig_ext_dia = px.bar(pd.DataFrame({'Aviso': ['Sin datos'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
             
             fig_ext_dia.update_traces(textposition='outside', textfont_size=10)
-            fig_ext_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=220, xaxis_title=None, yaxis_title=None)
+            fig_ext_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None)
             st.plotly_chart(fig_ext_dia, use_container_width=True)
 
-        with col_ex2:
-            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Distribución por Nivel Tarifario (Externo)</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Distribución por Nivel Tarifario (Externo)</p>", unsafe_allow_html=True)
             if 'nivel' in df_externo.columns and not df_externo.empty:
                 df_ext_nivel = df_externo['nivel'].fillna("SIN NIVEL").value_counts().reset_index()
                 df_ext_nivel.columns = ['Nivel', 'Cantidad']
@@ -837,21 +838,22 @@ if 'datos_instalaciones' in st.session_state:
             else:
                 fig_ext_niv = px.bar(pd.DataFrame({'Nivel': ['Sin datos'], 'Cantidad': [0]}), x='Nivel', y='Cantidad', text='Cantidad')
             
-            fig_ext_niv.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=220, xaxis_title=None, yaxis_title=None, showlegend=False)
+            fig_ext_niv.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None, showlegend=False)
             st.plotly_chart(fig_ext_niv, use_container_width=True)
 
-        st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones - Personal Externo</p>", unsafe_allow_html=True)
-        df_ext_map = df_externo.dropna(subset=['latitud', 'longitud']) if not df_externo.empty else pd.DataFrame()
-        m_lat = df_ext_map['latitud'].mean() if not df_ext_map.empty else lat_centro
-        m_lon = df_ext_map['longitud'].mean() if not df_ext_map.empty else lon_centro
-        
-        mapa_ext = folium.Map(location=[m_lat, m_lon], zoom_start=12, tiles=None)
-        agregar_capas_base(mapa_ext)
+        with col_ex_right:
+            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones - Personal Externo</p>", unsafe_allow_html=True)
+            df_ext_map = df_externo.dropna(subset=['latitud', 'longitud']) if not df_externo.empty else pd.DataFrame()
+            m_lat = df_ext_map['latitud'].mean() if not df_ext_map.empty else lat_centro
+            m_lon = df_ext_map['longitud'].mean() if not df_ext_map.empty else lon_centro
+            
+            mapa_ext = folium.Map(location=[m_lat, m_lon], zoom_start=12, tiles=None)
+            agregar_capas_base(mapa_ext)
 
-        for _, row in df_ext_map.iterrows():
-            folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#f59e0b', fill=True, fill_color='#f59e0b', fill_opacity=0.7).add_to(mapa_ext)
-        
-        st_folium(mapa_ext, width=None, height=220, use_container_width=True, key="mapa_externo", returned_objects=[])
+            for _, row in df_ext_map.iterrows():
+                folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#f59e0b', fill=True, fill_color='#f59e0b', fill_opacity=0.7).add_to(mapa_ext)
+            
+            st_folium(mapa_ext, width=None, height=460, use_container_width=True, key="mapa_externo", returned_objects=[])
 
         st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal Externo</p>", unsafe_allow_html=True)
         df_tabla_ext = df_externo.copy()
@@ -908,8 +910,10 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-        col_mi1, col_mi2 = st.columns(2)
-        with col_mi1:
+        # Dos columnas principales: Izquierda (Gráficas apiladas), Derecha (Mapa grande)
+        col_mi_left, col_mi_right = st.columns([1.1, 1.3])
+
+        with col_mi_left:
             st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día (MIAA)</p>", unsafe_allow_html=True)
             if col_fecha_ref and not df_miaa_pers.empty and not df_miaa_pers['fecha_dt'].isna().all():
                 df_miaa_dia = df_miaa_pers.copy()
@@ -921,11 +925,10 @@ if 'datos_instalaciones' in st.session_state:
                 fig_miaa_dia = px.bar(pd.DataFrame({'Aviso': ['Sin datos'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
             
             fig_miaa_dia.update_traces(textposition='outside', textfont_size=10)
-            fig_miaa_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=220, xaxis_title=None, yaxis_title=None)
+            fig_miaa_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None)
             st.plotly_chart(fig_miaa_dia, use_container_width=True)
 
-        with col_mi2:
-            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Distribución por Nivel Tarifario (MIAA)</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Distribución por Nivel Tarifario (MIAA)</p>", unsafe_allow_html=True)
             if 'nivel' in df_miaa_pers.columns and not df_miaa_pers.empty:
                 df_miaa_nivel = df_miaa_pers['nivel'].fillna("SIN NIVEL").value_counts().reset_index()
                 df_miaa_nivel.columns = ['Nivel', 'Cantidad']
@@ -934,21 +937,22 @@ if 'datos_instalaciones' in st.session_state:
             else:
                 fig_miaa_niv = px.bar(pd.DataFrame({'Nivel': ['Sin datos'], 'Cantidad': [0]}), x='Nivel', y='Cantidad', text='Cantidad')
             
-            fig_miaa_niv.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=220, xaxis_title=None, yaxis_title=None, showlegend=False)
+            fig_miaa_niv.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None, showlegend=False)
             st.plotly_chart(fig_miaa_niv, use_container_width=True)
 
-        st.markdown("<p style='font-size:12px; margin-top:5px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones - Personal MIAA</p>", unsafe_allow_html=True)
-        df_miaa_map = df_miaa_pers.dropna(subset=['latitud', 'longitud']) if not df_miaa_pers.empty else pd.DataFrame()
-        mm_lat = df_miaa_map['latitud'].mean() if not df_miaa_map.empty else lat_centro
-        mm_lon = df_miaa_map['longitud'].mean() if not df_miaa_map.empty else lon_centro
-        
-        mapa_miaa_pers = folium.Map(location=[mm_lat, mm_lon], zoom_start=12, tiles=None)
-        agregar_capas_base(mapa_miaa_pers)
+        with col_mi_right:
+            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Mapa de Instalaciones - Personal MIAA</p>", unsafe_allow_html=True)
+            df_miaa_map = df_miaa_pers.dropna(subset=['latitud', 'longitud']) if not df_miaa_pers.empty else pd.DataFrame()
+            mm_lat = df_miaa_map['latitud'].mean() if not df_miaa_map.empty else lat_centro
+            mm_lon = df_miaa_map['longitud'].mean() if not df_miaa_map.empty else lon_centro
+            
+            mapa_miaa_pers = folium.Map(location=[mm_lat, mm_lon], zoom_start=12, tiles=None)
+            agregar_capas_base(mapa_miaa_pers)
 
-        for _, row in df_miaa_map.iterrows():
-            folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#10b981', fill=True, fill_color='#10b981', fill_opacity=0.7).add_to(mapa_miaa_pers)
-        
-        st_folium(mapa_miaa_pers, width=None, height=220, use_container_width=True, key="mapa_miaa_personal", returned_objects=[])
+            for _, row in df_miaa_map.iterrows():
+                folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#10b981', fill=True, fill_color='#10b981', fill_opacity=0.7).add_to(mapa_miaa_pers)
+            
+            st_folium(mapa_miaa_pers, width=None, height=460, use_container_width=True, key="mapa_miaa_personal", returned_objects=[])
 
         st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal MIAA</p>", unsafe_allow_html=True)
         df_tabla_miaa = df_miaa_pers.copy()
