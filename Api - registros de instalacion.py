@@ -843,21 +843,23 @@ if 'datos_instalaciones' in st.session_state:
                         paper_bgcolor='rgba(0,0,0,0)', 
                         font_color='#ffffff', 
                         margin=dict(t=5, b=5, l=5, r=40),  
-                        height=200, 
+                        height=210, 
                         xaxis=dict(showgrid=False, showticklabels=False, title=None, range=[0, max_cant * 1.25]), 
                         yaxis=dict(showgrid=False, title=None, tickfont=dict(size=10), categoryorder='array', categoryarray=df_mes['Mes'].tolist()),
                         showlegend=False
                     )
                     st.plotly_chart(fig_mes_h, use_container_width=True)
 
-                # Tarjeta de Resultados de Total de Anomalías con el mismo contenedor y estilo de tarjeta
+                # Tarjeta de Resultados con altura forzada para igualar al mapa
                 with st.container(border=True):
                     st.markdown("<p style='font-size:12px; margin-bottom:8px; font-weight:bold;'>Total de Anomalías</p>", unsafe_allow_html=True)
                     total_anomalias_actual = len(df_filtrado[df_filtrado['anomalia_nombre'] != "SIN ANOMALÍA / REGULAR"]) if not df_filtrado.empty else 0
+                    
+                    # Se agrega min-height y padding vertical para estirar el contenedor visualmente
                     st.markdown(f"""
-                        <div style="display: flex; align-items: center; justify-content: center; gap: 20px; padding: 12px 0;">
-                            <div style="font-size: 32px; color: #f43f5e;"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                            <div style="font-size: 28px; font-weight: bold; color: #ffffff;">{total_anomalias_actual:,}</div>
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 20px; min-height: 115px;">
+                            <div style="font-size: 38px; color: #f43f5e;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div style="font-size: 34px; font-weight: bold; color: #ffffff;">{total_anomalias_actual:,}</div>
                         </div>
                     """, unsafe_allow_html=True)
 
