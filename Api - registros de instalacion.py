@@ -801,7 +801,7 @@ if 'datos_instalaciones' in st.session_state:
                         ).add_to(mapa_miaa)
 
                     st_folium(mapa_miaa, width=None, height=320, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
-            # SECCION 7.8: --------------------------------------------------- Gafico de instalaciones por mes ------------------------------------------------------------------------------------------------------
+            # SECCION 7.8: --------------------------------------------------- Gafico de instalaciones por mes y Tarjeta de Anomalía Debajo ---------------------------------------------------------------------------------
             with col_graf_h:
                 with st.container(border=True):
                     st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
@@ -848,6 +848,19 @@ if 'datos_instalaciones' in st.session_state:
                         showlegend=False
                     )
                     st.plotly_chart(fig_mes_h, use_container_width=True)
+
+                    # --- INDICADOR DE MEDIDORES CON ANOMALÍA UBICADO DEBAJO DEL GRÁFICO ---
+                    total_anomalias_reg = len(df_filtrado[df_filtrado['anomalia_nombre'] != "SIN ANOMALÍA / REGULAR"]) if not df_filtrado.empty else 0
+                    
+                    st.markdown(f"""
+                        <div class="metric-card" style="margin-top: 10px; height: 50px;">
+                            <div class="metric-icon-box" style="color: #f43f5e; font-size: 18px;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div class="metric-content">
+                                <div class="metric-title" style="font-size: 9px;">Total con Anomalía</div>
+                                <div class="metric-value" style="font-size: 15px;">{total_anomalias_reg:,}</div>
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
 
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # SECCION 7.9: NUEVA PESTAÑA - ANÁLISIS DE ANOMALÍAS
