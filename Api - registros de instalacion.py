@@ -295,7 +295,6 @@ if 'datos_instalaciones' in st.session_state:
     if not df_tipos_db.empty:
         dict_tipos_map = dict(zip(df_tipos_db['ID'].astype(str), df_tipos_db['tipo_instalacion']))
     else:
-        # Fallback predeterminado según catálogo de base de datos
         dict_tipos_map = {
             "1": "CAJA DE VALVULAS",
             "2": "CUADRO DENTRO",
@@ -384,9 +383,6 @@ if 'datos_instalaciones' in st.session_state:
             estado = st.checkbox(f"Polígono {pol}", key=f"chk_pol_{pol}")
             if estado:
                 poligonos_seleccionados.append(pol)
-
-    if not df_metas_filtrado.empty if 'df_metas_filtrado' in locals() else False:
-        pass
 
     if not df_metas_valido.empty and 'Poligono_de_instalacion' in df_metas_valido.columns:
         df_metas_filtrado = df_metas_valido[df_metas_valido['Poligono_de_instalacion'].astype(str).isin(poligonos_seleccionados)].copy()
@@ -529,8 +525,8 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-        # SECCION 7.2: --------------------------------------------- Fila de Gráficos Principales (Instalaciones por Día y Desglose por Tipo de Instalación) ------------------------------------------------------------------
-        col_g1, col_g2 = st.columns([1.8, 1.2])
+        # SECCION 7.2: --------------------------------------------- Fila de Gráficos Principales (Instalaciones por Día, Desglose por Tipo y Cuadro vs Registro) ------------------------------------------------------------------
+        col_g1, col_g2, col_g3 = st.columns([1.3, 1, 1])
 
         with col_g1:
             st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Instalaciones por Día</p>", unsafe_allow_html=True)
@@ -561,7 +557,6 @@ if 'datos_instalaciones' in st.session_state:
                 df_tipo_inst = df_filtrado['tipo_instalacion_nombre'].value_counts().reset_index()
                 df_tipo_inst.columns = ['Tipo', 'Cantidad']
                 
-                # Paleta cromática acorde con la interfaz
                 colores_pie = ['#38bdf8', '#4ade80', '#f59e0b', '#a855f7', '#f43f5e', '#64748b']
                 
                 fig_pie = go.Figure(go.Pie(
@@ -584,6 +579,58 @@ if 'datos_instalaciones' in st.session_state:
                 legend=dict(orientation="h", y=-0.2, font=dict(size=9))
             )
             st.plotly_chart(fig_pie, use_container_width=True)
+
+        with col_g3:
+            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Cuadro vs Registro</p>", unsafe_allow_html=True)
+            if 'tipo_instalacion_nombre' in df_filtrado.columns and not df_filtrado.empty:
+                def clasificar_cuadro_registro(nombre):
+                    n_str = str(nombre).upper()
+                    if 'CUADRO' in n_str:
+                        return 'CUADRO'
+                    elif 'REGISTRO' in n_str:
+                        return 'REGISTRO'
+                    return None
+
+                df_cr = df_filtrado.copy()
+                df_cr['categoria_cr'] = df_cr['tipo_instalacion_nombre'].apply(clasificar_cuadro_registro)
+                df_cr_val = df_cr.dropna(subset=['categoria_cr'])
+                
+                if not df_cr_val.empty:
+                    df_counts_cr = df_cr_val['categoria_cr'].value_counts().reset_index()
+                    df_counts_cr.columns = ['Tipo', 'Cantidad']
+                    
+                    tot_cr = df_counts_cr['Cantidad'].sum()
+                    txt_centro = f"{tot_cr/1000:.1f} mil".replace('.', ',') if tot_cr >= 1000 else f"{tot_cr:,}"
+
+                    color_cr_map = {'CUADRO': '#0066cc', 'REGISTRO': '#e83e8c'}
+                    colores_cr = [color_cr_map.get(t, '#3b82f6') for t in df_counts_cr['Tipo']]
+
+                    fig_cr = go.Figure(go.Pie(
+                        labels=df_counts_cr['Tipo'], 
+                        values=df_counts_cr['Cantidad'], 
+                        hole=0.6,
+                        textinfo='value+percent',
+                        marker=dict(colors=colores_cr)
+                    ))
+
+                    fig_cr.update_layout(
+                        annotations=[dict(text=txt_centro, x=0.5, y=0.5, font_size=16, font_color="white", font_weight="bold", showarrow=False)],
+                        plot_bgcolor='rgba(0,0,0,0)', 
+                        paper_bgcolor='rgba(0,0,0,0)', 
+                        font_color='#ffffff', 
+                        margin=dict(t=5, b=5, l=5, r=5), 
+                        height=230, 
+                        showlegend=True, 
+                        legend=dict(orientation="h", y=-0.2, font=dict(size=9))
+                    )
+                else:
+                    fig_cr = go.Figure(go.Pie(labels=['Sin Datos'], values=[0], hole=0.6))
+                    fig_cr.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', height=230)
+            else:
+                fig_cr = go.Figure(go.Pie(labels=['Sin Datos'], values=[0], hole=0.6))
+                fig_cr.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', height=230)
+
+            st.plotly_chart(fig_cr, use_container_width=True)
 
         # SECCION 7.3: ---------------------------------------------------  Fila Inferior: Tabla de Eficiencia, Mapa de Puntos y Gráfico Mensual Horizontal ---------------------------------------------------------------
         col_inf1, col_inf2 = st.columns([1, 1.6])
