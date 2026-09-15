@@ -545,9 +545,10 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-        # SECCION 7.2: --------------------------------------------- Fila de Gráficos Principales (Instalaciones por Día, Desglose por Tipo y Cuadro vs Registro) ------------------------------------------------------------------
+        # SECCION 7.2: --------------------------------------------- Fila de Gráficos Principales (Instalaciones por Día, Desglose por Tipo y Cuadro vs Registro) ----------------------------------------------------
         col_g1, col_g2, col_g3 = st.columns([2.6, 1.2, 0.9])
 
+        # SECCION 7.3: ----------------------------------------------Grafico de Instalaciones por dia ----------------------------------------------------------------------------------------------------------------- 
         with col_g1:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día</p>", unsafe_allow_html=True)
@@ -572,6 +573,7 @@ if 'datos_instalaciones' in st.session_state:
                 )
                 st.plotly_chart(fig_dia, use_container_width=True)
 
+        # SECCION 7.4: ------------------------------------------------------Grafico de Instalaciones por Distrubucion por tipo de Instalacion ----------------------------------------------------------------------
         with col_g2:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Tipo de Instalación</p>", unsafe_allow_html=True)
@@ -613,7 +615,8 @@ if 'datos_instalaciones' in st.session_state:
                     )
                 )
                 st.plotly_chart(fig_pie, use_container_width=True)
-                
+
+        # SECCION 7.5: -----------------------------------------------------Grafico de Instalaciones por desgloce de Cuadro vs Registro ------------------------------------------------------------------------
         with col_g3:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Cuadro vs Registro</p>", unsafe_allow_html=True)
@@ -667,7 +670,7 @@ if 'datos_instalaciones' in st.session_state:
 
                 st.plotly_chart(fig_cr, use_container_width=True)
 
-        # SECCION 7.3: ---------------------------------------------------  Fila Inferior: Tabla de Eficiencia, Mapa de Puntos y Gráfico Mensual Horizontal ---------------------------------------------------------------
+        # SECCION 7.6: ---------------------------------------------------  Fila Inferior: Tabla de Eficiencia, Mapa de Puntos y Gráfico Mensual Horizontal ---------------------------------------------------------------
         col_inf1, col_inf2 = st.columns([1, 1.6])
 
         with col_inf1:
@@ -681,6 +684,7 @@ if 'datos_instalaciones' in st.session_state:
         with col_inf2:
             col_map_h, col_graf_h = st.columns([2.2, 1])
 
+            # SECCION 7.7: --------------------------------------------------- Mapa de instalaciones Externo y Miaa --------------------------------------------------------------------------------------------------
             with col_map_h:
                 with st.container(border=True):
                     st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones (Externo: Anaranjado | MIAA: Morado)</p>", unsafe_allow_html=True)
@@ -699,17 +703,50 @@ if 'datos_instalaciones' in st.session_state:
                         es_externo = bool(row['usuarioExterno']) if 'usuarioExterno' in df_mapa_valido.columns else False
                         color_punto = '#f59e0b' if es_externo else '#a855f7'
                         
+                        # Extraer los datos para el popup
+                        nombre = row.get('nombre', 'N/A')
+                        predio = row.get('numeroPredio', row.get('predio', 'N/A'))
+                        cliente = row.get('cliente', 'N/A')
+                        domicilio = row.get('domicilio', 'N/A')
+                        colonia = row.get('colonia', 'N/A')
+                        nivel = row.get('nivel', 'N/A')
+                        giro = row.get('giro', 'N/A')
+                        serie = row.get('serieMedidor', row.get('serie', 'N/A'))
+                        fecha_inst = row.get('fechaInstalacion', 'N/A')
+                        lugar_inst = row.get('tipo_instalacion_nombre', 'N/A')
+
+                        # Estructura HTML del popup
+                        info_popup = f"""
+                        <div style="font-size: 11px; line-height: 1.4; color: #000000;">
+                            <b>Información del Servicio</b><br>
+                            <b>Nombre:</b> {nombre}<br>
+                            <b>Número de Predio:</b> {predio}<br>
+                            <b>Cliente:</b> {cliente}<br>
+                            <b>Domicilio:</b> {domicilio}<br>
+                            <b>Colonia:</b> {colonia}<br>
+                            <b>Nivel:</b> {nivel}<br>
+                            <b>Giro:</b> {giro}<br>
+                            <b>Serie del Medidor:</b> {serie}<br>
+                            <b>Fecha de Instalación:</b> {fecha_inst}<br>
+                            <b>Lugar de Instalación:</b> {lugar_inst}
+                        </div>
+                        """
+                        
+                        popup_obj = folium.Popup(info_popup, max_width=300)
+
                         folium.CircleMarker(
                             location=[float(row['latitud']), float(row['longitud'])], 
                             radius=2.5, 
                             color=color_punto, 
                             fill=True, 
                             fill_color=color_punto, 
-                            fill_opacity=0.7
+                            fill_opacity=0.7,
+                            popup=popup_obj
                         ).add_to(mapa_miaa)
 
                     st_folium(mapa_miaa, width=None, height=320, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
 
+            # SECCION 7.8: --------------------------------------------------- Gafico de instalaciones por mes ------------------------------------------------------------------------------------------------------
             with col_graf_h:
                 with st.container(border=True):
                     st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
