@@ -706,7 +706,7 @@ if 'datos_instalaciones' in st.session_state:
                         # Extraer los datos con la llave correcta para el cliente
                         nombre = row.get('nombreCliente', 'N/A')
                         predio = row.get('numeroPredio', row.get('predio', 'N/A'))
-                        cliente = row.get('cliente', 'N/A')
+                        cliente = row.get('numeroCliente', '')
                         domicilio = row.get('domicilio', 'N/A')
                         colonia = row.get('colonia', 'N/A')
                         nivel = row.get('nivel', 'N/A')
