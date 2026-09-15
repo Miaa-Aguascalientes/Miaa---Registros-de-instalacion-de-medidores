@@ -485,7 +485,7 @@ if 'datos_instalaciones' in st.session_state:
 
     # SECCIÓN 7: ----------------------------------------------------------------- ESTRUCTURA DE PESTAÑAS PRINCIPALES ------------------------------------------------------------------------------------------------
     
-    tab_principal, tab_anomalias, tab_poligonos, tab_externo, tab_miaa, tab_tabla = st.tabs([
+    tab_principal,  tab_poligonos, tab_externo, tab_miaa, tab_anomalias, tab_tabla = st.tabs([
         "📊 Dashboard Principal", 
         "🗺️ Mapa Polígonos",
         "👷 Personal Externo", 
