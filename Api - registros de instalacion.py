@@ -703,8 +703,8 @@ if 'datos_instalaciones' in st.session_state:
                         es_externo = bool(row['usuarioExterno']) if 'usuarioExterno' in df_mapa_valido.columns else False
                         color_punto = '#f59e0b' if es_externo else '#a855f7'
                         
-                        # Extraer los datos para el popup
-                        nombre = row.get('nombre', 'N/A')
+                        # Extraer los datos con la llave correcta para el cliente
+                        nombre = row.get('nombreCliente', 'N/A')
                         predio = row.get('numeroPredio', row.get('predio', 'N/A'))
                         cliente = row.get('cliente', 'N/A')
                         domicilio = row.get('domicilio', 'N/A')
@@ -712,7 +712,23 @@ if 'datos_instalaciones' in st.session_state:
                         nivel = row.get('nivel', 'N/A')
                         giro = row.get('giro', 'N/A')
                         serie = row.get('serieMedidor', row.get('serie', 'N/A'))
-                        fecha_inst = row.get('fechaInstalacion', 'N/A')
+                        
+                        # Formatear la fecha de instalación a DD/MM/YYYY y agregar la hora de inicio
+                        raw_fecha = row.get('fechaInstalacion', None)
+                        raw_hora = row.get('horaInicio', '')
+                        
+                        if pd.notna(raw_fecha):
+                            dt_obj = pd.to_datetime(raw_fecha, errors='coerce')
+                            if pd.notna(dt_obj):
+                                fecha_formateada = dt_obj.strftime('%d/%m/%Y')
+                            else:
+                                fecha_formateada = str(raw_fecha)
+                        else:
+                            fecha_formateada = 'N/A'
+                            
+                        # Unir fecha y hora de inicio
+                        fecha_inst = f"{fecha_formateada} {raw_hora}".strip()
+                        
                         lugar_inst = row.get('tipo_instalacion_nombre', 'N/A')
 
                         # Estructura HTML del popup
