@@ -546,9 +546,10 @@ if 'datos_instalaciones' in st.session_state:
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
        # SECCION 7.2: --------------------------------------------- Fila de Gráficos Principales (Instalaciones por Día, Desglose por Tipo y Cuadro vs Registro) ------------------------------------------------------------------
-        col_g1, col_g2, col_g3 = st.columns([1, 1.6, 1])
+        # Se regresa a proporciones 1:1:1 para no reducir el ancho de "Instalaciones por Día" ni "Cuadro vs Registro"
+        col_g1, col_g2, col_g3 = st.columns([1, 1, 1])
 
-        # COLUMNA 1: Instalaciones por Día (Recuperado)
+        # COLUMNA 1: Instalaciones por Día (Ancho restaurado)
         with col_g1:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día</p>", unsafe_allow_html=True)
@@ -573,7 +574,7 @@ if 'datos_instalaciones' in st.session_state:
                 )
                 st.plotly_chart(fig_dia, use_container_width=True)
 
-        # COLUMNA 2: Distribución por Tipo de Instalación (Dona expandida a lo ancho)
+        # COLUMNA 2: Distribución por Tipo de Instalación (Aprovecha mejor el espacio interno sin deformar las columnas)
         with col_g2:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Tipo de Instalación</p>", unsafe_allow_html=True)
@@ -597,14 +598,14 @@ if 'datos_instalaciones' in st.session_state:
                     plot_bgcolor='rgba(0,0,0,0)', 
                     paper_bgcolor='rgba(0,0,0,0)', 
                     font_color='#ffffff', 
-                    margin=dict(t=10, b=10, l=10, r=10), 
+                    margin=dict(t=0, b=0, l=0, r=0), 
                     height=250, 
                     showlegend=True, 
                     legend=dict(orientation="h", y=-0.18, font=dict(size=9))
                 )
                 st.plotly_chart(fig_pie, use_container_width=True)
 
-        # COLUMNA 3: Cuadro vs Registro
+        # COLUMNA 3: Cuadro vs Registro (Mismo ancho relativo que Instalaciones por Mes)
         with col_g3:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Cuadro vs Registro</p>", unsafe_allow_html=True)
