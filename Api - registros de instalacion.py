@@ -42,28 +42,32 @@ custom_style = """
         margin-top: 0px !important;
     }
 
-    /* Cabecera Superior con Título y Fecha Alineados (Sin cuadros ni elementos extra) */
+    /* Cabecera Superior: Título centrado en azul y fecha a la derecha */
     .dashboard-header-flex {
         display: flex;
         justify-content: space-between;
-        align-items: baseline;
+        align-items: center;
         margin-top: 5px;
         margin-bottom: 15px;
         padding: 0px 5px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         padding-bottom: 8px;
+        position: relative;
     }
 
     .dashboard-main-title {
         font-size: 1.6rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #38bdf8;
         text-transform: uppercase;
         letter-spacing: 0.8px;
-        margin: 0;
+        margin: 0 auto;
+        text-align: center;
         text-shadow: 0px 2px 15px rgba(56, 189, 248, 0.2);
+        position: absolute;
+        left: 0;
+        right: 0;
+        pointer-events: none;
     }
 
     .dashboard-subtitle-right {
@@ -72,6 +76,8 @@ custom_style = """
         font-weight: 500;
         letter-spacing: 0.3px;
         white-space: nowrap;
+        margin-left: auto;
+        z-index: 2;
     }
 
     /* Tarjetas Compactas: Icono a la izquierda y textos centrados a la derecha */
@@ -152,7 +158,7 @@ custom_style = """
 """
 st.markdown(custom_style, unsafe_allow_html=True)
 
-# Cabecera superior visual con Título a la izquierda y Fecha actualizada a la derecha
+# Cabecera superior visual con Título centrado en azul y Fecha actualizada a la derecha
 st.markdown("""
     <div class="dashboard-header-flex">
         <h2 class="dashboard-main-title">📊 Dashboard Instalación Medidores Inteligentes</h2>
