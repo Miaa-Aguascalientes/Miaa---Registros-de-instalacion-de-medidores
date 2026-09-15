@@ -652,11 +652,13 @@ if 'datos_instalaciones' in st.session_state:
                             fids_seleccionados_mapa.append(fid)
 
                 poligonos_procesados = {}
+                lat_acumuladas = []
+                lon_acumuladas = []
+                
                 for fid in fids_disponibles:
                     df_pol_sel = df_poligonos[df_poligonos['FID'] == fid]
                     coordenadas_poligono = []
                     
-                    # Ordenar por Orden_inst para mantener la secuencia general de las partes del polígono
                     df_ordenado = df_pol_sel.sort_values(by='Orden_inst', ascending=True)
                     
                     sec_comercial = df_pol_sel['Sector_comercial'].iloc[0] if 'Sector_comercial' in df_pol_sel.columns else "N/A"
@@ -669,16 +671,13 @@ if 'datos_instalaciones' in st.session_state:
                             continue
                         c_str = str(c_val).strip()
                         
-                        # Limpiar caracteres especiales de formatos WKT o arrays
                         for char in ['(', ')', '[', ']', '"', "'", 'POINT', 'POLYGON']:
                             c_str = c_str.replace(char, '')
                         c_str = c_str.strip()
                         c_str = c_str.replace(';', ',')
                         
-                        # Separar por comas para capturar todos los valores numéricos de la celda
                         tokens = [t.strip() for t in c_str.split(',') if t.strip()]
                         
-                        # Convertir todos los tokens válidos a flotantes
                         numeros = []
                         for t in tokens:
                             try:
@@ -686,20 +685,17 @@ if 'datos_instalaciones' in st.session_state:
                             except ValueError:
                                 pass
                         
-                        # Agrupar los números en parejas (lat, lon o lon, lat)
                         if len(numeros) >= 2:
                             for i in range(0, len(numeros) - 1, 2):
                                 p1 = numeros[i]
                                 p2 = numeros[i+1]
                                 
-                                # Autodetectar orden (si el valor absoluto mayor es longitud/X)
                                 if abs(p1) > abs(p2):
                                     lon, lat = p1, p2
                                 else:
                                     lat, lon = p1, p2
                                     
                                 punto = [lat, lon]
-                                # Evitar duplicados consecutivos exactos dentro del mismo registro
                                 if not coordenadas_poligono or coordenadas_poligono[-1] != punto:
                                     coordenadas_poligono.append(punto)
                                     if fid in fids_seleccionados_mapa:
