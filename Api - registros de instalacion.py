@@ -828,7 +828,7 @@ if 'datos_instalaciones' in st.session_state:
             st.plotly_chart(fig_ext_dia, use_container_width=True)
 
         with col_ex2:
-            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Distribución por Nivel (Externo)</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Distribución por Nivel Tarifario (Externo)</p>", unsafe_allow_html=True)
             if 'nivel' in df_externo.columns and not df_externo.empty:
                 df_ext_nivel = df_externo['nivel'].fillna("SIN NIVEL").value_counts().reset_index()
                 df_ext_nivel.columns = ['Nivel', 'Cantidad']
@@ -925,7 +925,7 @@ if 'datos_instalaciones' in st.session_state:
             st.plotly_chart(fig_miaa_dia, use_container_width=True)
 
         with col_mi2:
-            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Distribución por Nivel (MIAA)</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:12px; margin-bottom:0; font-weight:bold;'>Distribución por Nivel Tarifario (MIAA)</p>", unsafe_allow_html=True)
             if 'nivel' in df_miaa_pers.columns and not df_miaa_pers.empty:
                 df_miaa_nivel = df_miaa_pers['nivel'].fillna("SIN NIVEL").value_counts().reset_index()
                 df_miaa_nivel.columns = ['Nivel', 'Cantidad']
