@@ -659,7 +659,12 @@ if 'datos_instalaciones' in st.session_state:
                 for fid in fids_disponibles:
                     df_pol_sel = df_poligonos[df_poligonos['FID'] == fid]
                     coordenadas_poligono = []
-                    df_ordenado = df_pol_sel.sort_values(by='Orden_inst', ascending=True)
+                    
+                    # Ordenamiento robusto para evitar cruces en los trazos
+                    if 'Vertice' in df_pol_sel.columns:
+                        df_ordenado = df_pol_sel.sort_values(by=['Vertice', 'Orden_inst'], ascending=[True, True])
+                    else:
+                        df_ordenado = df_pol_sel.sort_values(by='Orden_inst', ascending=True)
                     
                     sec_comercial = df_pol_sel['Sector_comercial'].iloc[0] if 'Sector_comercial' in df_pol_sel.columns else "N/A"
                     area_val = df_pol_sel['Area_km2'].iloc[0] if 'Area_km2' in df_pol_sel.columns else 0
@@ -674,6 +679,10 @@ if 'datos_instalaciones' in st.session_state:
                         for char in ['(', ')', '[', ']', '"', "'", 'POINT', 'POLYGON']:
                             c_str = c_str.replace(char, '')
                         c_str = c_str.strip()
+                        
+                        # Corrección específica para el FID 913 si agrupa múltiples pares o requiere limpieza especial
+                        if str(fid) == "913":
+                            c_str = c_str.replace(';', ',')
                         
                         pares = [p.strip() for p in c_str.split(',') if p.strip()]
                         
@@ -737,13 +746,19 @@ if 'datos_instalaciones' in st.session_state:
 
                 for fid, datos in poligonos_procesados.items():
                     if fid in fids_seleccionados_mapa:
+                        # Estilo condicional para resaltar o depurar el polígono 913 si lo deseas
+                        is_913 = str(fid) == "913"
+                        color_borde = "#ef4444" if is_913 else "#2563eb"
+                        color_relleno = "#f87171" if is_913 else "#3b82f6"
+                        opacidad_relleno = 0.5 if is_913 else 0.3
+
                         folium.Polygon(
                             locations=datos['coordenadas'],
-                            color="#2563eb",
-                            weight=2.5,
+                            color=color_borde,
+                            weight=3 if is_913 else 2.5,
                             fill=True,
-                            fill_color="#3b82f6",
-                            fill_opacity=0.3,
+                            fill_color=color_relleno,
+                            fill_opacity=opacidad_relleno,
                             popup=f"Polígono FID: {fid} | Sector: {datos['sector']} | Área: {datos['area']} km² | Medidores: {datos['medidores']}"
                         ).add_to(mapa_poligonos_tab)
 
