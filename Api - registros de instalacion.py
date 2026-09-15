@@ -37,38 +37,31 @@ custom_style = """
     [data-testid="collapsedControl"] { display: none !important; }
 
     .block-container {
-        padding-top: 0rem !important;
+        padding-top: 0.5rem !important;
         padding-bottom: 0.5rem !important;
-        margin-top: -25px !important;
+        margin-top: -30px !important;
     }
 
-    /* Cabecera Superior: Alineada perfectamente arriba con fecha y título */
+    /* Cabecera Superior: Título a la izquierda, Fecha a la derecha en la misma línea */
     .dashboard-header-flex {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-top: 0px;
-        margin-bottom: 5px;
-        padding: 0px 5px;
+        margin-bottom: 8px;
+        padding: 5px 0px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        padding-bottom: 5px;
-        position: relative;
-        height: 35px;
+        width: 100%;
     }
 
     .dashboard-main-title {
-        font-size: 1.4rem;
+        font-size: 1.3rem;
         font-weight: 800;
         color: #38bdf8;
         text-transform: uppercase;
         letter-spacing: 0.8px;
-        margin: 0 auto;
-        text-align: center;
+        margin: 0;
         text-shadow: 0px 2px 15px rgba(56, 189, 248, 0.2);
-        position: absolute;
-        left: 0;
-        right: 0;
-        pointer-events: none;
     }
 
     .dashboard-subtitle-right {
@@ -77,8 +70,11 @@ custom_style = """
         font-weight: 500;
         letter-spacing: 0.3px;
         white-space: nowrap;
-        margin-left: auto;
-        z-index: 2;
+    }
+
+    /* Separador visual para las pestañas de Streamlit */
+    .stTabs {
+        margin-top: 5px;
     }
 
     /* Tarjetas Compactas: Icono a la izquierda y textos centrados a la derecha */
@@ -159,7 +155,7 @@ custom_style = """
 """
 st.markdown(custom_style, unsafe_allow_html=True)
 
-# Cabecera superior visual con Título centrado en azul y Fecha actualizada a la derecha
+# Cabecera superior visual con Título a la izquierda y Fecha a la derecha alineados perfectamente
 st.markdown("""
     <div class="dashboard-header-flex">
         <h2 class="dashboard-main-title">DASHBOARD INSTALACIÓN MEDIDORES INTELIGENTES</h2>
