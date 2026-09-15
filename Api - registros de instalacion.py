@@ -713,23 +713,26 @@ if 'datos_instalaciones' in st.session_state:
                         giro = row.get('giro', 'N/A')
                         serie = row.get('serieMedidor', row.get('serie', 'N/A'))
                         
-                        # Formatear la fecha de instalación a DD/MM/YYYY y agregar la hora de inicio
+                        # Extraer la fecha de instalación cruda
                         raw_fecha = row.get('fechaInstalacion', None)
-                        raw_hora = row.get('horaInicio', '')
                         
-                        if pd.notna(raw_fecha):
+                        fecha_inst = ""
+                        if pd.notna(raw_fecha) and str(raw_fecha).strip() != "":
                             dt_obj = pd.to_datetime(raw_fecha, errors='coerce')
                             if pd.notna(dt_obj):
+                                # Formato limpio: Día/Mes/Año y Hora:Minuto:Segundo
                                 fecha_formateada = dt_obj.strftime('%d/%m/%Y')
+                                hora_formateada = dt_obj.strftime('%H:%M:%S')
+                                
+                                # Si la hora es ceros, puedes decidir si mostrarla o dejar solo la fecha
+                                if hora_formateada != "00:00:00":
+                                    fecha_inst = f"{fecha_formateada} {hora_formateada}"
+                                else:
+                                    fecha_inst = fecha_formateada
                             else:
-                                fecha_formateada = str(raw_fecha)
+                                fecha_inst = str(raw_fecha)
                         else:
-                            fecha_formateada = 'N/A'
-                            
-                        # Unir fecha y hora de inicio
-                        fecha_inst = f"{fecha_formateada} {raw_hora}".strip()
-                        
-                        lugar_inst = row.get('tipo_instalacion_nombre', 'N/A')
+                            fecha_inst = ""  # Se queda completamente vacío en lugar de NaN
 
                         # Estructura HTML del popup
                         info_popup = f"""
