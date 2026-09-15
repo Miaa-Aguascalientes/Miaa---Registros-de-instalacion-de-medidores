@@ -212,7 +212,7 @@ def cargar_datos_api():
                 if res_inst.status_code == 200:
                     return res_inst.json()
         return None
-    except Exception as e:
+    except Exception:
         return None
 
 @st.cache_data(ttl=600)
@@ -230,7 +230,7 @@ def cargar_metas_db():
             FROM Diccionario_instalacion_medidores
         """
         return pd.read_sql(query, con=engine)
-    except Exception as e:
+    except Exception:
         return pd.DataFrame()
 
 @st.cache_data(ttl=600)
@@ -250,7 +250,7 @@ def cargar_poligonos_db():
             FROM Diccionario_poligonos_instalacion
         """
         return pd.read_sql(query, con=engine)
-    except Exception as e:
+    except Exception:
         return pd.DataFrame()
 
 @st.cache_data(ttl=600)
@@ -260,7 +260,7 @@ def cargar_tipos_instalacion_db():
         engine = create_engine(st.secrets["mysql"]["connection_string"])
         query = "SELECT ID, tipo_instalacion FROM Diccionario_tipo_instalacion"
         return pd.read_sql(query, con=engine)
-    except Exception as e:
+    except Exception:
         return pd.DataFrame()
 
 @st.cache_data(ttl=600)
@@ -270,7 +270,7 @@ def cargar_anomalias_db():
         engine = create_engine(st.secrets["mysql"]["connection_string"])
         query = "SELECT ID, anomalia FROM Diccionario_anomalias"
         return pd.read_sql(query, con=engine)
-    except Exception as e:
+    except Exception:
         return pd.DataFrame()
 
 
@@ -800,8 +800,8 @@ if 'datos_instalaciones' in st.session_state:
                             popup=popup_obj
                         ).add_to(mapa_miaa)
 
-                    st_folium(mapa_miaa, width=None, height=320, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
-            # SECCION 7.8: --------------------------------------------------- Gafico de instalaciones por mes y Tarjeta de Anomalía Debajo ---------------------------------------------------------------------------------
+                    st_folium(mapa_miaa, width=None, height=320, key="mapa_estatico_instalaciones", returned_objects=[])
+            # SECCION 7.8: --------------------------------------------------- Gafico de instalaciones por mes ------------------------------------------------------------------------------------------------------
             with col_graf_h:
                 with st.container(border=True):
                     st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
@@ -848,19 +848,6 @@ if 'datos_instalaciones' in st.session_state:
                         showlegend=False
                     )
                     st.plotly_chart(fig_mes_h, use_container_width=True)
-
-                    # --- INDICADOR DE MEDIDORES CON ANOMALÍA UBICADO DEBAJO DEL GRÁFICO ---
-                    total_anomalias_reg = len(df_filtrado[df_filtrado['anomalia_nombre'] != "SIN ANOMALÍA / REGULAR"]) if not df_filtrado.empty else 0
-                    
-                    st.markdown(f"""
-                        <div class="metric-card" style="margin-top: 10px; height: 50px;">
-                            <div class="metric-icon-box" style="color: #f43f5e; font-size: 18px;"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                            <div class="metric-content">
-                                <div class="metric-title" style="font-size: 9px;">Total con Anomalía</div>
-                                <div class="metric-value" style="font-size: 15px;">{total_anomalias_reg:,}</div>
-                            </div>
-                        </div>
-                    """, unsafe_allow_html=True)
 
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # SECCION 7.9: NUEVA PESTAÑA - ANÁLISIS DE ANOMALÍAS
@@ -1128,7 +1115,7 @@ if 'datos_instalaciones' in st.session_state:
                             popup=f"Polígono FID: {fid} | Sector: {datos['sector']} | Área: {datos['area']} km² | Medidores: {datos['medidores']}"
                         ).add_to(mapa_poligonos_tab)
 
-                st_folium(mapa_poligonos_tab, width=None, height=450, use_container_width=True, key="mapa_selector_poligonos", returned_objects=[])
+                st_folium(mapa_poligonos_tab, width=None, height=450, key="mapa_selector_poligonos", returned_objects=[])
 
             st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:20px; margin-bottom:10px;'>📋 Detalle de Polígonos de Instalación</p>", unsafe_allow_html=True)
             
@@ -1236,7 +1223,7 @@ if 'datos_instalaciones' in st.session_state:
                 for _, row in df_ext_map.iterrows():
                     folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#f59e0b', fill=True, fill_color='#f59e0b', fill_opacity=0.7).add_to(mapa_ext)
                 
-                st_folium(mapa_ext, width=None, height=460, use_container_width=True, key="mapa_externo", returned_objects=[])
+                st_folium(mapa_ext, width=None, height=460, key="mapa_externo", returned_objects=[])
 
         st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal Externo</p>", unsafe_allow_html=True)
         df_tabla_ext = df_externo.copy()
@@ -1337,7 +1324,7 @@ if 'datos_instalaciones' in st.session_state:
                 for _, row in df_miaa_map.iterrows():
                     folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#10b981', fill=True, fill_color='#10b981', fill_opacity=0.7).add_to(mapa_miaa_pers)
                 
-                st_folium(mapa_miaa_pers, width=None, height=460, use_container_width=True, key="mapa_miaa_personal", returned_objects=[])
+                st_folium(mapa_miaa_pers, width=None, height=460, key="mapa_miaa_personal", returned_objects=[])
 
         st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal MIAA</p>", unsafe_allow_html=True)
         df_tabla_miaa = df_miaa_pers.copy()
