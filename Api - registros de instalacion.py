@@ -1000,7 +1000,7 @@ if 'datos_instalaciones' in st.session_state:
     # SECCION 8: PESTAÑA MAPA DE POLÍGONOS GEOGRÁFICOS Y ASIGNACIÓN DE MEDIDORES
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_poligonos:
-        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Mapa Detallado de Polígonos de Instalación y Conteo de Medidores</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Mapa Detallado de Polígonos de Instalación</p>", unsafe_allow_html=True)
         
         if not df_poligonos.empty:
             fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
@@ -1136,7 +1136,7 @@ if 'datos_instalaciones' in st.session_state:
                 else:
                     m_p_lat, m_p_lon = lat_centro, lon_centro
 
-                mapa_poligonos_tab = folium.Map(location=[m_p_lat, m_p_lon], zoom_start=12, tiles=None)
+                mapa_poligonos_tab = folium.Map(location=[m_p_lat, m_p_lon], zoom_start=13, tiles=None)
                 agregar_capas_base(mapa_poligonos_tab)
 
                 # Renderizar Polígonos con su respectivo porcentaje de avance en el popup
