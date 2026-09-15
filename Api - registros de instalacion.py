@@ -802,7 +802,7 @@ if 'datos_instalaciones' in st.session_state:
 
                     st_folium(mapa_miaa, width=None, height=320, key="mapa_estatico_instalaciones", returned_objects=[])
                     
-           # SECCION 7.8: --------------------------------------------------- Gafico de instalaciones por mes ------------------------------------------------------------------------------------------------------
+           # SECCION 7.8: --------------------------------------------------- Gafico de instalaciones por mes y tarjeta de anomalías --------------------------------------------------------------------------------------
             with col_graf_h:
                 with st.container(border=True):
                     st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
@@ -843,21 +843,23 @@ if 'datos_instalaciones' in st.session_state:
                         paper_bgcolor='rgba(0,0,0,0)', 
                         font_color='#ffffff', 
                         margin=dict(t=2, b=2, l=5, r=40),  
-                        height=90,  # <--- Disminuye este valor para reducir la altura del gráfico
+                        height=130,  # <--- Mantiene el tamaño actual del gráfico superior
                         xaxis=dict(showgrid=False, showticklabels=False, title=None, range=[0, max_cant * 1.25]), 
                         yaxis=dict(showgrid=False, title=None, tickfont=dict(size=10), categoryorder='array', categoryarray=df_mes['Mes'].tolist()),
                         showlegend=False
                     )
                     st.plotly_chart(fig_mes_h, use_container_width=True)
 
-                # Tarjeta de Resultados de Total de Anomalías debajo
+                # Tarjeta de Anomalías con mayor altura (padding vertical incrementado)
                 with st.container(border=True):
                     st.markdown("<p style='font-size:12px; margin-bottom:8px; font-weight:bold;'>Total de Anomalías</p>", unsafe_allow_html=True)
                     total_anomalias_actual = len(df_filtrado[df_filtrado['anomalia_nombre'] != "SIN ANOMALÍA / REGULAR"]) if not df_filtrado.empty else 0
+                    
+                    # Se incrementó el padding superior e inferior (de 12px a 32px) para que crezca hacia abajo
                     st.markdown(f"""
-                        <div style="display: flex; align-items: center; justify-content: center; gap: 20px; padding: 12px 0;">
-                            <div style="font-size: 32px; color: #f43f5e;"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                            <div style="font-size: 28px; font-weight: bold; color: #ffffff;">{total_anomalias_actual:,}</div>
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 20px; padding: 32px 0;">
+                            <div style="font-size: 38px; color: #f43f5e;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div style="font-size: 36px; font-weight: bold; color: #ffffff;">{total_anomalias_actual:,}</div>
                         </div>
                     """, unsafe_allow_html=True)
 
