@@ -154,7 +154,7 @@ custom_style = """
 
     /* Estilos para Tarjetas Contenedoras de Gráficos (st.container(border=True)) */
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
+        background: transparent !important; /* SE CAMBIÓ EL DEGRADADO GRIS/AZUL POR TRANSPARENTE */
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
         border-radius: 12px !important;
         padding: 12px !important;
@@ -546,31 +546,40 @@ if 'datos_instalaciones' in st.session_state:
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
         # SECCION 7.2: --------------------------------------------- Fila de Gráficos Principales (Instalaciones por Día, Desglose por Tipo y Cuadro vs Registro) ------------------------------------------------------------------
-        col_g1, col_g2, col_g3 = st.columns([1.3, 1, 1])
+        # 1. Se le da más ancho a la columna central col_g2 (cambió de [1.3, 1, 1] a [1, 1.8, 1])
+        col_g1, col_g2, col_g3 = st.columns([1, 1.8, 1])
 
-        with col_g1:
+        # ... (deja col_g1 igual) ...
+
+        with col_g2:
             with st.container(border=True):
-                st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día</p>", unsafe_allow_html=True)
-                if col_fecha_ref and not df_filtrado['fecha_dt'].isna().all():
-                    df_filtrado['fecha_dia'] = df_filtrado['fecha_dt'].dt.date
-                    df_dia = df_filtrado.groupby('fecha_dia', as_index=False).size()
-                    df_dia['fecha_dia'] = pd.to_datetime(df_dia['fecha_dia']).dt.strftime('%d/%m/%Y')
-                    fig_dia = px.bar(df_dia, x='fecha_dia', y='size', text='size', color_discrete_sequence=['#3b82f6'])
+                st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Tipo de Instalación</p>", unsafe_allow_html=True)
+                if 'tipo_instalacion_nombre' in df_filtrado.columns and not df_filtrado.empty:
+                    df_tipo_inst = df_filtrado['tipo_instalacion_nombre'].value_counts().reset_index()
+                    df_tipo_inst.columns = ['Tipo', 'Cantidad']
+                    
+                    colores_pie = ['#38bdf8', '#4ade80', '#f59e0b', '#a855f7', '#f43f5e', '#64748b']
+                    
+                    fig_pie = go.Figure(go.Pie(
+                        labels=df_tipo_inst['Tipo'], 
+                        values=df_tipo_inst['Cantidad'], 
+                        hole=0.55,
+                        textinfo='value+percent',
+                        marker=dict(colors=colores_pie)
+                    ))
                 else:
-                    fig_dia = px.bar(pd.DataFrame({'Aviso': ['Sin fechas'], 'Valor': [0]}), x='Aviso', y='Valor', text='Valor')
-                
-                fig_dia.update_traces(textposition='outside', textfont_size=10)
-                fig_dia.update_layout(
+                    fig_pie = go.Figure(go.Pie(labels=['Sin Datos'], values=[len(df_filtrado)], hole=0.55))
+                    
+                fig_pie.update_layout(
                     plot_bgcolor='rgba(0,0,0,0)', 
                     paper_bgcolor='rgba(0,0,0,0)', 
                     font_color='#ffffff', 
-                    margin=dict(t=25, b=5, l=5, r=5), 
-                    height=230, 
-                    xaxis_title=None, 
-                    yaxis_title=None,
-                    yaxis=dict(range=[0, 500])
+                    margin=dict(t=10, b=10, l=10, r=10), 
+                    height=280,  # 2. Se aumentó el alto de 230 a 280 para aprovechar el ancho
+                    showlegend=True, 
+                    legend=dict(orientation="h", y=-0.15, font=dict(size=10))
                 )
-                st.plotly_chart(fig_dia, use_container_width=True)
+                st.plotly_chart(fig_pie, use_container_width=True)
 
         with col_g2:
             with st.container(border=True):
