@@ -585,10 +585,11 @@ if 'datos_instalaciones' in st.session_state:
                         labels=df_tipo_inst['Tipo'], 
                         values=df_tipo_inst['Cantidad'], 
                         hole=0.5,
-                        textinfo='value+percent',        # Muestra la cantidad numérica y el porcentaje
-                        texttemplate='%{value}<br>%{percent}', # Las organiza en dos líneas (número arriba, porcentaje abajo)
-                        textposition='inside',           # Ubica los textos dentro de las rebanadas
+                        textinfo='value+percent',
+                        texttemplate='%{value}<br>%{percent}',
+                        textposition='inside',
                         insidetextorientation='radial',
+                        textfont=dict(color='black', size=11, family='Arial Black'), # Negro intenso y negrita para máxima visibilidad
                         marker=dict(colors=colores_pie),
                         hovertemplate="<b>%{label}</b><br>Cantidad: %{value:,}<br>Porcentaje: %{percent}<extra></extra>"
                     ))
@@ -599,9 +600,9 @@ if 'datos_instalaciones' in st.session_state:
                     plot_bgcolor='rgba(0,0,0,0)', 
                     paper_bgcolor='rgba(0,0,0,0)', 
                     font_color='#ffffff', 
-                    margin=dict(t=5, b=5, l=5, r=130),  # Margen derecho para la leyenda
+                    margin=dict(t=5, b=5, l=5, r=130), 
                     height=230, 
-                    showlegend=True,                     # Mantiene la leyenda lateral completa
+                    showlegend=True, 
                     legend=dict(
                         orientation="v", 
                         yanchor="middle", 
@@ -610,7 +611,7 @@ if 'datos_instalaciones' in st.session_state:
                         x=1.02, 
                         font=dict(size=9)
                     ),
-                    uniformtext=dict(minsize=9, mode='hide') # Oculta automáticamente el texto en sectores muy pequeños para evitar caos visual
+                    uniformtext=dict(minsize=9, mode='hide')
                 )
                 st.plotly_chart(fig_pie, use_container_width=True)
 
