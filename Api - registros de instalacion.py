@@ -487,10 +487,10 @@ if 'datos_instalaciones' in st.session_state:
     
     tab_principal, tab_anomalias, tab_poligonos, tab_externo, tab_miaa, tab_tabla = st.tabs([
         "📊 Dashboard Principal", 
-        "⚠️ Análisis de Anomalías",
         "🗺️ Mapa Polígonos",
         "👷 Personal Externo", 
-        "🏢 Personal MIAA", 
+        "👤 Personal MIAA",
+        "⚠️ Análisis de Anomalías",
         "📋 Tabla Base de Datos Completa"
     ])
 
