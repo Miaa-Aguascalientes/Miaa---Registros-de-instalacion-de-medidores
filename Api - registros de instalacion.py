@@ -585,11 +585,11 @@ if 'datos_instalaciones' in st.session_state:
                         labels=df_tipo_inst['Tipo'], 
                         values=df_tipo_inst['Cantidad'], 
                         hole=0.5,
-                        domain=dict(x=[0.0, 0.62], y=[0.05, 0.95]), # Ubica la rueda a la izquierda para dejar espacio libre a las líneas exteriores
+                        domain=dict(x=[0.0, 0.62], y=[0.05, 0.95]), 
                         textinfo='value+percent',
-                        texttemplate='%{value} (%{percent})', # Muestra cantidad y porcentaje en línea limpia
-                        textposition='outside',             # Saca los textos fuera del círculo con líneas conectoras
-                        textfont=dict(color='#ffffff', size=9), # Texto blanco visible para el fondo oscuro
+                        texttemplate='%{value} (%{percent})', 
+                        textposition='outside',             
+                        textfont=dict(color='#ffffff', size=9), 
                         marker=dict(colors=colores_pie),
                         hovertemplate="<b>%{label}</b><br>Cantidad: %{value:,}<br>Porcentaje: %{percent}<extra></extra>"
                     ))
@@ -600,7 +600,7 @@ if 'datos_instalaciones' in st.session_state:
                     plot_bgcolor='rgba(0,0,0,0)', 
                     paper_bgcolor='rgba(0,0,0,0)', 
                     font_color='#ffffff', 
-                    margin=dict(t=25, b=25, l=10, r=130), # Márgenes amplios arriba y abajo para que las líneas de texto no se corten
+                    margin=dict(t=25, b=25, l=10, r=130), 
                     height=230, 
                     showlegend=True, 
                     legend=dict(
@@ -683,7 +683,7 @@ if 'datos_instalaciones' in st.session_state:
 
             with col_map_h:
                 with st.container(border=True):
-                    st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones </p>", unsafe_allow_html=True)
+                    st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones (Externo: Anaranjado | MIAA: Morado)</p>", unsafe_allow_html=True)
                     
                     df_mapa_valido = df_filtrado.dropna(subset=['latitud', 'longitud'])
                     if not df_mapa_valido.empty:
@@ -696,7 +696,17 @@ if 'datos_instalaciones' in st.session_state:
                     agregar_capas_base(mapa_miaa)
 
                     for _, row in df_mapa_valido.iterrows():
-                        folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#3b82f6', fill=True, fill_color='#3b82f6', fill_opacity=0.7).add_to(mapa_miaa)
+                        es_externo = bool(row['usuarioExterno']) if 'usuarioExterno' in df_mapa_valido.columns else False
+                        color_punto = '#f59e0b' if es_externo else '#a855f7'
+                        
+                        folium.CircleMarker(
+                            location=[float(row['latitud']), float(row['longitud'])], 
+                            radius=2.5, 
+                            color=color_punto, 
+                            fill=True, 
+                            fill_color=color_punto, 
+                            fill_opacity=0.7
+                        ).add_to(mapa_miaa)
 
                     st_folium(mapa_miaa, width=None, height=320, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
 
