@@ -703,40 +703,42 @@ if 'datos_instalaciones' in st.session_state:
                         es_externo = bool(row['usuarioExterno']) if 'usuarioExterno' in df_mapa_valido.columns else False
                         color_punto = '#f59e0b' if es_externo else '#a855f7'
                         
-                        # Extraer los datos con la llave correcta para el cliente
-                        nombre = row.get('nombreCliente', 'N/A')
-                        predio = row.get('numeroPredio', row.get('predio', 'N/A'))
-                        cliente = row.get('numeroCliente', '')
-                        domicilio = row.get('domicilio', 'N/A')
-                        colonia = row.get('colonia', 'N/A')
-                        nivel = row.get('nivel', 'N/A')
-                        giro = row.get('giro', 'N/A')
-                        serie = row.get('serieMedidor', row.get('serie', 'N/A'))
+                        # Función auxiliar para limpiar valores nulos o 'nan' y dejarlos en blanco
+                        def get_clean(keys, default=''):
+                            if isinstance(keys, str):
+                                keys = [keys]
+                            for k in keys:
+                                if k in row:
+                                    val = row[k]
+                                    if pd.notna(val) and str(val).strip().lower() not in ['nan', 'none', 'nat', '']:
+                                        return str(val).strip()
+                            return default
+
+                        # Extracción de campos limpios (sin valores nan)
+                        nombre = get_clean('nombreCliente')
+                        predio = get_clean(['numeroPredio', 'predio'])
+                        cliente = get_clean(['cliente', 'numeroCliente'])
+                        domicilio = get_clean('domicilio')
+                        colonia = get_clean('colonia')
+                        nivel = get_clean('nivel')
+                        giro = get_clean('giro')
+                        serie = get_clean(['serieMedidor', 'serie'])
+                        lugar_inst = get_clean(['tipo_instalacion_nombre', 'lugarInstalacion'])
                         
-                        # Extraer la fecha de instalación cruda
+                        # Extraer fecha de instalación
                         raw_fecha = row.get('fechaInstalacion', None)
-                        
                         fecha_inst = ""
-                        if pd.notna(raw_fecha) and str(raw_fecha).strip() != "":
+                        if pd.notna(raw_fecha) and str(raw_fecha).strip().lower() not in ['nan', 'none', 'nat', '']:
                             dt_obj = pd.to_datetime(raw_fecha, errors='coerce')
                             if pd.notna(dt_obj):
-                                # Formato limpio: Día/Mes/Año y Hora:Minuto:Segundo
-                                fecha_formateada = dt_obj.strftime('%d/%m/%Y')
-                                hora_formateada = dt_obj.strftime('%H:%M:%S')
-                                
-                                # Si la hora es ceros, puedes decidir si mostrarla o dejar solo la fecha
-                                if hora_formateada != "00:00:00":
-                                    fecha_inst = f"{fecha_formateada} {hora_formateada}"
-                                else:
-                                    fecha_inst = fecha_formateada
+                                fecha_inst = dt_obj.strftime('%d/%m/%Y')
                             else:
-                                fecha_inst = str(raw_fecha)
-                        else:
-                            fecha_inst = ""  # Se queda completamente vacío en lugar de NaN
+                                fecha_inst = str(raw_fecha).strip()
 
-                        lugar_inst = row.get('tipo_instalacion_nombre', row.get('lugarInstalacion', 'N/A'))
+                        # Extraer hora de inicio de instalación
+                        hora_inst = get_clean(['horaInicio', 'hora_inicio'])
 
-                        # Estructura HTML del popup
+                        # Estructura HTML del popup (vacía si el campo no tiene datos)
                         info_popup = f"""
                         <div style="font-size: 11px; line-height: 1.4; color: #000000;">
                             <b>Información del Servicio</b><br>
@@ -749,6 +751,7 @@ if 'datos_instalaciones' in st.session_state:
                             <b>Giro:</b> {giro}<br>
                             <b>Serie del Medidor:</b> {serie}<br>
                             <b>Fecha de Instalación:</b> {fecha_inst}<br>
+                            <b>Hora de Instalación:</b> {hora_inst}<br>
                             <b>Lugar de Instalación:</b> {lugar_inst}
                         </div>
                         """
