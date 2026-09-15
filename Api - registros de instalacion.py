@@ -1137,9 +1137,13 @@ if 'datos_instalaciones' in st.session_state:
                 mapa_poligonos_tab = folium.Map(location=[m_p_lat, m_p_lon], zoom_start=12, tiles=None)
                 agregar_capas_base(mapa_poligonos_tab)
 
+                # Renderizar Polígonos con su respectivo porcentaje de avance en el popup
                 for fid, datos in poligonos_procesados.items():
                     if fid in fids_seleccionados_mapa:
                         inst_count = conteo_medidores_instalados.get(fid, 0)
+                        med_db = datos['medidores_db']
+                        pct_avance_pol = round((inst_count / med_db * 100), 2) if med_db > 0 else 0.0
+                        
                         folium.Polygon(
                             locations=datos['coordenadas'],
                             color="#2563eb",
@@ -1147,8 +1151,23 @@ if 'datos_instalaciones' in st.session_state:
                             fill=True,
                             fill_color="#3b82f6",
                             fill_opacity=0.3,
-                            popup=f"Polígono FID: {fid} | Sector: {datos['sector']} | Área: {datos['area']} km² | Medidores DB: {datos['medidores_db']} | Medidores Instalados (API): {inst_count}"
+                            popup=f"Polígono FID: {fid} | Sector: {datos['sector']} | Área: {datos['area']} km² | Medidores DB: {med_db} | Instalados (API): {inst_count} | Avance: {pct_avance_pol}%"
                         ).add_to(mapa_poligonos_tab)
+
+                # Agregar todos los puntos de los medidores instalados (API) al mapa de polígonos
+                df_puntos_mapa = df_filtrado.dropna(subset=['latitud', 'longitud'])
+                for _, row_pt in df_puntos_mapa.iterrows():
+                    serie_val = row_pt.get('serieMedidor', row_pt.get('serie', 'N/A'))
+                    colonia_val = row_pt.get('colonia', 'N/A')
+                    folium.CircleMarker(
+                        location=[float(row_pt['latitud']), float(row_pt['longitud'])],
+                        radius=2.5,
+                        color="#38bdf8",
+                        fill=True,
+                        fill_color="#38bdf8",
+                        fill_opacity=0.9,
+                        popup=f"Medidor Instalado<br><b>Serie:</b> {serie_val}<br><b>Colonia:</b> {colonia_val}"
+                    ).add_to(mapa_poligonos_tab)
 
                 st_folium(mapa_poligonos_tab, width=None, height=450, key="mapa_selector_poligonos", returned_objects=[])
 
@@ -1157,12 +1176,16 @@ if 'datos_instalaciones' in st.session_state:
             resumen_poligonos = []
             for fid, datos in poligonos_procesados.items():
                 if fid in fids_seleccionados_mapa:
+                    med_db = datos['medidores_db']
+                    inst_count = conteo_medidores_instalados.get(fid, 0)
+                    pct_avance_pol = round((inst_count / med_db * 100), 2) if med_db > 0 else 0.0
                     resumen_poligonos.append({
                         'FID': fid,
                         'Sector Comercial': datos['sector'],
                         'Área (km²)': datos['area'],
-                        'Medidores (DB)': datos['medidores_db'],
-                        'Medidores Instalados (API)': conteo_medidores_instalados.get(fid, 0),
+                        'Medidores (DB)': med_db,
+                        'Medidores Instalados (API)': inst_count,
+                        'Avance (%)': f"{pct_avance_pol}%",
                         'Vértices Totales': datos['vertis']
                     })
             
@@ -1386,7 +1409,7 @@ if 'datos_instalaciones' in st.session_state:
         with t_col1:
             st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-table-list"></i></div>
+                    <div class="icon-box" style="color: #38bdf8;"><i class="fa-solid fa-table-list"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Total de Registros</div>
                         <div class="metric-value">{total_registros_tabla:,}</div>
