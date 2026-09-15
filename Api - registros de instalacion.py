@@ -734,6 +734,8 @@ if 'datos_instalaciones' in st.session_state:
                         else:
                             fecha_inst = ""  # Se queda completamente vacío en lugar de NaN
 
+                        lugar_inst = row.get('tipo_instalacion_nombre', row.get('lugarInstalacion', 'N/A'))
+
                         # Estructura HTML del popup
                         info_popup = f"""
                         <div style="font-size: 11px; line-height: 1.4; color: #000000;">
