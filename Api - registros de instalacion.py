@@ -735,8 +735,19 @@ if 'datos_instalaciones' in st.session_state:
                             else:
                                 fecha_inst = str(raw_fecha).strip()
 
-                        # Extraer hora de inicio de instalación
-                        hora_inst = get_clean(['horaInicio', 'hora_inicio'])
+                        # Extraer solo la hora en formato HH:MM
+                        raw_hora = row.get('horaInicio', None)
+                        hora_inst = ""
+                        if pd.notna(raw_hora) and str(raw_hora).strip().lower() not in ['nan', 'none', 'nat', '']:
+                            dt_hora = pd.to_datetime(raw_hora, errors='coerce')
+                            if pd.notna(dt_hora):
+                                hora_inst = dt_hora.strftime('%H:%M')
+                            else:
+                                # Intento de limpieza manual si viene como texto plano largo
+                                hora_str = str(raw_hora).strip()
+                                if 'T' in hora_str:
+                                    hora_str = hora_str.split('T')[1]
+                                hora_inst = hora_str[:5]
 
                         # Estructura HTML del popup (vacía si el campo no tiene datos)
                         info_popup = f"""
@@ -769,7 +780,6 @@ if 'datos_instalaciones' in st.session_state:
                         ).add_to(mapa_miaa)
 
                     st_folium(mapa_miaa, width=None, height=320, use_container_width=True, key="mapa_estatico_instalaciones", returned_objects=[])
-
             # SECCION 7.8: --------------------------------------------------- Gafico de instalaciones por mes ------------------------------------------------------------------------------------------------------
             with col_graf_h:
                 with st.container(border=True):
