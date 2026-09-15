@@ -585,12 +585,11 @@ if 'datos_instalaciones' in st.session_state:
                         labels=df_tipo_inst['Tipo'], 
                         values=df_tipo_inst['Cantidad'], 
                         hole=0.5,
-                        domain=dict(x=[0.05, 0.72], y=[0.05, 0.95]),
+                        domain=dict(x=[0.0, 0.62], y=[0.05, 0.95]), # Ubica la rueda a la izquierda para dejar espacio libre a las líneas exteriores
                         textinfo='value+percent',
-                        texttemplate='%{value}<br>%{percent}',
-                        textposition='inside',
-                        insidetextorientation='radial',
-                        textfont=dict(color='black', size=8, family='Arial Black'), # Fuente reducida a tamaño 8 para mejor ajuste
+                        texttemplate='%{value} (%{percent})', # Muestra cantidad y porcentaje en línea limpia
+                        textposition='outside',             # Saca los textos fuera del círculo con líneas conectoras
+                        textfont=dict(color='#ffffff', size=9), # Texto blanco visible para el fondo oscuro
                         marker=dict(colors=colores_pie),
                         hovertemplate="<b>%{label}</b><br>Cantidad: %{value:,}<br>Porcentaje: %{percent}<extra></extra>"
                     ))
@@ -601,7 +600,7 @@ if 'datos_instalaciones' in st.session_state:
                     plot_bgcolor='rgba(0,0,0,0)', 
                     paper_bgcolor='rgba(0,0,0,0)', 
                     font_color='#ffffff', 
-                    margin=dict(t=5, b=5, l=5, r=130), 
+                    margin=dict(t=25, b=25, l=10, r=130), # Márgenes amplios arriba y abajo para que las líneas de texto no se corten
                     height=230, 
                     showlegend=True, 
                     legend=dict(
@@ -611,8 +610,7 @@ if 'datos_instalaciones' in st.session_state:
                         xanchor="left", 
                         x=1.02, 
                         font=dict(size=9)
-                    ),
-                    uniformtext=dict(minsize=7, mode='hide') # Permite mostrar textos desde tamaño 7 sin ocultarlos tan agresivamente
+                    )
                 )
                 st.plotly_chart(fig_pie, use_container_width=True)
                 
