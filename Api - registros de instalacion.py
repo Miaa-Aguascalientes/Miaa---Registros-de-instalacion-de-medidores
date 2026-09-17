@@ -17,7 +17,8 @@ import pydeck as pdk
 st.set_page_config(
     page_title="Dashboard Instalación Medidores Inteligentes", 
     page_icon="https://www.miaa.mx/favicon.ico", 
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 # SECCIÓN 2: ------------------------------------------------------------------------- ESTILOS CSS PERSONALIZADOS ---------------------------------------------------------------------------------------------------
@@ -31,9 +32,16 @@ custom_style = """
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
+    /* Forzar que la barra lateral nunca se oculte ni colapse */
     [data-testid="stSidebar"] {
         min-width: 260px !important;
         max-width: 320px !important;
+        transform: none !important;
+        visibility: visible !important;
+    }
+    
+    section[data-testid="stSidebar"] {
+        display: block !important;
     }
     
     [data-testid="collapsedControl"] { display: none !important; }
@@ -202,7 +210,7 @@ url_instalaciones = "https://prelec.miaa.mx/msvc-tecnica/medidores/instalaciones
 
 @st.cache_data(ttl=300)
 def cargar_datos_api():
-    """Conecta con la API externa de MIAA usando credenciales de st.secrets para obtener registros de instalaciones[cite: 3]."""
+    """Conecta con la API externa de MIAA usando credenciales de st.secrets para obtener registros de instalaciones."""
     try:
         usuario = st.secrets["api"]["usuario"]
         password = st.secrets["api"]["password"]
@@ -219,7 +227,7 @@ def cargar_datos_api():
 
 @st.cache_data(ttl=600)
 def cargar_metas_db():
-    """Consulta la base de datos MySQL para obtener el diccionario de metas e instalaciones por colonia[cite: 3]."""
+    """Consulta la base de datos MySQL para obtener el diccionario de metas e instalaciones por colonia."""
     try:
         engine = create_engine(st.secrets["mysql"]["connection_string"])
         query = """
@@ -237,7 +245,7 @@ def cargar_metas_db():
 
 @st.cache_data(ttl=600)
 def cargar_poligonos_db():
-    """Consulta la base de datos MySQL para extraer los vértices y metadatos de los polígonos geográficos[cite: 3]."""
+    """Consulta la base de datos MySQL para extraer los vértices y metadatos de los polígonos geográficos."""
     try:
         engine = create_engine(st.secrets["mysql"]["connection_string"])
         query = """
@@ -257,7 +265,7 @@ def cargar_poligonos_db():
 
 @st.cache_data(ttl=600)
 def cargar_tipos_instalacion_db():
-    """Consulta la base de datos MySQL para obtener el catálogo de tipos de instalación[cite: 3]."""
+    """Consulta la base de datos MySQL para obtener el catálogo de tipos de instalación."""
     try:
         engine = create_engine(st.secrets["mysql"]["connection_string"])
         query = "SELECT ID, tipo_instalacion FROM Diccionario_tipo_instalacion"
@@ -267,7 +275,7 @@ def cargar_tipos_instalacion_db():
 
 @st.cache_data(ttl=600)
 def cargar_anomalias_db():
-    """Consulta la base de datos MySQL para obtener el diccionario de anomalías[cite: 3]."""
+    """Consulta la base de datos MySQL para obtener el diccionario de anomalías."""
     try:
         engine = create_engine(st.secrets["mysql"]["connection_string"])
         query = "SELECT ID, anomalia FROM Diccionario_anomalias"
@@ -279,7 +287,7 @@ def cargar_anomalias_db():
 # SECCIÓN 4: --------------------------------------------------------------------- FUNCIONES AUXILIARES PARA MAPAS -----------------------------------------------------------------------------------------------
 
 def agregar_capas_base(m):
-    """Agrega las capas base de mapa (Carto Dark Matter con API Key) y controles de pantalla completa[cite: 3]."""
+    """Agrega las capas base de mapa (Carto Dark Matter con API Key) y controles de pantalla completa."""
     api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
     
     folium.TileLayer(
@@ -1175,10 +1183,6 @@ if 'datos_instalaciones' in st.session_state:
                         inst_count = conteo_medidores_instalados.get(fid, 0)
                         polygon_coords_lon_lat = [[coord[1], coord[0]] for coord in datos['coordenadas']]
                         
-                        # Asignación de colores real solicitada:
-                        # - Rojo: No hay medidores instalados (0)
-                        # - Amarillo: Instalación media
-                        # - Verde: Mayor instalación de medidores
                         if inst_count == 0:
                             color = [239, 68, 68, 190]    # Rojo
                             elevation = 15
@@ -1208,7 +1212,6 @@ if 'datos_instalaciones' in st.session_state:
 
                 st.pydeck_chart(r, use_container_width=True)
                 
-                # Leyenda inferior del mapa actualizada con los colores y significados correctos
                 st.markdown("""
                     <div style="display: flex; gap: 15px; font-size: 10px; color: #94a3b8; align-items: center; margin-top: -4px;">
                         <div style="display: flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 10px; background-color: #22c55e; display: inline-block; border-radius: 2px;"></span> Mayor instalación</div>
@@ -1222,7 +1225,6 @@ if 'datos_instalaciones' in st.session_state:
             with st.container(border=True):
                 st.markdown("<p style='font-size:14px; font-weight:bold; margin-bottom:8px;'>Resumen por Sector</p>", unsafe_allow_html=True)
                 
-                # Encabezados de la tabla con letra más grande
                 st.markdown("""
                     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #cbd5e1; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 6px; margin-bottom: 8px;">
                         <div style="width: 25%;">Sector</div>
@@ -1268,7 +1270,6 @@ if 'datos_instalaciones' in st.session_state:
                             s_avance = row_sec['avance']
                             s_avance_cap = min(s_avance, 100.0)
                             
-                            # Reglas de color: >= 80% Verde, <= 40% Rojo, Intermedio Amarillo
                             if s_avance >= 80.0:
                                 dot_color = "#22c55e"
                             elif s_avance <= 40.0:
@@ -1377,7 +1378,6 @@ if 'datos_instalaciones' in st.session_state:
 
                 st.markdown("<p style='font-size:11px; font-weight:bold; margin-top:8px; margin-bottom:2px;'>Polígonos con Menor Avance de Instalación</p>", unsafe_allow_html=True)
                 
-                # Gráfica horizontal real basada en los polígonos con menor porcentaje de avance
                 df_avance_pol = []
                 for fid, datos in poligonos_procesados.items():
                     m_db = datos['medidores_db']
