@@ -1687,7 +1687,7 @@ if 'datos_instalaciones' in st.session_state:
 
         df_tabla_limpia = df_filtrado.copy()
         
-        terminos_excluidos = ['foto', 'modoIdentificacion', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
+        terminos_excluidos = ['foto', 'modoIdentificacion', 'giro','fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
         columnas_a_excluir = [c for c in df_tabla_limpia.columns if any(term in c.lower() for term in terminos_excluidos)]
         df_tabla_limpia = df_tabla_limpia.drop(columns=columnas_a_excluir, errors='ignore')
         
@@ -1719,7 +1719,7 @@ if 'datos_instalaciones' in st.session_state:
         df_tabla_limpia['poligono'] = poligonos_asignados
 
         # Eliminar los campos solicitados por el usuario
-        campos_a_quitar = ['anomaliaId', 'modoIdentificacion', 'lugarInstalacionId', 'usuarioId', 'lugarInstalacion_id_str', 'anomalia_id_str']
+        campos_a_quitar = ['anomaliaId', 'modoIdentificacion','giro', 'lugarInstalacionId', 'usuarioId', 'lugarInstalacion_id_str', 'anomalia_id_str']
         df_tabla_limpia = df_tabla_limpia.drop(columns=campos_a_quitar, errors='ignore')
 
         if 'fechaInstalacion' in df_tabla_limpia.columns:
