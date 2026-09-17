@@ -998,11 +998,11 @@ if 'datos_instalaciones' in st.session_state:
             st.success("¡Excelente! No hay registros con anomalías reportadas para los filtros seleccionados.")
 
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # SECCION 8: PESTAÑA MAPA TRIDIMENSIONAL DE POLÍGONOS Y DENSIDAD DE INSTALACIONES (PYDECK 3D CORREGIDO)
+    # SECCION 8: PESTAÑA MAPA DE POLÍGONOS Y DENSIDAD DE INSTALACIONES (FOLIUM VECTORIAL ROBUSTO)
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_poligonos:
-        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:5px;'>🗺️ Mapa Tridimensional de Polígonos de Instalación</p>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:12px; color: #94a3b8; margin-bottom:12px;'>Visualización 3D por densidad de instalaciones: <span style='color: #22c55e; font-weight:bold;'>Verde</span> (más instalaciones), <span style='color: #eab308; font-weight:bold;'>Amarillo</span> (moderado) y <span style='color: #ef4444; font-weight:bold;'>Rojo</span> (sin instalaciones).</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:5px;'>🗺️ Mapa de Polígonos de Instalación</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:12px; color: #94a3b8; margin-bottom:12px;'>Visualización por densidad de instalaciones: <span style='color: #22c55e; font-weight:bold;'>Verde</span> (alta densidad), <span style='color: #eab308; font-weight:bold;'>Amarillo</span> (moderada) y <span style='color: #ef4444; font-weight:bold;'>Rojo</span> (sin instalaciones). Haz clic en cualquier polígono para ver su tarjeta de información.</p>", unsafe_allow_html=True)
         
         if not df_poligonos.empty:
             fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
@@ -1052,26 +1052,20 @@ if 'datos_instalaciones' in st.session_state:
                         if pd.isna(c_val):
                             continue
                         c_str = str(c_val).strip()
-                        
                         for char in ['(', ')', '[', ']', '"', "'", 'POINT', 'POLYGON']:
                             c_str = c_str.replace(char, '')
                         c_str = c_str.strip()
-                        
                         pares = [p.strip() for p in c_str.split(',') if p.strip()]
                         
                         if len(pares) >= 2 and len(pares) % 2 == 0:
                             for i in range(0, len(pares), 2):
                                 try:
-                                    val1 = float(pares[i])
-                                    val2 = float(pares[i+1])
-                                    
-                                    # Forzar orden correcto: Latitud debe estar entre 15 y 30, Longitud entre -115 y -85
+                                    val1, val2 = float(pares[i]), float(pares[i+1])
                                     if 15 <= abs(val1) <= 30 and -115 <= val2 <= -85:
                                         lat, lon = val1, val2
                                     elif 15 <= abs(val2) <= 30 and -115 <= val1 <= -85:
                                         lat, lon = val2, val1
                                     else:
-                                        # Fallback por tamaño absoluto
                                         lat, lon = (val1, val2) if abs(val1) < abs(val2) else (val2, val1)
                                         if abs(lat) > 90:
                                             lat, lon = lon, lat
@@ -1086,9 +1080,7 @@ if 'datos_instalaciones' in st.session_state:
                             partes = c_str.split(',') if ',' in c_str else c_str.split()
                             if len(partes) >= 2:
                                 try:
-                                    val1 = float(partes[0].strip())
-                                    val2 = float(partes[1].strip())
-                                    
+                                    val1, val2 = float(partes[0].strip()), float(partes[1].strip())
                                     if 15 <= abs(val1) <= 30 and -115 <= val2 <= -85:
                                         lat, lon = val1, val2
                                     elif 15 <= abs(val2) <= 30 and -115 <= val1 <= -85:
@@ -1121,7 +1113,7 @@ if 'datos_instalaciones' in st.session_state:
                         except Exception:
                             pass
 
-                # Asignación espacial y conteo de medidores instalados por polígono
+                # Conteo de instalaciones por polígono
                 conteo_medidores_instalados = {fid: 0 for fid in fids_disponibles}
                 if shapely_polygons and not df_filtrado.empty:
                     try:
@@ -1134,72 +1126,64 @@ if 'datos_instalaciones' in st.session_state:
                     except Exception:
                         pass
 
-                if lat_acumuladas and lon_acumuladas:
-                    m_p_lat = sum(lat_acumuladas) / len(lat_acumuladas)
-                    m_p_lon = sum(lon_acumuladas) / len(lon_acumuladas)
-                else:
-                    m_p_lat, m_p_lon = lat_centro, lon_centro
+                m_p_lat = sum(lat_acumuladas) / len(lat_acumuladas) if lat_acumuladas else lat_centro
+                m_p_lon = sum(lon_acumuladas) / len(lon_acumuladas) if lon_acumuladas else lon_centro
 
                 counts_act = [conteo_medidores_instalados.get(fid, 0) for fid in fids_seleccionados_mapa]
                 max_inst = max(counts_act) if counts_act and max(counts_act) > 0 else 1
 
-                pydeck_data = []
+                # Crear mapa robusto con Folium
+                mapa_poligonos_seguro = folium.Map(location=[m_p_lat, m_p_lon], zoom_start=11, tiles=None)
+                agregar_capas_base(mapa_poligonos_seguro)
+
                 for fid, datos in poligonos_procesados.items():
                     if fid in fids_seleccionados_mapa:
                         inst_count = conteo_medidores_instalados.get(fid, 0)
-                        polygon_coords_lon_lat = [[coord[1], coord[0]] for coord in datos['coordenadas']]
+                        coords = datos['coordenadas']
                         
                         if inst_count == 0:
-                            color = [239, 68, 68, 185]    # Rojo
-                            elevation = 20
+                            color_hex = '#ef4444'  # Rojo
                         elif inst_count >= max_inst * 0.5:
-                            color = [34, 197, 94, 185]    # Verde
-                            elevation = float(inst_count * 12 + 50)
+                            color_hex = '#22c55e'  # Verde
                         else:
-                            color = [234, 179, 8, 185]    # Amarillo
-                            elevation = float(inst_count * 12 + 30)
-                            
-                        pydeck_data.append({
-                            "polygon": polygon_coords_lon_lat,
-                            "elevation": elevation,
-                            "color": color,
-                            "fid": str(fid),
-                            "sector": str(datos['sector']),
-                            "medidores_db": int(datos['medidores_db']),
-                            "instalados": int(inst_count)
-                        })
+                            color_hex = '#eab308'  # Amarillo
 
-                layer = pdk.Layer(
-                    "PolygonLayer",
-                    pydeck_data,
-                    get_polygon="polygon",
-                    get_elevation="elevation",
-                    get_fill_color="color",
-                    get_line_color=[255, 255, 255, 160],
-                    line_width_min_pixels=1.5,
-                    extruded=True,
-                    pickable=True,
-                    auto_highlight=True,
-                )
+                        popup_html = f"""
+                        <div style="
+                            background: #0f172a;
+                            color: #ffffff;
+                            padding: 12px;
+                            border-radius: 8px;
+                            font-family: sans-serif;
+                            width: 200px;
+                            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+                            border: 1px solid rgba(255,255,255,0.15);
+                        ">
+                            <b style="color: #38bdf8; font-size: 13px;">Polígono FID: {fid}</b><br>
+                            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.2); margin: 6px 0;">
+                            <span style="font-size: 11px; color: #cbd5e1;">
+                                <b>Sector:</b> {datos['sector']}<br>
+                                <b>Instalaciones:</b> {inst_count:,}<br>
+                                <b>Medidores DB:</b> {datos['medidores_db']:,}<br>
+                                <b>Área:</b> {datos['area']} km²
+                            </span>
+                        </div>
+                        """
 
-                view_state = pdk.ViewState(
-                    latitude=m_p_lat,
-                    longitude=m_p_lon,
-                    zoom=11.2,
-                    pitch=48,
-                    bearing=0
-                )
+                        popup_obj = folium.Popup(popup_html, max_width=220)
 
-                r = pdk.Deck(
-                    layers=[layer],
-                    initial_view_state=view_state,
-                    tooltip={
-                        "html": "<b>Polígono FID: {fid}</b><br/>Sector: {sector}<br/>Instalaciones: {instalados}<br/>Medidores DB: {medidores_db}",
-                        "style": {"backgroundColor": "rgba(15, 23, 42, 0.95)", "color": "white", "fontSize": "12px", "padding": "8px", "borderRadius": "6px"}
-                    }
-                )
+                        folium.Polygon(
+                            locations=coords,
+                            color=color_hex,
+                            weight=2,
+                            fill=True,
+                            fill_color=color_hex,
+                            fill_opacity=0.55,
+                            popup=popup_obj,
+                            tooltip=f"Polígono {fid} | Instalaciones: {inst_count}"
+                        ).add_to(mapa_poligonos_seguro)
 
-                st.pydeck_chart(r, use_container_width=True)
+                st_folium(mapa_poligonos_seguro, width=None, height=520, key="mapa_poligonos_seguro", returned_objects=[])
 
             st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:20px; margin-bottom:10px;'>📋 Detalle de Polígonos de Instalación y Conteo de Medidores</p>", unsafe_allow_html=True)
             
