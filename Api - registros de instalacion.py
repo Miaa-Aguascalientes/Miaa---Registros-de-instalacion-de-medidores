@@ -1002,7 +1002,6 @@ if 'datos_instalaciones' in st.session_state:
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_poligonos:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:5px;'>🗺️ Mapa Tridimensional de Polígonos de Instalación</p>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:12px; color: #94a3b8; margin-bottom:12px;'>Visualización 3D por densidad de instalaciones: <span style='color: #22c55e; font-weight:bold;'>Verde</span> (más instalaciones), <span style='color: #eab308; font-weight:bold;'>Amarillo</span> (moderado) y <span style='color: #ef4444; font-weight:bold;'>Rojo</span> (sin instalaciones).</p>", unsafe_allow_html=True)
         
         if not df_poligonos.empty:
             fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
@@ -1140,26 +1139,22 @@ if 'datos_instalaciones' in st.session_state:
                 counts_act = [conteo_medidores_instalados.get(fid, 0) for fid in fids_seleccionados_mapa]
                 max_inst = max(counts_act) if counts_act and max(counts_act) > 0 else 1
 
-                # Construir datos para PyDeck (PolygonLayer)
+                # Construir datos para PyDeck (PolygonLayer y TextLayer permanente)
                 pydeck_data = []
+                text_data = []
                 for fid, datos in poligonos_procesados.items():
                     if fid in fids_seleccionados_mapa:
                         inst_count = conteo_medidores_instalados.get(fid, 0)
-                        # PyDeck requiere coordenadas en formato [lon, lat]
                         polygon_coords_lon_lat = [[coord[1], coord[0]] for coord in datos['coordenadas']]
                         
-                        # Asignación de colores y elevación 3D según instrucciones:
-                        # - Rojo: polígonos que no tienen nada (0)
-                        # - Amarillo: los que más o menos
-                        # - Verde: los polígonos que más instalaciones tienen
                         if inst_count == 0:
                             color = [239, 68, 68, 185]    # Rojo
                             elevation = 20
                         elif inst_count >= max_inst * 0.5:
-                            color = [34, 197, 94, 185]    # Verde (más instalaciones)
+                            color = [34, 197, 94, 185]    # Verde
                             elevation = float(inst_count * 12 + 50)
                         else:
-                            color = [234, 179, 8, 185]    # Amarillo (más o menos)
+                            color = [234, 179, 8, 185]    # Amarillo
                             elevation = float(inst_count * 12 + 30)
                             
                         pydeck_data.append({
@@ -1170,6 +1165,19 @@ if 'datos_instalaciones' in st.session_state:
                             "sector": str(datos['sector']),
                             "medidores_db": int(datos['medidores_db']),
                             "instalados": int(inst_count)
+                        })
+
+                        # Cálculo de centroide para la etiqueta permanente
+                        lats_p = [c[0] for c in datos['coordenadas']]
+                        lons_p = [c[1] for c in datos['coordenadas']]
+                        c_lat = sum(lats_p) / len(lats_p)
+                        c_lon = sum(lons_p) / len(lons_p)
+
+                        text_data.append({
+                            "coordinates": [c_lon, c_lat],
+                            "text": f"FID {fid}\n({inst_count})",
+                            "color": [255, 255, 255, 240],
+                            "elevation": elevation + 15
                         })
 
                 layer = pdk.Layer(
@@ -1185,6 +1193,18 @@ if 'datos_instalaciones' in st.session_state:
                     auto_highlight=True,
                 )
 
+                text_layer = pdk.Layer(
+                    "TextLayer",
+                    text_data,
+                    get_position="coordinates",
+                    get_text="text",
+                    get_color="color",
+                    get_size=11,
+                    get_elevation="elevation",
+                    get_alignment_baseline="'bottom'",
+                    pickable=False
+                )
+
                 view_state = pdk.ViewState(
                     latitude=m_p_lat,
                     longitude=m_p_lon,
@@ -1194,7 +1214,7 @@ if 'datos_instalaciones' in st.session_state:
                 )
 
                 r = pdk.Deck(
-                    layers=[layer],
+                    layers=[layer, text_layer],
                     initial_view_state=view_state,
                     tooltip={
                         "html": "<b>Polígono FID: {fid}</b><br/>Sector: {sector}<br/>Instalaciones: {instalados}<br/>Medidores DB: {medidores_db}",
@@ -1203,6 +1223,9 @@ if 'datos_instalaciones' in st.session_state:
                 )
 
                 st.pydeck_chart(r, use_container_width=True)
+                
+                # Texto descriptivo colocado exactamente debajo del mapa 3D
+                st.markdown("<p style='font-size:12px; color: #94a3b8; margin-top:8px; margin-bottom:12px;'>Visualización 3D por densidad de instalaciones: <span style='color: #22c55e; font-weight:bold;'>Verde</span> (más instalaciones), <span style='color: #eab308; font-weight:bold;'>Amarillo</span> (moderado) y <span style='color: #ef4444; font-weight:bold;'>Rojo</span> (sin instalaciones).</p>", unsafe_allow_html=True)
 
             st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:20px; margin-bottom:10px;'>📋 Detalle de Polígonos de Instalación y Conteo de Medidores</p>", unsafe_allow_html=True)
             
