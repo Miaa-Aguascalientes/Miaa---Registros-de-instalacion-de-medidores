@@ -1217,7 +1217,7 @@ if 'datos_instalaciones' in st.session_state:
                     </div>
                 """, unsafe_allow_html=True)
 
-# --- Columna Derecha: Resumen por Sector (Tipografía y números más grandes) & Dona ---
+# --- Columna Derecha: Resumen por Sector (Sin gráficos, solo tabla ordenada y tipografía grande) ---
         with col_c_der:
             with st.container(border=True):
                 st.markdown("<p style='font-size:14px; font-weight:bold; margin-bottom:8px;'>Resumen por Sector</p>", unsafe_allow_html=True)
@@ -1294,27 +1294,6 @@ if 'datos_instalaciones' in st.session_state:
                             """, unsafe_allow_html=True)
                 else:
                     st.info("Sin datos de sectores disponibles.")
-
-            with st.container(border=True):
-                st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>Distribución de Polígonos</p>", unsafe_allow_html=True)
-                
-                fig_dona_real = go.Figure(go.Pie(
-                    labels=['Mayor instalación', 'Instalación media', 'Sin medidores'],
-                    values=[pol_mayor_instalacion, pol_media_instalacion, pol_sin_instalacion],
-                    hole=0.65,
-                    marker=dict(colors=['#22c55e', '#eab308', '#ef4444']),
-                    textinfo='none',
-                    hovertemplate="<b>%{label}</b><br>Cantidad: %{value}<br>Porcentaje: %{percent}<extra></extra>"
-                ))
-                
-                fig_dona_real.update_layout(
-                    annotations=[dict(text=f"<b>{tot_poligonos_val}</b><br><span style='font-size:10px;'>Total</span>", x=0.5, y=0.5, font_size=15, font_color="white", showarrow=False)],
-                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff',
-                    margin=dict(t=5, b=5, l=5, r=5), height=140,
-                    showlegend=True,
-                    legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=0.98, font=dict(size=10))
-                )
-                st.plotly_chart(fig_dona_real, use_container_width=True)
 
         # 3. SECCIÓN INFERIOR: TABLA DETALLADA Y ESTADÍSTICAS GENERALES REALES
         col_inf_izq, col_inf_der = st.columns([1.3, 1])
