@@ -1217,7 +1217,7 @@ if 'datos_instalaciones' in st.session_state:
                     </div>
                 """, unsafe_allow_html=True)
 
-# --- Columna Derecha: Resumen por Sector (Corregido con unicidad por FID) & Dona ---
+# --- Columna Derecha: Resumen por Sector (Ordenado por % de avance de mayor a menor) & Dona ---
         with col_c_der:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:6px;'>Resumen por Sector</p>", unsafe_allow_html=True)
@@ -1241,44 +1241,60 @@ if 'datos_instalaciones' in st.session_state:
                     
                     sectores_unicos = df_fids_unicos['Sector_comercial'].dropna().unique()
                     
-                    for s_nombre in sorted(sectores_unicos):
+                    # Recopilamos los datos en una lista para poder ordenarlos
+                    lista_sectores_datos = []
+                    for s_nombre in sectores_unicos:
                         df_sec_subset = df_fids_unicos[df_fids_unicos['Sector_comercial'] == s_nombre]
                         
-                        # Suma limpia basada en polígonos únicos (FID)
                         s_med_db = int(pd.to_numeric(df_sec_subset['Medidores'], errors='coerce').sum())
-                        
-                        # Suma de medidores instalados reales por los FIDs de este sector
                         fids_del_sector = df_sec_subset['FID'].tolist()
                         s_med_instalados = int(sum(conteo_medidores_instalados.get(f, 0) for f in fids_del_sector))
                         
-                        # Cálculo real del porcentaje de avance
                         s_avance = round((s_med_instalados / s_med_db * 100), 1) if s_med_db > 0 else 0.0
-                        s_avance_cap = min(s_avance, 100.0)  # Para la barra visual
                         
-                        # Reglas de color exactas solicitadas: >= 80% Verde, <= 40% Rojo, Intermedio Amarillo
-                        if s_avance >= 80.0:
-                            dot_color = "#22c55e"  # Verde
-                        elif s_avance <= 40.0:
-                            dot_color = "#ef4444"  # Rojo
-                        else:
-                            dot_color = "#eab308"  # Amarillo
+                        lista_sectores_datos.append({
+                            'sector': s_nombre,
+                            'med_db': s_med_db,
+                            'med_inst': s_med_instalados,
+                            'avance': s_avance
+                        })
+                    
+                    # Convertimos a DataFrame temporal y ordenamos por avance de mayor a menor
+                    df_resumen_sectores = pd.DataFrame(lista_sectores_datos)
+                    if not df_resumen_sectores.empty:
+                        df_resumen_sectores = df_resumen_sectores.sort_values(by='avance', ascending=False)
                         
-                        st.markdown(f"""
-                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 6px;">
-                                <div style="width: 25%; display: flex; align-items: center; gap: 6px; color: white; font-weight: bold;">
-                                    <span style="width: 8px; height: 8px; background-color: {dot_color}; border-radius: 50%; display: inline-block;"></span>
-                                    {s_nombre}
-                                </div>
-                                <div style="width: 25%; color: #94a3b8; text-align: center;">{s_med_db:,}</div>
-                                <div style="width: 25%; color: #ffffff; text-align: center; font-weight: bold;">{s_med_instalados:,}</div>
-                                <div style="width: 25%; text-align: right;">
-                                    <div style="font-size: 10px; color: white; margin-bottom: 2px;">{s_avance}%</div>
-                                    <div style="background-color: rgba(255,255,255,0.1); border-radius: 4px; width: 100%; height: 6px; overflow: hidden;">
-                                        <div style="background-color: {dot_color}; width: {s_avance_cap}%; height: 100%; border-radius: 4px;"></div>
+                        for _, row_sec in df_resumen_sectores.iterrows():
+                            s_nombre = row_sec['sector']
+                            s_med_db = row_sec['med_db']
+                            s_med_instalados = row_sec['med_inst']
+                            s_avance = row_sec['avance']
+                            s_avance_cap = min(s_avance, 100.0)  # Para la barra visual
+                            
+                            # Reglas de color exactas: >= 80% Verde, <= 40% Rojo, Intermedio Amarillo
+                            if s_avance >= 80.0:
+                                dot_color = "#22c55e"  # Verde
+                            elif s_avance <= 40.0:
+                                dot_color = "#ef4444"  # Rojo
+                            else:
+                                dot_color = "#eab308"  # Amarillo
+                            
+                            st.markdown(f"""
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 6px;">
+                                    <div style="width: 25%; display: flex; align-items: center; gap: 6px; color: white; font-weight: bold;">
+                                        <span style="width: 8px; height: 8px; background-color: {dot_color}; border-radius: 50%; display: inline-block;"></span>
+                                        {s_nombre}
+                                    </div>
+                                    <div style="width: 25%; color: #94a3b8; text-align: center;">{s_med_db:,}</div>
+                                    <div style="width: 25%; color: #ffffff; text-align: center; font-weight: bold;">{s_med_instalados:,}</div>
+                                    <div style="width: 25%; text-align: right;">
+                                        <div style="font-size: 10px; color: white; margin-bottom: 2px;">{s_avance}%</div>
+                                        <div style="background-color: rgba(255,255,255,0.1); border-radius: 4px; width: 100%; height: 6px; overflow: hidden;">
+                                            <div style="background-color: {dot_color}; width: {s_avance_cap}%; height: 100%; border-radius: 4px;"></div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        """, unsafe_allow_html=True)
+                            """, unsafe_allow_html=True)
                 else:
                     st.info("Sin datos de sectores disponibles.")
 
