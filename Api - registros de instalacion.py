@@ -1,4 +1,4 @@
-# API - registros de instalacion_3.py[cite: 3]
+# API - registros de instalacion_4.py
 import streamlit as st
 import requests
 import json
@@ -1141,18 +1141,18 @@ if 'datos_instalaciones' in st.session_state:
                 counts_act = [conteo_medidores_instalados.get(fid, 0) for fid in fids_seleccionados_mapa]
                 max_inst = max(counts_act) if counts_act and max(counts_act) > 0 else 1
 
-                # Construir datos para PyDeck (PolygonLayer)
+                # Construir datos para PyDeck (PolygonLayer y TextLayer)
                 pydeck_data = []
                 for fid, datos in poligonos_procesados.items():
                     if fid in fids_seleccionados_mapa:
                         inst_count = conteo_medidores_instalados.get(fid, 0)
+                        med_db = int(datos['medidores_db'])
+                        pct_avance_pol = round((inst_count / med_db * 100), 1) if med_db > 0 else 0.0
+
                         # PyDeck requiere coordenadas en formato [lon, lat]
                         polygon_coords_lon_lat = [[coord[1], coord[0]] for coord in datos['coordenadas']]
                         
-                        # Asignación de colores y elevación 3D según instrucciones:
-                        # - Rojo: polígonos que no tienen nada (0)
-                        # - Amarillo: los que más o menos
-                        # - Verde: los polígonos que más instalaciones tienen
+                        # Cálculo de elevación y color según la lógica anterior
                         if inst_count == 0:
                             color = [239, 68, 68, 185]    # Rojo
                             elevation = 20
@@ -1162,6 +1162,15 @@ if 'datos_instalaciones' in st.session_state:
                         else:
                             color = [234, 179, 8, 185]    # Amarillo (más o menos)
                             elevation = float(inst_count * 12 + 30)
+
+                        # Obtener centroide del polígono para la etiqueta de texto flotante permanente
+                        poly_geom = shapely_polygons.get(fid)
+                        if poly_geom:
+                            centroid = poly_geom.centroid
+                            # Ubicamos el centroide [lon, lat] y elevamos un poco la etiqueta sobre el polígono 3D
+                            centroid_coord = [centroid.y, centroid.x, elevation + 15]
+                        else:
+                            centroid_coord = [m_p_lon, m_p_lat, 50]
                             
                         pydeck_data.append({
                             "polygon": polygon_coords_lon_lat,
@@ -1169,11 +1178,15 @@ if 'datos_instalaciones' in st.session_state:
                             "color": color,
                             "fid": str(fid),
                             "sector": str(datos['sector']),
-                            "medidores_db": int(datos['medidores_db']),
-                            "instalados": int(inst_count)
+                            "medidores_db": med_db,
+                            "instalados": int(inst_count),
+                            "avance": f"{pct_avance_pol}%",
+                            "centroid": centroid_coord,
+                            "label": f"F{fid}\n{pct_avance_pol}%"
                         })
 
-                layer = pdk.Layer(
+                # Capa de Polígonos 3D
+                layer_polygon = pdk.Layer(
                     "PolygonLayer",
                     pydeck_data,
                     get_polygon="polygon",
@@ -1186,6 +1199,20 @@ if 'datos_instalaciones' in st.session_state:
                     auto_highlight=True,
                 )
 
+                # Capa de Texto para mostrar etiquetas permanentes (FID y Porcentaje de Avance) desde el inicio
+                layer_text = pdk.Layer(
+                    "TextLayer",
+                    pydeck_data,
+                    get_position="centroid",
+                    get_text="label",
+                    get_size=11,
+                    get_color=[255, 255, 255, 255],
+                    get_angle=0,
+                    get_text_anchor="middle",
+                    get_alignment_baseline="center",
+                    pickable=False,
+                )
+
                 view_state = pdk.ViewState(
                     latitude=m_p_lat,
                     longitude=m_p_lon,
@@ -1195,10 +1222,10 @@ if 'datos_instalaciones' in st.session_state:
                 )
 
                 r = pdk.Deck(
-                    layers=[layer],
+                    layers=[layer_polygon, layer_text],
                     initial_view_state=view_state,
                     tooltip={
-                        "html": "<b>Polígono FID: {fid}</b><br/>Sector: {sector}<br/>Instalaciones: {instalados}<br/>Medidores DB: {medidores_db}",
+                        "html": "<b>Polígono FID: {fid}</b><br/>Sector: {sector}<br/>Instalaciones: {instalados} / {medidores_db}<br/>Avance: {avance}",
                         "style": {"backgroundColor": "rgba(15, 23, 42, 0.95)", "color": "white", "fontSize": "12px", "padding": "8px", "borderRadius": "6px"}
                     }
                 )
