@@ -998,11 +998,11 @@ if 'datos_instalaciones' in st.session_state:
             st.success("¡Excelente! No hay registros con anomalías reportadas para los filtros seleccionados.")
 
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # SECCION 8: PESTAÑA MAPA TRIDIMENSIONAL DE POLÍGONOS Y TARJETAS FLOTANTES DISTRIBUIDAS (PYDECK 3D)
+    # SECCION 8: PESTAÑA MAPA TRIDIMENSIONAL DE POLÍGONOS Y DENSIDAD DE INSTALACIONES (PYDECK 3D CORREGIDO)
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_poligonos:
         st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:5px;'>🗺️ Mapa Tridimensional de Polígonos de Instalación</p>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:12px; color: #94a3b8; margin-bottom:12px;'>Visualización 3D con tarjetas flotantes distribuidas radialmente para evitar amontonamiento.</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:12px; color: #94a3b8; margin-bottom:12px;'>Visualización 3D por densidad de instalaciones: <span style='color: #22c55e; font-weight:bold;'>Verde</span> (más instalaciones), <span style='color: #eab308; font-weight:bold;'>Amarillo</span> (moderado) y <span style='color: #ef4444; font-weight:bold;'>Rojo</span> (sin instalaciones).</p>", unsafe_allow_html=True)
         
         if not df_poligonos.empty:
             fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
@@ -1052,16 +1052,30 @@ if 'datos_instalaciones' in st.session_state:
                         if pd.isna(c_val):
                             continue
                         c_str = str(c_val).strip()
+                        
                         for char in ['(', ')', '[', ']', '"', "'", 'POINT', 'POLYGON']:
                             c_str = c_str.replace(char, '')
                         c_str = c_str.strip()
+                        
                         pares = [p.strip() for p in c_str.split(',') if p.strip()]
                         
                         if len(pares) >= 2 and len(pares) % 2 == 0:
                             for i in range(0, len(pares), 2):
                                 try:
-                                    p1, p2 = float(pares[i]), float(pares[i+1])
-                                    lat, lon = (p2, p1) if abs(p1) <= abs(p2) else (p1, p2)
+                                    val1 = float(pares[i])
+                                    val2 = float(pares[i+1])
+                                    
+                                    # Forzar orden correcto: Latitud debe estar entre 15 y 30, Longitud entre -115 y -85
+                                    if 15 <= abs(val1) <= 30 and -115 <= val2 <= -85:
+                                        lat, lon = val1, val2
+                                    elif 15 <= abs(val2) <= 30 and -115 <= val1 <= -85:
+                                        lat, lon = val2, val1
+                                    else:
+                                        # Fallback por tamaño absoluto
+                                        lat, lon = (val1, val2) if abs(val1) < abs(val2) else (val2, val1)
+                                        if abs(lat) > 90:
+                                            lat, lon = lon, lat
+
                                     coordenadas_poligono.append([lat, lon])
                                     if fid in fids_seleccionados_mapa:
                                         lat_acumuladas.append(lat)
@@ -1072,8 +1086,18 @@ if 'datos_instalaciones' in st.session_state:
                             partes = c_str.split(',') if ',' in c_str else c_str.split()
                             if len(partes) >= 2:
                                 try:
-                                    p1, p2 = float(partes[0].strip()), float(partes[1].strip())
-                                    lat, lon = (p2, p1) if abs(p1) <= abs(p2) else (p1, p2)
+                                    val1 = float(partes[0].strip())
+                                    val2 = float(partes[1].strip())
+                                    
+                                    if 15 <= abs(val1) <= 30 and -115 <= val2 <= -85:
+                                        lat, lon = val1, val2
+                                    elif 15 <= abs(val2) <= 30 and -115 <= val1 <= -85:
+                                        lat, lon = val2, val1
+                                    else:
+                                        lat, lon = (val1, val2) if abs(val1) < abs(val2) else (val2, val1)
+                                        if abs(lat) > 90:
+                                            lat, lon = lon, lat
+
                                     coordenadas_poligono.append([lat, lon])
                                     if fid in fids_seleccionados_mapa:
                                         lat_acumuladas.append(lat)
@@ -1097,7 +1121,7 @@ if 'datos_instalaciones' in st.session_state:
                         except Exception:
                             pass
 
-                # Conteo de instalaciones
+                # Asignación espacial y conteo de medidores instalados por polígono
                 conteo_medidores_instalados = {fid: 0 for fid in fids_disponibles}
                 if shapely_polygons and not df_filtrado.empty:
                     try:
@@ -1110,76 +1134,44 @@ if 'datos_instalaciones' in st.session_state:
                     except Exception:
                         pass
 
-                m_p_lat = sum(lat_acumuladas) / len(lat_acumuladas) if lat_acumuladas else lat_centro
-                m_p_lon = sum(lon_acumuladas) / len(lon_acumuladas) if lon_acumuladas else lon_centro
+                if lat_acumuladas and lon_acumuladas:
+                    m_p_lat = sum(lat_acumuladas) / len(lat_acumuladas)
+                    m_p_lon = sum(lon_acumuladas) / len(lon_acumuladas)
+                else:
+                    m_p_lat, m_p_lon = lat_centro, lon_centro
 
                 counts_act = [conteo_medidores_instalados.get(fid, 0) for fid in fids_seleccionados_mapa]
                 max_inst = max(counts_act) if counts_act and max(counts_act) > 0 else 1
 
-                pydeck_poligonos = []
-                pydeck_lineas = []
-                pydeck_textos = []
+                pydeck_data = []
+                for fid, datos in poligonos_procesados.items():
+                    if fid in fids_seleccionados_mapa:
+                        inst_count = conteo_medidores_instalados.get(fid, 0)
+                        polygon_coords_lon_lat = [[coord[1], coord[0]] for coord in datos['coordenadas']]
+                        
+                        if inst_count == 0:
+                            color = [239, 68, 68, 185]    # Rojo
+                            elevation = 20
+                        elif inst_count >= max_inst * 0.5:
+                            color = [34, 197, 94, 185]    # Verde
+                            elevation = float(inst_count * 12 + 50)
+                        else:
+                            color = [234, 179, 8, 185]    # Amarillo
+                            elevation = float(inst_count * 12 + 30)
+                            
+                        pydeck_data.append({
+                            "polygon": polygon_coords_lon_lat,
+                            "elevation": elevation,
+                            "color": color,
+                            "fid": str(fid),
+                            "sector": str(datos['sector']),
+                            "medidores_db": int(datos['medidores_db']),
+                            "instalados": int(inst_count)
+                        })
 
-                # Calcular distribución radial (en abanico) para los polígonos seleccionados
-                total_sel = len(fids_seleccionados_mapa)
-                
-                for idx, fid in enumerate(fids_seleccionados_mapa):
-                    if fid not in poligonos_procesados:
-                        continue
-                    datos = poligonos_procesados[fid]
-                    inst_count = conteo_medidores_instalados.get(fid, 0)
-                    polygon_lon_lat = [[c[1], c[0]] for c in datos['coordenadas']]
-                    
-                    if inst_count == 0:
-                        color, elevation = [239, 68, 68, 185], 20
-                    elif inst_count >= max_inst * 0.5:
-                        color, elevation = [34, 197, 94, 185], float(inst_count * 12 + 50)
-                    else:
-                        color, elevation = [234, 179, 8, 185], float(inst_count * 12 + 30)
-
-                    # Centroide del polígono
-                    lats_p = [c[0] for c in datos['coordenadas']]
-                    lons_p = [c[1] for c in datos['coordenadas']]
-                    c_lat = sum(lats_p) / len(lats_p)
-                    c_lon = sum(lons_p) / len(lons_p)
-
-                    # Ángulo radial único para cada tarjeta (distribución de 360 grados / abanico)
-                    # Esto garantiza que NUNCA se encimen porque cada uno apunta en una dirección distinta
-                    angulo_rad = (idx / max(total_sel, 1)) * 2 * np.pi
-                    radio_distancia = 0.08 + (idx % 2) * 0.03  # Distancias alternas para mayor separación
-
-                    tarjeta_lon = c_lon + np.cos(angulo_rad) * radio_distancia
-                    tarjeta_lat = c_lat + np.sin(angulo_rad) * (radio_distancia * 0.7)
-
-                    # 1. Polígono 3D
-                    pydeck_poligonos.append({
-                        "polygon": polygon_lon_lat,
-                        "elevation": elevation,
-                        "color": color,
-                        "fid": str(fid),
-                        "sector": str(datos['sector']),
-                        "medidores_db": int(datos['medidores_db']),
-                        "instalados": int(inst_count)
-                    })
-
-                    # 2. Línea Conectora 3D hacia la tarjeta flotante radial
-                    pydeck_lineas.append({
-                        "source": [c_lon, c_lat, elevation + 15],
-                        "target": [tarjeta_lon, tarjeta_lat, elevation + 20],
-                        "color": [255, 255, 255, 200]
-                    })
-
-                    # 3. Texto descriptivo limpio de la tarjeta flotante
-                    texto_tarjeta = f"FID: {fid} | Sec: {datos['sector']}\nInst: {inst_count:,} | DB: {datos['medidores_db']:,}"
-                    pydeck_textos.append({
-                        "position": [tarjeta_lon, tarjeta_lat, elevation + 25],
-                        "text": texto_tarjeta
-                    })
-
-                # Capas PyDeck
-                layer_poligonos = pdk.Layer(
+                layer = pdk.Layer(
                     "PolygonLayer",
-                    pydeck_poligonos,
+                    pydeck_data,
                     get_polygon="polygon",
                     get_elevation="elevation",
                     get_fill_color="color",
@@ -1188,29 +1180,6 @@ if 'datos_instalaciones' in st.session_state:
                     extruded=True,
                     pickable=True,
                     auto_highlight=True,
-                )
-
-                layer_lineas = pdk.Layer(
-                    "LineLayer",
-                    pydeck_lineas,
-                    get_source_position="source",
-                    get_target_position="target",
-                    get_color="color",
-                    get_width=2,
-                    pickable=False,
-                )
-
-                layer_textos = pdk.Layer(
-                    "TextLayer",
-                    pydeck_textos,
-                    get_position="position",
-                    get_text="text",
-                    get_size=12,
-                    get_color=[255, 255, 255, 255],
-                    get_angle=0,
-                    text_anchor="middle",
-                    alignment_baseline="center",
-                    pickable=False,
                 )
 
                 view_state = pdk.ViewState(
@@ -1222,7 +1191,7 @@ if 'datos_instalaciones' in st.session_state:
                 )
 
                 r = pdk.Deck(
-                    layers=[layer_poligonos, layer_lineas, layer_textos],
+                    layers=[layer],
                     initial_view_state=view_state,
                     tooltip={
                         "html": "<b>Polígono FID: {fid}</b><br/>Sector: {sector}<br/>Instalaciones: {instalados}<br/>Medidores DB: {medidores_db}",
