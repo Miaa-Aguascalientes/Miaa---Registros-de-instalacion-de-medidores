@@ -1687,21 +1687,30 @@ if 'datos_instalaciones' in st.session_state:
 
         df_tabla_limpia = df_filtrado.copy()
         
-        terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
+        terminos_excluidos = ['foto', 'modoIdentificacion', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
         columnas_a_excluir = [c for c in df_tabla_limpia.columns if any(term in c.lower() for term in terminos_excluidos)]
         df_tabla_limpia = df_tabla_limpia.drop(columns=columnas_a_excluir, errors='ignore')
         
-        # Asignar el polígono donde fue instalado el medidor basado en coordenadas y los polígonos geográficos cargados
+        # Asignar el polígono donde fue instalado el medidor basado en coordenadas
         poligonos_asignados = []
         if 'shapely_polygons' in locals() and shapely_polygons:
+            # Si quieres enumerarlos secuencialmente del 1 en adelante según el orden de tus polígonos:
+            # Creamos una lista ordenada de las claves para mapearlas a un índice numérico (1, 2, 3...)
+            poly_keys = list(shapely_polygons.keys())
+            
             for _, row_m in df_tabla_limpia.iterrows():
                 lat, lon = row_m.get('latitud'), row_m.get('longitud')
                 assigned_fid = "SIN POLÍGONO"
                 if pd.notna(lat) and pd.notna(lon):
                     pt = Point(lat, lon)
-                    for fid, poly in shapely_polygons.items():
+                    for idx, (fid, poly) in enumerate(shapely_polygons.items(), start=1):
                         if poly.contains(pt):
-                            assigned_fid = str(fid)
+                            # OPCIÓN A: Si quieres que imprima el número secuencial (1, 2, 3...) asignado:
+                            assigned_fid = str(idx)
+                            
+                            # OPCIÓN B: Si prefieres el identificador original pero limpio (descomenta la línea de abajo si prefieres el ID real):
+                            # assigned_fid = str(fid)
+                            
                             break
                 poligonos_asignados.append(assigned_fid)
         else:
