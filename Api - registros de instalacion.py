@@ -998,11 +998,11 @@ if 'datos_instalaciones' in st.session_state:
             st.success("¡Excelente! No hay registros con anomalías reportadas para los filtros seleccionados.")
 
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # SECCION 8: PESTAÑA MAPA TRIDIMENSIONAL DE POLÍGONOS Y DENSIDAD DE INSTALACIONES (PYDECK 3D)
+    # SECCION 8: PESTAÑA MAPA TRIDIMENSIONAL DE POLÍGONOS Y DENSIDAD DE INSTALACIONES (FOLIUM 3D / VECTORIAL)
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_poligonos:
-        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:5px;'>🗺️ Mapa Tridimensional de Polígonos de Instalación</p>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:12px; color: #94a3b8; margin-bottom:12px;'>Visualización 3D por densidad de instalaciones con tarjetas de información desplegadas y líneas conectoras.</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:5px;'>🗺️ Mapa de Polígonos de Instalación y Tarjetas de Información</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:12px; color: #94a3b8; margin-bottom:12px;'>Visualización geoespacial por densidad de instalaciones: <span style='color: #22c55e; font-weight:bold;'>Verde</span> (alta densidad), <span style='color: #eab308; font-weight:bold;'>Amarillo</span> (moderada) y <span style='color: #ef4444; font-weight:bold;'>Rojo</span> (sin instalaciones).</p>", unsafe_allow_html=True)
         
         if not df_poligonos.empty:
             fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
@@ -1097,7 +1097,7 @@ if 'datos_instalaciones' in st.session_state:
                         except Exception:
                             pass
 
-                # Conteo de instalaciones
+                # Conteo de instalaciones por polígono
                 conteo_medidores_instalados = {fid: 0 for fid in fids_disponibles}
                 if shapely_polygons and not df_filtrado.empty:
                     try:
@@ -1116,114 +1116,81 @@ if 'datos_instalaciones' in st.session_state:
                 counts_act = [conteo_medidores_instalados.get(fid, 0) for fid in fids_seleccionados_mapa]
                 max_inst = max(counts_act) if counts_act and max(counts_act) > 0 else 1
 
-                pydeck_poligonos = []
-                pydeck_lineas = []
-                pydeck_puntos_tarjetas = []
+                # Crear mapa base con Folium
+                mapa_poligonos_3d = folium.Map(location=[m_p_lat, m_p_lon], zoom_start=11, tiles=None)
+                agregar_capas_base(mapa_poligonos_3d)
 
-                # Desplazamiento dinámico para acomodar las tarjetas flotantes hacia la derecha del mapa
-                offset_tarjeta_lon = 0.08  
+                offset_tarjeta_lon = 0.05  # Desplazamiento horizontal para las tarjetas flotantes
 
                 for fid, datos in poligonos_procesados.items():
                     if fid in fids_seleccionados_mapa:
                         inst_count = conteo_medidores_instalados.get(fid, 0)
-                        polygon_lon_lat = [[c[1], c[0]] for c in datos['coordenadas']]
+                        coords = datos['coordenadas']
                         
-                        # Colores y elevaciones según densidad
+                        # Definir colores según densidad
                         if inst_count == 0:
-                            color, elevation = [239, 68, 68, 185], 20
+                            color_hex = '#ef4444'  # Rojo
                         elif inst_count >= max_inst * 0.5:
-                            color, elevation = [34, 197, 94, 185], float(inst_count * 12 + 50)
+                            color_hex = '#22c55e'  # Verde
                         else:
-                            color, elevation = [234, 179, 8, 185], float(inst_count * 12 + 30)
+                            color_hex = '#eab308'  # Amarillo
 
-                        # Calcular centroide del polígono en lat/lon
-                        lats_p = [c[0] for c in datos['coordenadas']]
-                        lons_p = [c[1] for c in datos['coordenadas']]
+                        # Dibujar el polígono en el mapa
+                        folium.Polygon(
+                            locations=coords,
+                            color=color_hex,
+                            weight=2,
+                            fill=True,
+                            fill_color=color_hex,
+                            fill_opacity=0.45
+                        ).add_to(mapa_poligonos_3d)
+
+                        # Calcular centroide del polígono
+                        lats_p = [c[0] for c in coords]
+                        lons_p = [c[1] for c in coords]
                         c_lat = sum(lats_p) / len(lats_p)
                         c_lon = sum(lons_p) / len(lons_p)
 
-                        # Coordenada de destino para la tarjeta flotante desplazada a la derecha
+                        # Coordenada de la tarjeta flotante a la derecha
                         tarjeta_lon = c_lon + offset_tarjeta_lon
                         tarjeta_lat = c_lat
 
-                        # 1. Capa del Polígono 3D
-                        pydeck_poligonos.append({
-                            "polygon": polygon_lon_lat,
-                            "elevation": elevation,
-                            "color": color,
-                            "fid": str(fid),
-                            "sector": str(datos['sector']),
-                            "medidores_db": int(datos['medidores_db']),
-                            "instalados": int(inst_count)
-                        })
+                        # Línea conectora entre el polígono y la tarjeta flotante
+                        folium.PolyLine(
+                            locations=[[c_lat, c_lon], [tarjeta_lat, tarjeta_lon]],
+                            color='#ffffff',
+                            weight=1.5,
+                            opacity=0.8
+                        ).add_to(mapa_poligonos_3d)
 
-                        # 2. Capa de la Línea Conectora (Desde el centro del polígono hacia la tarjeta flotante)
-                        pydeck_lineas.append({
-                            "source": [c_lon, c_lat, elevation + 10],
-                            "target": [tarjeta_lon, tarjeta_lat, elevation + 10],
-                            "color": [255, 255, 255, 200]
-                        })
+                        # HTML de la tarjeta flotante con la información del polígono
+                        html_tarjeta = f"""
+                        <div style="
+                            background: rgba(15, 23, 42, 0.95);
+                            border: 1px solid rgba(255, 255, 255, 0.2);
+                            border-radius: 8px;
+                            padding: 10px;
+                            width: 170px;
+                            color: white;
+                            font-family: sans-serif;
+                            font-size: 11px;
+                            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+                        ">
+                            <b style="color: #38bdf8; font-size: 12px;">Polígono FID: {fid}</b><br>
+                            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 5px 0;">
+                            <b>Sector:</b> {datos['sector']}<br>
+                            <b>Instalaciones:</b> {inst_count:,}<br>
+                            <b>Medidores DB:</b> {datos['medidores_db']:,}
+                        </div>
+                        """
 
-                        # 3. Punto de conexión exterior para la tarjeta
-                        pydeck_puntos_tarjetas.append({
-                            "position": [tarjeta_lon, tarjeta_lat, elevation + 10],
-                            "fid": str(fid),
-                            "sector": str(datos['sector']),
-                            "instalados": int(inst_count),
-                            "medidores_db": int(datos['medidores_db'])
-                        })
+                        # Marcador con la tarjeta flotante en el extremo de la línea conector
+                        folium.Marker(
+                            location=[tarjeta_lat, tarjeta_lon],
+                            icon=folium.DivIcon(html=html_tarjeta, icon_size=(170, 90), icon_anchor=(0, 45))
+                        ).add_to(mapa_poligonos_3d)
 
-                # Definición de capas PyDeck
-                layer_poligonos = pdk.Layer(
-                    "PolygonLayer",
-                    pydeck_poligonos,
-                    get_polygon="polygon",
-                    get_elevation="elevation",
-                    get_fill_color="color",
-                    get_line_color=[255, 255, 255, 160],
-                    line_width_min_pixels=1.5,
-                    extruded=True,
-                    pickable=True,
-                    auto_highlight=True,
-                )
-
-                layer_lineas = pdk.Layer(
-                    "LineLayer",
-                    pydeck_lineas,
-                    get_source_position="source",
-                    get_target_position="target",
-                    get_color="color",
-                    get_width=2,
-                    pickable=False,
-                )
-
-                layer_puntos = pdk.Layer(
-                    "ScatterplotLayer",
-                    pydeck_puntos_tarjetas,
-                    get_position="position",
-                    get_fill_color=[255, 255, 255, 255],
-                    get_radius=300,
-                    pickable=True,
-                )
-
-                view_state = pdk.ViewState(
-                    latitude=m_p_lat,
-                    longitude=m_p_lon,
-                    zoom=11.2,
-                    pitch=48,
-                    bearing=0
-                )
-
-                r = pdk.Deck(
-                    layers=[layer_poligonos, layer_lineas, layer_puntos],
-                    initial_view_state=view_state,
-                    tooltip={
-                        "html": "<b>Polígono FID: {fid}</b><br/>Sector: {sector}<br/>Instalaciones: {instalados}<br/>Medidores DB: {medidores_db}",
-                        "style": {"backgroundColor": "rgba(15, 23, 42, 0.95)", "color": "white", "fontSize": "12px", "padding": "8px", "borderRadius": "6px"}
-                    }
-                )
-
-                st.pydeck_chart(r, use_container_width=True)
+                st_folium(mapa_poligonos_3d, width=None, height=520, key="mapa_poligonos_folium", returned_objects=[])
 
             st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:20px; margin-bottom:10px;'>📋 Detalle de Polígonos de Instalación y Conteo de Medidores</p>", unsafe_allow_html=True)
             
