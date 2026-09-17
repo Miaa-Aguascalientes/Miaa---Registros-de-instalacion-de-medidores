@@ -1217,37 +1217,70 @@ if 'datos_instalaciones' in st.session_state:
                     </div>
                 """, unsafe_allow_html=True)
 
-        # --- Columna Derecha: Resumen por Sector & Distribución Real (Dona) ---
+        # --- Columna Derecha: Resumen por Sector (Diseño Actualizado con Barra de Avance) & Dona ---
         with col_c_der:
             with st.container(border=True):
-                st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Resumen por Sector</p>", unsafe_allow_html=True)
+                st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:6px;'>Resumen por Sector</p>", unsafe_allow_html=True)
                 
-                # Cálculo real del resumen por sector agrupando df_poligonos
+                # Encabezados de la tabla de sectores
+                st.markdown("""
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #94a3b8; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; margin-bottom: 6px;">
+                        <div style="width: 25%;">Sector</div>
+                        <div style="width: 25%; text-align: center;">Área (km²)</div>
+                        <div style="width: 25%; text-align: center;">Medidores</div>
+                        <div style="width: 25%; text-align: right;">Avance</div>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                # Cálculo real agrupado por Sector Comercial a partir de df_poligonos y los datos calculados
                 if not df_poligonos.empty and 'Sector_comercial' in df_poligonos.columns:
-                    sec_resumen = df_poligonos.groupby('Sector_comercial').agg(
-                        area=('Area_km2', 'first'),
-                        medidores=('Medidores', 'first')
-                    ).reset_index().head(5)
+                    # Agrupamos los polígonos por sector comercial
+                    sectores_unicos = df_poligonos['Sector_comercial'].dropna().unique()
                     
-                    for _, s_row in sec_resumen.iterrows():
-                        s_nombre = s_row['Sector_comercial']
-                        s_area = s_row['area'] if not pd.isna(s_row['area']) else 0
-                        s_med = s_row['medidores'] if not pd.isna(s_row['medidores']) else 0
+                    for s_nombre in sorted(sectores_unicos):
+                        df_sec_subset = df_poligonos[df_poligonos['Sector_comercial'] == s_nombre]
+                        s_area = df_sec_subset['Area_km2'].sum() if 'Area_km2' in df_sec_subset.columns else 0
+                        s_med_db = df_sec_subset['Medidores'].sum() if 'Medidores' in df_sec_subset.columns else 0
+                        
+                        # Sumar medidores instalados reales en los polígonos de este sector
+                        fids_del_sector = df_sec_subset['FID'].tolist()
+                        s_med_instalados = sum(conteo_medidores_instalados.get(f, 0) for f in fids_del_sector)
+                        
+                        # Cálculo del porcentaje de avance del sector
+                        s_avance = round((s_med_instalados / s_med_db * 100), 1) if s_med_db > 0 else 0.0
+                        s_avance_cap = min(s_avance, 100.0)  # Para el ancho visual de la barra de progreso
+                        
+                        # Determinación del color del semáforo y la barra según el avance
+                        if s_avance >= 70:
+                            dot_color = "#22c55e"  # Verde
+                        elif s_avance >= 30:
+                            dot_color = "#eab308"  # Amarillo
+                        else:
+                            dot_color = "#ef4444"  # Rojo
                         
                         st.markdown(f"""
-                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">
-                                <div style="width: 30%; color: white; font-weight: bold;">{s_nombre}</div>
-                                <div style="width: 35%; color: #94a3b8; text-align: center;">{s_area:.2f} km²</div>
-                                <div style="width: 35%; color: #38bdf8; text-align: right; font-weight: bold;">{int(s_med):,}</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 6px;">
+                                <div style="width: 25%; display: flex; align-items: center; gap: 6px; color: white; font-weight: bold;">
+                                    <span style="width: 8px; height: 8px; background-color: {dot_color}; border-radius: 50%; display: inline-block;"></span>
+                                    {s_nombre}
+                                </div>
+                                <div style="width: 25%; color: #94a3b8; text-align: center;">{s_area:,.2f}</div>
+                                <div style="width: 25%; color: #ffffff; text-align: center;">{int(s_med_db):,}</div>
+                                <div style="width: 25%; text-align: right;">
+                                    <div style="font-size: 10px; color: white; margin-bottom: 2px;">{s_avance}%</div>
+                                    <div style="background-color: rgba(255,255,255,0.1); border-radius: 4px; width: 100%; height: 6px; overflow: hidden;">
+                                        <div style="background-color: {dot_color}; width: {s_avance_cap}%; height: 100%; border-radius: 4px;"></div>
+                                    </div>
+                                </div>
                             </div>
                         """, unsafe_allow_html=True)
                 else:
-                    st.info("Sin datos de sectores.")
+                    st.info("Sin datos de sectores disponibles.")
 
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:2px;'>Distribución de Polígonos</p>", unsafe_allow_html=True)
                 
-                # Gráfica de Dona con los datos reales calculados arriba
+                # Gráfica de Dona con los datos reales calculados previamente
                 fig_dona_real = go.Figure(go.Pie(
                     labels=['Mayor instalación', 'Instalación media', 'Sin medidores'],
                     values=[pol_mayor_instalacion, pol_media_instalacion, pol_sin_instalacion],
@@ -1265,8 +1298,6 @@ if 'datos_instalaciones' in st.session_state:
                     legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=0.98, font=dict(size=9))
                 )
                 st.plotly_chart(fig_dona_real, use_container_width=True)
-
-        st.markdown("<div style='margin-bottom: 4px;'></div>", unsafe_allow_html=True)
 
         # 3. SECCIÓN INFERIOR: TABLA DETALLADA Y ESTADÍSTICAS GENERALES REALES
         col_inf_izq, col_inf_der = st.columns([1.3, 1])
