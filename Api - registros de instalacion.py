@@ -998,27 +998,89 @@ if 'datos_instalaciones' in st.session_state:
             st.success("¡Excelente! No hay registros con anomalías reportadas para los filtros seleccionados.")
 
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # SECCIÓN 8: MAPA DE POLÍGONOS DE INSTALACIÓN (DISEÑO IDÉNTICO A LA REFERENCIA)
+    # SECCIÓN 8: MAPA DE POLÍGONOS DE INSTALACIÓN (DATOS 100% REALES - SIN FILTRO DE SECTOR)
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_poligonos:
         
-        # 1. BARRA SUPERIOR DE MÉTRICAS / KPIS DE POLÍGONOS Y FILTRO DE SECTOR
-        top_k1, top_k2, top_k3, top_k4, top_k5 = st.columns([1.1, 1.2, 1.2, 1.2, 1.4])
-        
-        tot_poligonos_val = len(df_poligonos['FID'].unique()) if not df_poligonos.empty else 74
-        
-        # Cálculo dinámico basado en las instalaciones reales contenidas en los polígonos
-        pol_con_medicion = 0
-        pol_con_anomalias = 0
-        pol_sin_medicion = 0
-        
-        # Simulación de estados para los polígonos cargados para empatar con la vista visual
         if not df_poligonos.empty:
-            fids_unicos_ref = df_poligonos['FID'].unique()
-            # Estimación proporcional para alinear con el diseño visual de referencia (58 con medición, 12 con anomalías, 4 sin medición)
-            pol_con_medicion = int(tot_poligonos_val * 0.784)
-            pol_con_anomalias = int(tot_poligonos_val * 0.162)
-            pol_sin_medicion = tot_poligonos_val - (pol_con_medicion + pol_con_anomalias)
+            fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
+            tot_poligonos_val = len(fids_disponibles)
+        else:
+            fids_disponibles = []
+            tot_poligonos_val = 0
+
+        # Procesamiento geométrico y cálculo real de medidores instalados por polígono
+        poligonos_procesados = {}
+        shapely_polygons = {}
+        lat_acumuladas, lon_acumuladas = [], []
+
+        if not df_poligonos.empty:
+            for fid in fids_disponibles:
+                df_pol_sel = df_poligonos[df_poligonos['FID'] == fid]
+                coordenadas_poligono = []
+                df_ordenado = df_pol_sel.sort_values(by='Orden_inst', ascending=True)
+                sec_comercial = df_pol_sel['Sector_comercial'].iloc[0] if 'Sector_comercial' in df_pol_sel.columns else "N/A"
+                area_val = df_pol_sel['Area_km2'].iloc[0] if 'Area_km2' in df_pol_sel.columns else 0
+                med_val = df_pol_sel['Medidores'].iloc[0] if 'Medidores' in df_pol_sel.columns else 0
+
+                for _, r_vertice in df_ordenado.iterrows():
+                    c_val = r_vertice['coord']
+                    if pd.isna(c_val): continue
+                    c_str = str(c_val).strip()
+                    for char in ['(', ')', '[', ']', '"', "'", 'POINT', 'POLYGON']:
+                        c_str = c_str.replace(char, '')
+                    pares = [p.strip() for p in c_str.split(',') if p.strip()]
+                    
+                    if len(pares) >= 2 and len(pares) % 2 == 0:
+                        for i in range(0, len(pares), 2):
+                            try:
+                                p1, p2 = float(pares[i]), float(pares[i+1])
+                                lat, lon = (p2, p1) if abs(p1) > abs(p2) else (p1, p2)
+                                coordenadas_poligono.append([lat, lon])
+                                lat_acumuladas.append(lat)
+                                lon_acumuladas.append(lon)
+                            except: pass
+                
+                if coordenadas_poligono:
+                    poligonos_procesados[fid] = {
+                        'coordenadas': coordenadas_poligono, 'sector': sec_comercial,
+                        'area': area_val, 'medidores_db': med_val, 'vertis': len(coordenadas_poligono)
+                    }
+                    try:
+                        poly_geom = Polygon(coordenadas_poligono)
+                        if not poly_geom.is_valid: poly_geom = poly_geom.buffer(0)
+                        shapely_polygons[fid] = poly_geom
+                    except: pass
+
+        # Conteo real de medidores instalados (API / df_filtrado) dentro de cada polígono
+        conteo_medidores_instalados = {fid: 0 for fid in fids_disponibles}
+        if shapely_polygons and not df_filtrado.empty:
+            try:
+                for _, row_m in df_filtrado.dropna(subset=['latitud', 'longitud']).iterrows():
+                    pt = Point(row_m['latitud'], row_m['longitud'])
+                    for fid, poly in shapely_polygons.items():
+                        if poly.contains(pt):
+                            conteo_medidores_instalados[fid] += 1
+                            break
+            except: pass
+
+        # Clasificación real para métricas superiores y gráfica de dona
+        # - Sin instalación (Rojo): 0 medidores instalados
+        # - Instalación media (Amarillo): entre 1 y el 50% del máximo del polígono
+        # - Mayor instalación (Verde): > 50% del máximo del polígono
+        counts_list = list(conteo_medidores_instalados.values())
+        max_inst_val = max(counts_list) if counts_list and max(counts_list) > 0 else 1
+
+        pol_sin_instalacion = sum(1 for c in counts_list if c == 0)
+        pol_mayor_instalacion = sum(1 for c in counts_list if c >= max_inst_val * 0.5)
+        pol_media_instalacion = tot_poligonos_val - (pol_sin_instalacion + pol_mayor_instalacion)
+
+        pct_mayor = round((pol_mayor_instalacion / tot_poligonos_val * 100), 1) if tot_poligonos_val > 0 else 0
+        pct_media = round((pol_media_instalacion / tot_poligonos_val * 100), 1) if tot_poligonos_val > 0 else 0
+        pct_sin = round((pol_sin_instalacion / tot_poligonos_val * 100), 1) if tot_poligonos_val > 0 else 0
+
+        # 1. BARRA SUPERIOR DE MÉTRICAS REALES (4 tarjetas distribuidas en el ancho)
+        top_k1, top_k2, top_k3, top_k4 = st.columns(4)
 
         with top_k1:
             st.markdown(f"""
@@ -1036,8 +1098,8 @@ if 'datos_instalaciones' in st.session_state:
                 <div class="metric-card" style="height: 52px;">
                     <div class="metric-icon-box" style="color: #22c55e; font-size: 18px;"><i class="fa-solid fa-circle-check"></i></div>
                     <div class="metric-content">
-                        <div class="metric-title" style="font-size: 9px;">Con medición</div>
-                        <div class="metric-value" style="font-size: 15px;">{pol_con_medicion} <span style="font-size: 9px; color: #22c55e; font-weight: normal;">78.4% del total</span></div>
+                        <div class="metric-title" style="font-size: 9px;">Mayor instalación (Verde)</div>
+                        <div class="metric-value" style="font-size: 15px;">{pol_mayor_instalacion} <span style="font-size: 9px; color: #22c55e; font-weight: normal;">{pct_mayor}% del total</span></div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
@@ -1047,8 +1109,8 @@ if 'datos_instalaciones' in st.session_state:
                 <div class="metric-card" style="height: 52px;">
                     <div class="metric-icon-box" style="color: #eab308; font-size: 18px;"><i class="fa-solid fa-triangle-exclamation"></i></div>
                     <div class="metric-content">
-                        <div class="metric-title" style="font-size: 9px;">Con anomalías</div>
-                        <div class="metric-value" style="font-size: 15px;">{pol_con_anomalias} <span style="font-size: 9px; color: #eab308; font-weight: normal;">16.2% del total</span></div>
+                        <div class="metric-title" style="font-size: 9px;">Instalación media (Amarillo)</div>
+                        <div class="metric-value" style="font-size: 15px;">{pol_media_instalacion} <span style="font-size: 9px; color: #eab308; font-weight: normal;">{pct_media}% del total</span></div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
@@ -1058,25 +1120,15 @@ if 'datos_instalaciones' in st.session_state:
                 <div class="metric-card" style="height: 52px;">
                     <div class="metric-icon-box" style="color: #ef4444; font-size: 18px;"><i class="fa-solid fa-circle-xmark"></i></div>
                     <div class="metric-content">
-                        <div class="metric-title" style="font-size: 9px;">Sin medición</div>
-                        <div class="metric-value" style="font-size: 15px;">{pol_sin_medicion} <span style="font-size: 9px; color: #ef4444; font-weight: normal;">5.4% del total</span></div>
+                        <div class="metric-title" style="font-size: 9px;">Sin medidores (Rojo)</div>
+                        <div class="metric-value" style="font-size: 15px;">{pol_sin_instalacion} <span style="font-size: 9px; color: #ef4444; font-weight: normal;">{pct_sin}% del total</span></div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
 
-        with top_k5:
-            with st.container(border=True):
-                # Selector de sector compacto idéntico a la esquina superior derecha de la imagen
-                st.markdown("<div style='font-size:9px; color:#94a3b8; font-weight:bold; text-transform:uppercase; margin-bottom:-4px;'>Sector</div>", unsafe_allow_html=True)
-                lista_sectores_disponibles = ["Todos los sectores"]
-                if not df_poligonos.empty and 'Sector_comercial' in df_poligonos.columns:
-                    lista_sectores_disponibles.extend(sorted(df_poligonos['Sector_comercial'].dropna().unique().tolist()))
-                
-                filtro_sector_mapa = st.selectbox("Sector", lista_sectores_disponibles, label_visibility="collapsed")
-
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-        # 2. SECCIÓN CENTRAL A TRES COLUMNAS (Selección Polígonos | Mapa Principal | Resumen por Sector + Gráfica Dona)
+        # 2. SECCIÓN CENTRAL A TRES COLUMNAS (Selección Polígonos | Mapa Principal 3D | Resumen y Dona Real)
         col_c_izq, col_c_centro, col_c_der = st.columns([0.22, 0.52, 0.26])
 
         # --- Columna Izquierda: Selección de Polígonos (FID) con Buscador ---
@@ -1086,116 +1138,55 @@ if 'datos_instalaciones' in st.session_state:
                 
                 b_col1, b_col2 = st.columns(2)
                 if b_col1.button("Todos", key="btn_all_fids_ref"):
-                    for f_id in df_poligonos['FID'].unique():
+                    for f_id in fids_disponibles:
                         st.session_state[f"map_fid_chk_{f_id}"] = True
                 if b_col2.button("Ninguno", key="btn_none_fids_ref"):
-                    for f_id in df_poligonos['FID'].unique():
+                    for f_id in fids_disponibles:
                         st.session_state[f"map_fid_chk_{f_id}"] = False
 
                 busqueda_fid = st.text_input("Buscar polígono...", placeholder="Buscar polígono...", label_visibility="collapsed")
                 st.markdown("<div style='margin-bottom: 4px;'></div>", unsafe_allow_html=True)
 
-                fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
-                
                 with st.container(height=350):
                     fids_seleccionados_mapa = []
                     for fid in fids_disponibles:
                         if f"map_fid_chk_{fid}" not in st.session_state:
                             st.session_state[f"map_fid_chk_{fid}"] = True
                         
-                        # Filtrar por texto de búsqueda si el usuario escribe algo
                         if busqueda_fid and busqueda_fid.lower() not in str(fid).lower():
                             continue
                             
-                        # Etiqueta con conteo simulado de elementos dentro del polígono
-                        chk_estado = st.checkbox(f"Polígono {fid} (8)", key=f"map_fid_chk_{fid}")
+                        inst_cnt_local = conteo_medidores_instalados.get(fid, 0)
+                        chk_estado = st.checkbox(f"Polígono {fid} ({inst_cnt_local})", key=f"map_fid_chk_{fid}")
                         if chk_estado:
                             fids_seleccionados_mapa.append(fid)
 
-        # --- Columna Central: Mapa de Polígonos de Instalación (PyDeck 3D / Folium) ---
+        # --- Columna Central: Mapa 3D PyDeck con colores reales según instalaciones ---
         with col_c_centro:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:2px;'>Mapa de Polígonos de Instalación</p>", unsafe_allow_html=True)
                 
-                # Procesamiento de coordenadas para el mapa central 3D
-                lat_acumuladas, lon_acumuladas = [], []
-                poligonos_procesados = {}
-                shapely_polygons = {}
-                
-                if not df_poligonos.empty:
-                    for fid in fids_disponibles:
-                        df_pol_sel = df_poligonos[df_poligonos['FID'] == fid]
-                        if filtro_sector_mapa != "Todos los sectores":
-                            if not df_pol_sel.empty and df_pol_sel['Sector_comercial'].iloc[0] != filtro_sector_mapa:
-                                continue
-                                
-                        coordenadas_poligono = []
-                        df_ordenado = df_pol_sel.sort_values(by='Orden_inst', ascending=True)
-                        sec_comercial = df_pol_sel['Sector_comercial'].iloc[0] if 'Sector_comercial' in df_pol_sel.columns else "N/A"
-                        area_val = df_pol_sel['Area_km2'].iloc[0] if 'Area_km2' in df_pol_sel.columns else 0
-                        med_val = df_pol_sel['Medidores'].iloc[0] if 'Medidores' in df_pol_sel.columns else 0
-
-                        for _, r_vertice in df_ordenado.iterrows():
-                            c_val = r_vertice['coord']
-                            if pd.isna(c_val): continue
-                            c_str = str(c_val).strip()
-                            for char in ['(', ')', '[', ']', '"', "'", 'POINT', 'POLYGON']:
-                                c_str = c_str.replace(char, '')
-                            pares = [p.strip() for p in c_str.split(',') if p.strip()]
-                            
-                            if len(pares) >= 2 and len(pares) % 2 == 0:
-                                for i in range(0, len(pares), 2):
-                                    try:
-                                        p1, p2 = float(pares[i]), float(pares[i+1])
-                                        lat, lon = (p2, p1) if abs(p1) > abs(p2) else (p1, p2)
-                                        coordenadas_poligono.append([lat, lon])
-                                        lat_acumuladas.append(lat)
-                                        lon_acumuladas.append(lon)
-                                    except: pass
-                        
-                        if coordenadas_poligono:
-                            poligonos_procesados[fid] = {
-                                'coordenadas': coordenadas_poligono, 'sector': sec_comercial,
-                                'area': area_val, 'medidores_db': med_val, 'vertis': len(coordenadas_poligono)
-                            }
-                            try:
-                                poly_geom = Polygon(coordenadas_poligono)
-                                if not poly_geom.is_valid: poly_geom = poly_geom.buffer(0)
-                                shapely_polygons[fid] = poly_geom
-                            except: pass
-
-                # Conteo de medidores instalados por polígono
-                conteo_medidores_instalados = {fid: 0 for fid in fids_disponibles}
-                if shapely_polygons and not df_filtrado.empty:
-                    try:
-                        for _, row_m in df_filtrado.dropna(subset=['latitud', 'longitud']).iterrows():
-                            pt = Point(row_m['latitud'], row_m['longitud'])
-                            for fid, poly in shapely_polygons.items():
-                                if poly.contains(pt):
-                                    conteo_medidores_instalados[fid] += 1
-                                    break
-                    except: pass
-
                 m_p_lat = sum(lat_acumuladas) / len(lat_acumuladas) if lat_acumuladas else 21.8853
                 m_p_lon = sum(lon_acumuladas) / len(lon_acumuladas) if lon_acumuladas else -102.2916
 
                 pydeck_data = []
-                max_inst = max(conteo_medidores_instalados.values()) if conteo_medidores_instalados else 1
-
                 for fid, datos in poligonos_procesados.items():
                     if fid in fids_seleccionados_mapa:
                         inst_count = conteo_medidores_instalados.get(fid, 0)
                         polygon_coords_lon_lat = [[coord[1], coord[0]] for coord in datos['coordenadas']]
                         
-                        # Colores estrictos de acuerdo a la referencia visual: Verde (más), Amarillo (moderado), Rojo (sin medición/0)
+                        # Asignación de colores real solicitada:
+                        # - Rojo: No hay medidores instalados (0)
+                        # - Amarillo: Instalación media
+                        # - Verde: Mayor instalación de medidores
                         if inst_count == 0:
                             color = [239, 68, 68, 190]    # Rojo
                             elevation = 15
-                        elif inst_count >= max_inst * 0.4:
-                            color = [34, 197, 94, 190]    # Verde
+                        elif inst_count >= max_inst_val * 0.5:
+                            color = [34, 197, 94, 190]    # Verde (mayor instalación)
                             elevation = float(inst_count * 10 + 40)
                         else:
-                            color = [234, 179, 8, 190]    # Amarillo
+                            color = [234, 179, 8, 190]    # Amarillo (instalación media)
                             elevation = float(inst_count * 10 + 25)
                             
                         pydeck_data.append({
@@ -1211,74 +1202,73 @@ if 'datos_instalaciones' in st.session_state:
 
                 r = pdk.Deck(
                     layers=[layer], initial_view_state=pdk.ViewState(latitude=m_p_lat, longitude=m_p_lon, zoom=11.5, pitch=45, bearing=0),
-                    tooltip={"html": "<b>Polígono FID: {fid}</b><br/>Sector: {sector}<br/>Instalaciones: {instalados}<br/>Medidores DB: {medidores_db}",
+                    tooltip={"html": "<b>Polígono FID: {fid}</b><br/>Sector: {sector}<br/>Medidores Instalados: {instalados}<br/>Medidores DB: {medidores_db}",
                              "style": {"backgroundColor": "rgba(15, 23, 42, 0.95)", "color": "white", "fontSize": "11px", "padding": "6px", "borderRadius": "4px"}}
                 )
 
                 st.pydeck_chart(r, use_container_width=True)
                 
-                # Leyenda inferior del mapa idéntica a la referencia
+                # Leyenda inferior del mapa actualizada con los colores y significados correctos
                 st.markdown("""
                     <div style="display: flex; gap: 15px; font-size: 10px; color: #94a3b8; align-items: center; margin-top: -4px;">
-                        <div style="display: flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 10px; background-color: #22c55e; display: inline-block; border-radius: 2px;"></span> Polígono con medición</div>
-                        <div style="display: flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 10px; background-color: #eab308; display: inline-block; border-radius: 2px;"></span> Polígono con anomalías</div>
-                        <div style="display: flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 10px; background-color: #ef4444; display: inline-block; border-radius: 2px;"></span> Polígono sin medición</div>
+                        <div style="display: flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 10px; background-color: #22c55e; display: inline-block; border-radius: 2px;"></span> Mayor instalación</div>
+                        <div style="display: flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 10px; background-color: #eab308; display: inline-block; border-radius: 2px;"></span> Instalación media</div>
+                        <div style="display: flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 10px; background-color: #ef4444; display: inline-block; border-radius: 2px;"></span> Sin medidores instalados</div>
                     </div>
                 """, unsafe_allow_html=True)
 
-        # --- Columna Derecha: Resumen por Sector & Distribución de Polígonos (Dona) ---
+        # --- Columna Derecha: Resumen por Sector & Distribución Real (Dona) ---
         with col_c_der:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Resumen por Sector</p>", unsafe_allow_html=True)
                 
-                # Tabla resumen por sector idéntica a la imagen
-                datos_resumen_sector = [
-                    {"Sector": "BI-02", "Área": "0.80", "Medidores": "1,094", "Avance": 0.62, "Color": "#22c55e"},
-                    {"Sector": "BI-01", "Área": "1.93", "Medidores": "248", "Avance": 0.43, "Color": "#22c55e"},
-                    {"Sector": "BI-06", "Área": "0.86", "Medidores": "1,834", "Avance": 0.00, "Color": "#22c55e"},
-                    {"Sector": "BI-03", "Área": "0.83", "Medidores": "1,102", "Avance": 1.00, "Color": "#eab308"},
-                    {"Sector": "BI-05", "Área": "1.05", "Medidores": "2,449", "Avance": 0.18, "Color": "#ef4444"}
-                ]
-                
-                for s in datos_resumen_sector:
-                    porc_txt = f"{int(s['Avance']*100)}%" if s['Avance'] <= 1 else f"{int(s['Avance']*100)}%"
-                    st.markdown(f"""
-                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">
-                            <div style="width: 25%; display: flex; align-items: center; gap: 5px;">
-                                <span style="width: 7px; height: 7px; background-color: {s['Color']}; border-radius: 50%;"></span>
-                                <span style="color: white; font-weight: bold;">{s['Sector']}</span>
+                # Cálculo real del resumen por sector agrupando df_poligonos
+                if not df_poligonos.empty and 'Sector_comercial' in df_poligonos.columns:
+                    sec_resumen = df_poligonos.groupby('Sector_comercial').agg(
+                        area=('Area_km2', 'first'),
+                        medidores=('Medidores', 'first')
+                    ).reset_index().head(5)
+                    
+                    for _, s_row in sec_resumen.iterrows():
+                        s_nombre = s_row['Sector_comercial']
+                        s_area = s_row['area'] if not pd.isna(s_row['area']) else 0
+                        s_med = s_row['medidores'] if not pd.isna(s_row['medidores']) else 0
+                        
+                        st.markdown(f"""
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 4px;">
+                                <div style="width: 30%; color: white; font-weight: bold;">{s_nombre}</div>
+                                <div style="width: 35%; color: #94a3b8; text-align: center;">{s_area:.2f} km²</div>
+                                <div style="width: 35%; color: #38bdf8; text-align: right; font-weight: bold;">{int(s_med):,}</div>
                             </div>
-                            <div style="width: 25%; color: #94a3b8; text-align: center;">{s['Área']}</div>
-                            <div style="width: 25%; color: #94a3b8; text-align: center;">{s['Medidores']}</div>
-                            <div style="width: 25%; color: white; text-align: right; font-weight: bold;">{porc_txt}</div>
-                        </div>
-                    """, unsafe_allow_html=True)
+                        """, unsafe_allow_html=True)
+                else:
+                    st.info("Sin datos de sectores.")
 
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:2px;'>Distribución de Polígonos</p>", unsafe_allow_html=True)
                 
-                # Gráfica de Dona Central exactamente igual a la de la referencia
-                fig_dona_ref = go.Figure(go.Pie(
-                    labels=['Con medición', 'Con anomalías', 'Sin medición'],
-                    values=[58, 12, 4],
+                # Gráfica de Dona con los datos reales calculados arriba
+                fig_dona_real = go.Figure(go.Pie(
+                    labels=['Mayor instalación', 'Instalación media', 'Sin medidores'],
+                    values=[pol_mayor_instalacion, pol_media_instalacion, pol_sin_instalacion],
                     hole=0.65,
-                    marker=dict(colors=['#00e676', '#ffb300', '#ff1744']),
+                    marker=dict(colors=['#22c55e', '#eab308', '#ef4444']),
                     textinfo='none',
                     hovertemplate="<b>%{label}</b><br>Cantidad: %{value}<br>Porcentaje: %{percent}<extra></extra>"
                 ))
                 
-                fig_dona_ref.update_layout(
-                    annotations=[dict(text="<b>74</b><br><span style='font-size:9px;'>Total</span>", x=0.5, y=0.5, font_size=14, font_color="white", showarrow=False)],
+                fig_dona_real.update_layout(
+                    annotations=[dict(text=f"<b>{tot_poligonos_val}</b><br><span style='font-size:9px;'>Total</span>", x=0.5, y=0.5, font_size=14, font_color="white", showarrow=False)],
                     plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff',
                     margin=dict(t=5, b=5, l=5, r=5), height=140,
                     showlegend=True,
                     legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=0.98, font=dict(size=9))
                 )
-                st.plotly_chart(fig_dona_ref, use_container_width=True)
+                st.plotly_chart(fig_dona_real, use_container_width=True)
 
         st.markdown("<div style='margin-bottom: 4px;'></div>", unsafe_allow_html=True)
 
-        # 3. SECCIÓN INFERIOR: TABLA DETALLADA Y ESTADÍSTICAS GENERALES
+        # 3. SECCIÓN INFERIOR: TABLA DETALLADA Y ESTADÍSTICAS GENERALES REALES
         col_inf_izq, col_inf_der = st.columns([1.3, 1])
 
         with col_inf_izq:
@@ -1305,27 +1295,30 @@ if 'datos_instalaciones' in st.session_state:
 
         with col_inf_der:
             with st.container(border=True):
-                st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:6px;'>Estadísticas Generales</p>", unsafe_allow_html=True)
+                st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:6px;'>Estadísticas Generales de Medidores</p>", unsafe_allow_html=True)
                 
-                # Mini tarjetas de estadísticas generales superiores
+                total_medidores_db = int(df_poligonos['Medidores'].sum()) if not df_poligonos.empty and 'Medidores' in df_poligonos.columns else len(df_filtrado)
+                total_instalados_real = sum(conteo_medidores_instalados.values())
+                total_faltantes = max(0, total_medidores_db - total_instalados_real)
+                
                 st1, st2 = st.columns(2)
                 with st1:
-                    st.markdown("""
+                    st.markdown(f"""
                         <div style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.05); padding: 6px; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
                             <div style="color: #38bdf8; font-size: 16px;"><i class="fa-solid fa-gauge"></i></div>
                             <div>
-                                <div style="font-size: 8px; color: #94a3b8; text-transform: uppercase;">Total de medidores</div>
-                                <div style="font-size: 13px; font-weight: bold; color: white;">7,842</div>
+                                <div style="font-size: 8px; color: #94a3b8; text-transform: uppercase;">Total en Base de Datos</div>
+                                <div style="font-size: 13px; font-weight: bold; color: white;">{total_medidores_db:,}</div>
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
                 with st2:
-                    st.markdown("""
+                    st.markdown(f"""
                         <div style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.05); padding: 6px; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
-                            <div style="color: #f59e0b; font-size: 16px;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div style="color: #22c55e; font-size: 16px;"><i class="fa-solid fa-circle-check"></i></div>
                             <div>
-                                <div style="font-size: 8px; color: #94a3b8; text-transform: uppercase;">Medidores con anomalías</div>
-                                <div style="font-size: 13px; font-weight: bold; color: white;">1,260 <span style="font-size:9px; color:#f59e0b;">(16.1%)</span></div>
+                                <div style="font-size: 8px; color: #94a3b8; text-transform: uppercase;">Total Instalados (API)</div>
+                                <div style="font-size: 13px; font-weight: bold; color: white;">{total_instalados_real:,}</div>
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
@@ -1334,47 +1327,53 @@ if 'datos_instalaciones' in st.session_state:
                 
                 st3, st4 = st.columns(2)
                 with st3:
-                    st.markdown("""
+                    pct_inst_gral = round((total_instalados_real / total_medidores_db * 100), 1) if total_medidores_db > 0 else 0
+                    st.markdown(f"""
                         <div style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.05); padding: 6px; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
-                            <div style="color: #22c55e; font-size: 16px;"><i class="fa-solid fa-circle-check"></i></div>
+                            <div style="color: #22c55e; font-size: 16px;"><i class="fa-solid fa-chart-pie"></i></div>
                             <div>
-                                <div style="font-size: 8px; color: #94a3b8; text-transform: uppercase;">Medidores activos</div>
-                                <div style="font-size: 13px; font-weight: bold; color: white;">6,102 <span style="font-size:9px; color:#22c55e;">(77.8%)</span></div>
+                                <div style="font-size: 8px; color: #94a3b8; text-transform: uppercase;">Avance Global</div>
+                                <div style="font-size: 13px; font-weight: bold; color: white;">{pct_inst_gral}%</div>
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
                 with st4:
-                    st.markdown("""
+                    st.markdown(f"""
                         <div style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.05); padding: 6px; border-radius: 6px; display: flex; align-items: center; gap: 10px;">
                             <div style="color: #ef4444; font-size: 16px;"><i class="fa-solid fa-circle-xmark"></i></div>
                             <div>
-                                <div style="font-size: 8px; color: #94a3b8; text-transform: uppercase;">Medidores sin lectura</div>
-                                <div style="font-size: 13px; font-weight: bold; color: white;">480 <span style="font-size:9px; color:#ef4444;">(6.1%)</span></div>
+                                <div style="font-size: 8px; color: #94a3b8; text-transform: uppercase;">Pendientes / Sin instalar</div>
+                                <div style="font-size: 13px; font-weight: bold; color: white;">{total_faltantes:,}</div>
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
 
-                st.markdown("<p style='font-size:11px; font-weight:bold; margin-top:8px; margin-bottom:2px;'>Top 5 sectores con más anomalías</p>", unsafe_allow_html=True)
+                st.markdown("<p style='font-size:11px; font-weight:bold; margin-top:8px; margin-bottom:2px;'>Polígonos con Menor Avance de Instalación</p>", unsafe_allow_html=True)
                 
-                # Gráfico horizontal para el Top 5 de sectores con más anomalías idéntico a la imagen
-                df_top_anom = pd.DataFrame({
-                    'Sector': ['BI-01', 'BI-02', 'BI-03', 'BI-06', 'BI-05'],
-                    'Porcentaje': [28, 22, 18, 12, 8]
-                })
+                # Gráfica horizontal real basada en los polígonos con menor porcentaje de avance
+                df_avance_pol = []
+                for fid, datos in poligonos_procesados.items():
+                    m_db = datos['medidores_db']
+                    i_cnt = conteo_medidores_instalados.get(fid, 0)
+                    av = round((i_cnt / m_db * 100), 1) if m_db > 0 else 0.0
+                    df_avance_pol.append({'FID': f"Polígono {fid}", 'Avance': av})
                 
-                fig_top_anom = px.bar(
-                    df_top_anom, x='Porcentaje', y='Sector', orientation='h', text='Porcentaje',
-                    color_discrete_sequence=['#ef4444']
-                )
-                fig_top_anom.update_traces(texttemplate='%{text}%', textposition='outside', textfont_size=9, marker_color=['#ff1744', '#ff1744', '#ffb300', '#00e676', '#00e676'])
-                fig_top_anom.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff',
-                    margin=dict(t=2, b=2, l=2, r=25), height=105,
-                    xaxis=dict(showgrid=False, showticklabels=False, title=None, range=[0, 35]),
-                    yaxis=dict(showgrid=False, title=None, tickfont=dict(size=9), categoryorder='total ascending'),
-                    showlegend=False
-                )
-                st.plotly_chart(fig_top_anom, use_container_width=True)
+                df_inf_bar = pd.DataFrame(df_avance_pol).sort_values(by='Avance', ascending=True).head(5)
+                
+                if not df_inf_bar.empty:
+                    fig_top_anom = px.bar(
+                        df_inf_bar, x='Avance', y='FID', orientation='h', text='Avance',
+                        color_discrete_sequence=['#ef4444']
+                    )
+                    fig_top_anom.update_traces(texttemplate='%{text}%', textposition='outside', textfont_size=9, marker_color='#ef4444')
+                    fig_top_anom.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff',
+                        margin=dict(t=2, b=2, l=2, r=25), height=105,
+                        xaxis=dict(showgrid=False, showticklabels=False, title=None, range=[0, 105]),
+                        yaxis=dict(showgrid=False, title=None, tickfont=dict(size=9), categoryorder='total ascending'),
+                        showlegend=False
+                    )
+                    st.plotly_chart(fig_top_anom, use_container_width=True)
 
     # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     # SECCION 9: PESTAÑA PERSONAL EXTERNO
