@@ -997,10 +997,19 @@ if 'datos_instalaciones' in st.session_state:
             st.success("¡Excelente! No hay registros con anomalías reportadas para los filtros seleccionados.")
 
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # SECCION 8: PESTAÑA MAPA DE POLÍGONOS GEOGRÁFICOS Y ASIGNACIÓN DE MEDIDORES
+    # SECCION 8: PESTAÑA MAPA DE POLÍGONOS GEOGRÁFICOS Y ASIGNACIÓN DE MEDIDORES (3D / COLORES DINÁMICOS)
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_poligonos:
-        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Mapa Detallado de Polígonos de Instalación</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Mapa Tridimensional de Polígonos por Nivel de Instalación</p>", unsafe_allow_html=True)
+        
+        # Leyenda visual de colores
+        st.markdown("""
+            <div style="display: flex; gap: 20px; margin-bottom: 12px; font-size: 12px; align-items: center;">
+                <span style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-square" style="color: #22c55e; font-size: 16px;"></i> Mayor instalación (Verde)</span>
+                <span style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-square" style="color: #eab308; font-size: 16px;"></i> Moderado (Amarillo)</span>
+                <span style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-square" style="color: #ef4444; font-size: 16px;"></i> Sin instalaciones / Nada (Rojo)</span>
+            </div>
+        """, unsafe_allow_html=True)
         
         if not df_poligonos.empty:
             fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
@@ -1113,7 +1122,7 @@ if 'datos_instalaciones' in st.session_state:
                         except Exception:
                             pass
 
-                # Asignación espacial y conteo de medidores instalados (df_filtrado) por polígono
+                # Asignación espacial y conteo de medidores instalados por polígono
                 conteo_medidores_instalados = {fid: 0 for fid in fids_disponibles}
                 punto_a_poligono = {}
                 if shapely_polygons and not df_filtrado.empty:
@@ -1130,6 +1139,10 @@ if 'datos_instalaciones' in st.session_state:
                     except Exception:
                         pass
 
+                # Calcular umbrales para clasificación de colores (Verde, Amarillo, Rojo)
+                non_zero_counts = [conteo_medidores_instalados.get(f, 0) for f in poligonos_procesados.keys() if conteo_medidores_instalados.get(f, 0) > 0]
+                med_threshold = np.percentile(non_zero_counts, 50) if non_zero_counts else 0
+
                 if lat_acumuladas and lon_acumuladas:
                     m_p_lat = sum(lat_acumuladas) / len(lat_acumuladas)
                     m_p_lon = sum(lon_acumuladas) / len(lon_acumuladas)
@@ -1139,24 +1152,50 @@ if 'datos_instalaciones' in st.session_state:
                 mapa_poligonos_tab = folium.Map(location=[m_p_lat, m_p_lon], zoom_start=13, tiles=None)
                 agregar_capas_base(mapa_poligonos_tab)
 
-                # Renderizar Polígonos con su respectivo porcentaje de avance en el popup
+                # Renderizar Polígonos con Colores Dinámicos (Verde, Amarillo, Rojo) y efecto 3D (sombra desplazada)
                 for fid, datos in poligonos_procesados.items():
                     if fid in fids_seleccionados_mapa:
                         inst_count = conteo_medidores_instalados.get(fid, 0)
                         med_db = datos['medidores_db']
                         pct_avance_pol = round((inst_count / med_db * 100), 2) if med_db > 0 else 0.0
                         
+                        # Definición de colores según la regla solicitada
+                        if inst_count == 0:
+                            color_borde = "#b91c1c"
+                            color_relleno = "#ef4444" # Rojo (no tienen nada)
+                            estado_txt = "SIN INSTALACIONES"
+                        elif non_zero_counts and inst_count >= med_threshold:
+                            color_borde = "#15803d"
+                            color_relleno = "#22c55e" # Verde (más instalaciones)
+                            estado_txt = "ALTA INSTALACIÓN"
+                        else:
+                            color_borde = "#a16207"
+                            color_relleno = "#eab308" # Amarillo (más o menos)
+                            estado_txt = "INSTALACIÓN MODERADA"
+
+                        # Efecto 3D simulado: Sombra desplazada ligeramente hacia abajo y a la derecha
+                        coords_sombra = [[lat - 0.0008, lon + 0.0008] for lat, lon in datos['coordenadas']]
                         folium.Polygon(
-                            locations=datos['coordenadas'],
-                            color="#2563eb",
-                            weight=2.5,
+                            locations=coords_sombra,
+                            color="#0f172a",
+                            weight=1,
                             fill=True,
-                            fill_color="#3b82f6",
-                            fill_opacity=0.3,
-                            popup=f"Polígono FID: {fid} | Sector: {datos['sector']} | Área: {datos['area']} km² | Medidores DB: {med_db} | Instalados (API): {inst_count} | Avance: {pct_avance_pol}%"
+                            fill_color="#0f172a",
+                            fill_opacity=0.4
                         ).add_to(mapa_poligonos_tab)
 
-                # Agregar todos los puntos de los medidores instalados (API) al mapa de polígonos con información detallada y polígono asignado
+                        # Polígono principal con color dinámico
+                        folium.Polygon(
+                            locations=datos['coordenadas'],
+                            color=color_borde,
+                            weight=2.5,
+                            fill=True,
+                            fill_color=color_relleno,
+                            fill_opacity=0.55,
+                            popup=f"<b>Polígono FID: {fid}</b><br>Estado: {estado_txt}<br>Sector: {datos['sector']}<br>Área: {datos['area']} km²<br>Medidores DB: {med_db}<br>Instalados (API): {inst_count}<br>Avance: {pct_avance_pol}%"
+                        ).add_to(mapa_poligonos_tab)
+
+                # Agregar puntos de medidores instalados
                 df_puntos_mapa = df_filtrado.dropna(subset=['latitud', 'longitud'])
                 for idx_pt, row_pt in df_puntos_mapa.iterrows():
                     fid_asignado = punto_a_poligono.get(idx_pt, "Fuera de Polígono")
@@ -1196,11 +1235,9 @@ if 'datos_instalaciones' in st.session_state:
                     if pd.notna(raw_hora_p) and str(raw_hora_p).strip().lower() not in ['nan', 'none', 'nat', '']:
                         hora_str_p = str(raw_hora_p).strip()
                         if 'T' in hora_str_p:
-                            time_part_p = hora_str_p.split('T')[1]
-                            hora_inst_p = time_part_p[:5]
+                            hora_inst_p = hora_str_p.split('T')[1][:5]
                         elif ' ' in hora_str_p:
-                            time_part_p = hora_str_p.split(' ')[1]
-                            hora_inst_p = time_part_p[:5]
+                            hora_inst_p = hora_str_p.split(' ')[1][:5]
                         else:
                             hora_inst_p = hora_str_p[:5]
 
@@ -1245,14 +1282,23 @@ if 'datos_instalaciones' in st.session_state:
                     med_db = datos['medidores_db']
                     inst_count = conteo_medidores_instalados.get(fid, 0)
                     pct_avance_pol = round((inst_count / med_db * 100), 2) if med_db > 0 else 0.0
+                    
+                    if inst_count == 0:
+                        est_t = "Sin instalaciones (Rojo)"
+                    elif inst_count >= med_threshold:
+                        est_t = "Mayor instalación (Verde)"
+                    else:
+                        est_t = "Moderado (Amarillo)"
+
                     resumen_poligonos.append({
                         'FID': fid,
+                        'Estado': est_t,
                         'Sector Comercial': datos['sector'],
                         'Área (km²)': datos['area'],
                         'Medidores (DB)': med_db,
                         'Medidores Instalados (API)': inst_count,
                         'Avance (%)': f"{pct_avance_pol}%",
-                        'Vértices Totales': datos['vertis']
+                        'Vértices': datos['vertis']
                     })
             
             df_resumen_tabla = pd.DataFrame(resumen_poligonos)
