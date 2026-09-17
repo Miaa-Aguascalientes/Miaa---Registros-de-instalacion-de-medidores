@@ -1719,7 +1719,7 @@ if 'datos_instalaciones' in st.session_state:
         df_tabla_limpia['poligono'] = poligonos_asignados
 
         # Eliminar los campos solicitados por el usuario
-        campos_a_quitar = ['anomaliaId', 'lugarInstalacionId', 'usuarioId', 'lugarInstalacion_id_str', 'anomalia_id_str']
+        campos_a_quitar = ['anomaliaId', 'modoIdentificacion', 'lugarInstalacionId', 'usuarioId', 'lugarInstalacion_id_str', 'anomalia_id_str']
         df_tabla_limpia = df_tabla_limpia.drop(columns=campos_a_quitar, errors='ignore')
 
         if 'fechaInstalacion' in df_tabla_limpia.columns:
