@@ -1,3 +1,4 @@
+# API - registros de instalacion_3.py[cite: 3]
 import streamlit as st
 import requests
 import json
@@ -10,6 +11,7 @@ from folium.plugins import Fullscreen
 from streamlit_folium import st_folium
 import numpy as np
 from shapely.geometry import Point, Polygon
+import pydeck as pdk
 
 # SECCIÓN 1: ---------------------------------------------------------------------- CONFIGURACIÓN GENERAL DE LA PÁGINA ---------------------------------------------------------------------------------------------
 
@@ -201,7 +203,7 @@ url_instalaciones = "https://prelec.miaa.mx/msvc-tecnica/medidores/instalaciones
 
 @st.cache_data(ttl=300)
 def cargar_datos_api():
-    """Conecta con la API externa de MIAA usando credenciales de st.secrets para obtener registros de instalaciones."""
+    """Conecta con la API externa de MIAA usando credenciales de st.secrets para obtener registros de instalaciones[cite: 3]."""
     try:
         usuario = st.secrets["api"]["usuario"]
         password = st.secrets["api"]["password"]
@@ -218,7 +220,7 @@ def cargar_datos_api():
 
 @st.cache_data(ttl=600)
 def cargar_metas_db():
-    """Consulta la base de datos MySQL para obtener el diccionario de metas e instalaciones por colonia."""
+    """Consulta la base de datos MySQL para obtener el diccionario de metas e instalaciones por colonia[cite: 3]."""
     try:
         engine = create_engine(st.secrets["mysql"]["connection_string"])
         query = """
@@ -236,7 +238,7 @@ def cargar_metas_db():
 
 @st.cache_data(ttl=600)
 def cargar_poligonos_db():
-    """Consulta la base de datos MySQL para extraer los vértices y metadatos de los polígonos geográficos."""
+    """Consulta la base de datos MySQL para extraer los vértices y metadatos de los polígonos geográficos[cite: 3]."""
     try:
         engine = create_engine(st.secrets["mysql"]["connection_string"])
         query = """
@@ -256,7 +258,7 @@ def cargar_poligonos_db():
 
 @st.cache_data(ttl=600)
 def cargar_tipos_instalacion_db():
-    """Consulta la base de datos MySQL para obtener el catálogo de tipos de instalación."""
+    """Consulta la base de datos MySQL para obtener el catálogo de tipos de instalación[cite: 3]."""
     try:
         engine = create_engine(st.secrets["mysql"]["connection_string"])
         query = "SELECT ID, tipo_instalacion FROM Diccionario_tipo_instalacion"
@@ -266,7 +268,7 @@ def cargar_tipos_instalacion_db():
 
 @st.cache_data(ttl=600)
 def cargar_anomalias_db():
-    """Consulta la base de datos MySQL para obtener el diccionario de anomalías."""
+    """Consulta la base de datos MySQL para obtener el diccionario de anomalías[cite: 3]."""
     try:
         engine = create_engine(st.secrets["mysql"]["connection_string"])
         query = "SELECT ID, anomalia FROM Diccionario_anomalias"
@@ -278,7 +280,7 @@ def cargar_anomalias_db():
 # SECCIÓN 4: --------------------------------------------------------------------- FUNCIONES AUXILIARES PARA MAPAS -----------------------------------------------------------------------------------------------
 
 def agregar_capas_base(m):
-    """Agrega las capas base de mapa (Carto Dark Matter con API Key) y controles de pantalla completa."""
+    """Agrega las capas base de mapa (Carto Dark Matter con API Key) y controles de pantalla completa[cite: 3]."""
     api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
     
     folium.TileLayer(
@@ -997,19 +999,11 @@ if 'datos_instalaciones' in st.session_state:
             st.success("¡Excelente! No hay registros con anomalías reportadas para los filtros seleccionados.")
 
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # SECCION 8: PESTAÑA MAPA DE POLÍGONOS GEOGRÁFICOS Y ASIGNACIÓN DE MEDIDORES (3D / COLORES DINÁMICOS)
+    # SECCION 8: PESTAÑA MAPA TRIDIMENSIONAL DE POLÍGONOS Y DENSIDAD DE INSTALACIONES (PYDECK 3D)
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_poligonos:
-        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Mapa Tridimensional de Polígonos por Nivel de Instalación</p>", unsafe_allow_html=True)
-        
-        # Leyenda visual de colores
-        st.markdown("""
-            <div style="display: flex; gap: 20px; margin-bottom: 12px; font-size: 12px; align-items: center;">
-                <span style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-square" style="color: #22c55e; font-size: 16px;"></i> Mayor instalación (Verde)</span>
-                <span style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-square" style="color: #eab308; font-size: 16px;"></i> Moderado (Amarillo)</span>
-                <span style="display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-square" style="color: #ef4444; font-size: 16px;"></i> Sin instalaciones / Nada (Rojo)</span>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:5px;'>🗺️ Mapa Tridimensional de Polígonos de Instalación</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:12px; color: #94a3b8; margin-bottom:12px;'>Visualización 3D por densidad de instalaciones: <span style='color: #22c55e; font-weight:bold;'>Verde</span> (más instalaciones), <span style='color: #eab308; font-weight:bold;'>Amarillo</span> (moderado) y <span style='color: #ef4444; font-weight:bold;'>Rojo</span> (sin instalaciones).</p>", unsafe_allow_html=True)
         
         if not df_poligonos.empty:
             fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
@@ -1018,7 +1012,7 @@ if 'datos_instalaciones' in st.session_state:
                 if f"sel_map_fid_{fid}" not in st.session_state:
                     st.session_state[f"sel_map_fid_{fid}"] = True
 
-            col_sel_izq, col_map_der = st.columns([0.3, 0.7])
+            col_sel_izq, col_map_der = st.columns([0.28, 0.72])
 
             with col_sel_izq:
                 st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:5px;'>Seleccionar Polígonos (FID):</p>", unsafe_allow_html=True)
@@ -1031,7 +1025,7 @@ if 'datos_instalaciones' in st.session_state:
                     for fid in fids_disponibles:
                         st.session_state[f"sel_map_fid_{fid}"] = False
 
-                with st.container(height=420):
+                with st.container(height=450):
                     fids_seleccionados_mapa = []
                     for fid in fids_disponibles:
                         chk = st.checkbox(f"Polígono {fid}", key=f"sel_map_fid_{fid}")
@@ -1122,9 +1116,8 @@ if 'datos_instalaciones' in st.session_state:
                         except Exception:
                             pass
 
-                # Asignación espacial y conteo de medidores instalados por polígono
+                # Asignación espacial y conteo de medidores instalados (df_filtrado) por polígono
                 conteo_medidores_instalados = {fid: 0 for fid in fids_disponibles}
-                punto_a_poligono = {}
                 if shapely_polygons and not df_filtrado.empty:
                     try:
                         for idx_m, row_m in df_filtrado.dropna(subset=['latitud', 'longitud']).iterrows():
@@ -1134,14 +1127,9 @@ if 'datos_instalaciones' in st.session_state:
                             for fid, poly in shapely_polygons.items():
                                 if poly.contains(pt):
                                     conteo_medidores_instalados[fid] += 1
-                                    punto_a_poligono[idx_m] = fid
                                     break
                     except Exception:
                         pass
-
-                # Calcular umbrales para clasificación de colores (Verde, Amarillo, Rojo)
-                non_zero_counts = [conteo_medidores_instalados.get(f, 0) for f in poligonos_procesados.keys() if conteo_medidores_instalados.get(f, 0) > 0]
-                med_threshold = np.percentile(non_zero_counts, 50) if non_zero_counts else 0
 
                 if lat_acumuladas and lon_acumuladas:
                     m_p_lat = sum(lat_acumuladas) / len(lat_acumuladas)
@@ -1149,130 +1137,73 @@ if 'datos_instalaciones' in st.session_state:
                 else:
                     m_p_lat, m_p_lon = lat_centro, lon_centro
 
-                mapa_poligonos_tab = folium.Map(location=[m_p_lat, m_p_lon], zoom_start=13, tiles=None)
-                agregar_capas_base(mapa_poligonos_tab)
+                # Obtener máximo de instalaciones para umbrales de color y altura 3D
+                counts_act = [conteo_medidores_instalados.get(fid, 0) for fid in fids_seleccionados_mapa]
+                max_inst = max(counts_act) if counts_act and max(counts_act) > 0 else 1
 
-                # Renderizar Polígonos con Colores Dinámicos (Verde, Amarillo, Rojo) y efecto 3D (sombra desplazada)
+                # Construir datos para PyDeck (PolygonLayer)
+                pydeck_data = []
                 for fid, datos in poligonos_procesados.items():
                     if fid in fids_seleccionados_mapa:
                         inst_count = conteo_medidores_instalados.get(fid, 0)
-                        med_db = datos['medidores_db']
-                        pct_avance_pol = round((inst_count / med_db * 100), 2) if med_db > 0 else 0.0
+                        # PyDeck requiere coordenadas en formato [lon, lat]
+                        polygon_coords_lon_lat = [[coord[1], coord[0]] for coord in datos['coordenadas']]
                         
-                        # Definición de colores según la regla solicitada
+                        # Asignación de colores y elevación 3D según instrucciones:
+                        # - Rojo: polígonos que no tienen nada (0)
+                        # - Amarillo: los que más o menos
+                        # - Verde: los polígonos que más instalaciones tienen
                         if inst_count == 0:
-                            color_borde = "#b91c1c"
-                            color_relleno = "#ef4444" # Rojo (no tienen nada)
-                            estado_txt = "SIN INSTALACIONES"
-                        elif non_zero_counts and inst_count >= med_threshold:
-                            color_borde = "#15803d"
-                            color_relleno = "#22c55e" # Verde (más instalaciones)
-                            estado_txt = "ALTA INSTALACIÓN"
+                            color = [239, 68, 68, 185]    # Rojo
+                            elevation = 20
+                        elif inst_count >= max_inst * 0.5:
+                            color = [34, 197, 94, 185]    # Verde (más instalaciones)
+                            elevation = float(inst_count * 12 + 50)
                         else:
-                            color_borde = "#a16207"
-                            color_relleno = "#eab308" # Amarillo (más o menos)
-                            estado_txt = "INSTALACIÓN MODERADA"
+                            color = [234, 179, 8, 185]    # Amarillo (más o menos)
+                            elevation = float(inst_count * 12 + 30)
+                            
+                        pydeck_data.append({
+                            "polygon": polygon_coords_lon_lat,
+                            "elevation": elevation,
+                            "color": color,
+                            "fid": str(fid),
+                            "sector": str(datos['sector']),
+                            "medidores_db": int(datos['medidores_db']),
+                            "instalados": int(inst_count)
+                        })
 
-                        # Efecto 3D simulado: Sombra desplazada ligeramente hacia abajo y a la derecha
-                        coords_sombra = [[lat - 0.0008, lon + 0.0008] for lat, lon in datos['coordenadas']]
-                        folium.Polygon(
-                            locations=coords_sombra,
-                            color="#0f172a",
-                            weight=1,
-                            fill=True,
-                            fill_color="#0f172a",
-                            fill_opacity=0.4
-                        ).add_to(mapa_poligonos_tab)
+                layer = pdk.Layer(
+                    "PolygonLayer",
+                    pydeck_data,
+                    get_polygon="polygon",
+                    get_elevation="elevation",
+                    get_fill_color="color",
+                    get_line_color=[255, 255, 255, 160],
+                    line_width_min_pixels=1.5,
+                    extruded=True,
+                    pickable=True,
+                    auto_highlight=True,
+                )
 
-                        # Polígono principal con color dinámico
-                        folium.Polygon(
-                            locations=datos['coordenadas'],
-                            color=color_borde,
-                            weight=2.5,
-                            fill=True,
-                            fill_color=color_relleno,
-                            fill_opacity=0.55,
-                            popup=f"<b>Polígono FID: {fid}</b><br>Estado: {estado_txt}<br>Sector: {datos['sector']}<br>Área: {datos['area']} km²<br>Medidores DB: {med_db}<br>Instalados (API): {inst_count}<br>Avance: {pct_avance_pol}%"
-                        ).add_to(mapa_poligonos_tab)
+                view_state = pdk.ViewState(
+                    latitude=m_p_lat,
+                    longitude=m_p_lon,
+                    zoom=11.2,
+                    pitch=48,  # Inclinación 3D
+                    bearing=0
+                )
 
-                # Agregar puntos de medidores instalados
-                df_puntos_mapa = df_filtrado.dropna(subset=['latitud', 'longitud'])
-                for idx_pt, row_pt in df_puntos_mapa.iterrows():
-                    fid_asignado = punto_a_poligono.get(idx_pt, "Fuera de Polígono")
+                r = pdk.Deck(
+                    layers=[layer],
+                    initial_view_state=view_state,
+                    tooltip={
+                        "html": "<b>Polígono FID: {fid}</b><br/>Sector: {sector}<br/>Instalaciones: {instalados}<br/>Medidores DB: {medidores_db}",
+                        "style": {"backgroundColor": "rgba(15, 23, 42, 0.95)", "color": "white", "fontSize": "12px", "padding": "8px", "borderRadius": "6px"}
+                    }
+                )
 
-                    def get_clean_p(keys, default=''):
-                        if isinstance(keys, str):
-                            keys = [keys]
-                        for k in keys:
-                            if k in row_pt:
-                                val = row_pt[k]
-                                if pd.notna(val) and str(val).strip().lower() not in ['nan', 'none', 'nat', '']:
-                                    return str(val).strip()
-                        return default
-
-                    nombre_p = get_clean_p('nombreCliente')
-                    predio_p = get_clean_p(['numeroPredio', 'predio'])
-                    cliente_p = get_clean_p(['cliente', 'numeroCliente'])
-                    domicilio_p = get_clean_p('domicilio')
-                    colonia_p = get_clean_p('colonia')
-                    nivel_p = get_clean_p('nivel')
-                    giro_p = get_clean_p('giro')
-                    serie_p = get_clean_p(['serieMedidor', 'serie'])
-                    lugar_inst_p = get_clean_p(['tipo_instalacion_nombre', 'lugarInstalacion'])
-                    anomalia_str_p = get_clean_p(['anomalia_nombre'])
-                    
-                    raw_fecha_p = row_pt.get('fechaInstalacion', None)
-                    fecha_inst_p = ""
-                    if pd.notna(raw_fecha_p) and str(raw_fecha_p).strip().lower() not in ['nan', 'none', 'nat', '']:
-                        dt_obj_p = pd.to_datetime(raw_fecha_p, errors='coerce')
-                        if pd.notna(dt_obj_p):
-                            fecha_inst_p = dt_obj_p.strftime('%d/%m/%Y')
-                        else:
-                            fecha_inst_p = str(raw_fecha_p).strip()
-
-                    raw_hora_p = row_pt.get('horaInicio', None)
-                    hora_inst_p = ""
-                    if pd.notna(raw_hora_p) and str(raw_hora_p).strip().lower() not in ['nan', 'none', 'nat', '']:
-                        hora_str_p = str(raw_hora_p).strip()
-                        if 'T' in hora_str_p:
-                            hora_inst_p = hora_str_p.split('T')[1][:5]
-                        elif ' ' in hora_str_p:
-                            hora_inst_p = hora_str_p.split(' ')[1][:5]
-                        else:
-                            hora_inst_p = hora_str_p[:5]
-
-                    info_popup_pol = f"""
-                    <div style="font-size: 11px; line-height: 1.4; color: #000000;">
-                        <b>Polígono Asignado:</b> {fid_asignado}<br>
-                        <b>Información del Servicio</b><br>
-                        <b>Nombre:</b> {nombre_p}<br>
-                        <b>Número de Predio:</b> {predio_p}<br>
-                        <b>Cliente:</b> {cliente_p}<br>
-                        <b>Domicilio:</b> {domicilio_p}<br>
-                        <b>Colonia:</b> {colonia_p}<br>
-                        <b>Nivel:</b> {nivel_p}<br>
-                        <b>Giro:</b> {giro_p}<br>
-                        <b>Serie del Medidor:</b> {serie_p}<br>
-                        <b>Fecha de Instalación:</b> {fecha_inst_p}<br>
-                        <b>Hora de Instalación:</b> {hora_inst_p}<br>
-                        <b>Lugar de Instalación:</b> {lugar_inst_p}<br>
-                        <b>Anomalía:</b> {anomalia_str_p}
-                    </div>
-                    """
-                    
-                    popup_obj_pol = folium.Popup(info_popup_pol, max_width=300)
-
-                    folium.CircleMarker(
-                        location=[float(row_pt['latitud']), float(row_pt['longitud'])],
-                        radius=2.5,
-                        color="#38bdf8",
-                        fill=True,
-                        fill_color="#38bdf8",
-                        fill_opacity=0.9,
-                        popup=popup_obj_pol
-                    ).add_to(mapa_poligonos_tab)
-
-                st_folium(mapa_poligonos_tab, width=None, height=450, key="mapa_selector_poligonos", returned_objects=[])
+                st.pydeck_chart(r, use_container_width=True)
 
             st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:20px; margin-bottom:10px;'>📋 Detalle de Polígonos de Instalación y Conteo de Medidores</p>", unsafe_allow_html=True)
             
@@ -1282,23 +1213,14 @@ if 'datos_instalaciones' in st.session_state:
                     med_db = datos['medidores_db']
                     inst_count = conteo_medidores_instalados.get(fid, 0)
                     pct_avance_pol = round((inst_count / med_db * 100), 2) if med_db > 0 else 0.0
-                    
-                    if inst_count == 0:
-                        est_t = "Sin instalaciones (Rojo)"
-                    elif inst_count >= med_threshold:
-                        est_t = "Mayor instalación (Verde)"
-                    else:
-                        est_t = "Moderado (Amarillo)"
-
                     resumen_poligonos.append({
                         'FID': fid,
-                        'Estado': est_t,
                         'Sector Comercial': datos['sector'],
                         'Área (km²)': datos['area'],
                         'Medidores (DB)': med_db,
                         'Medidores Instalados (API)': inst_count,
                         'Avance (%)': f"{pct_avance_pol}%",
-                        'Vértices': datos['vertis']
+                        'Vértices Totales': datos['vertis']
                     })
             
             df_resumen_tabla = pd.DataFrame(resumen_poligonos)
