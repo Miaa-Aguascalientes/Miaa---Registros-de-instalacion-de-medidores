@@ -1721,4 +1721,11 @@ if 'datos_instalaciones' in st.session_state:
 
         df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
 
+        # --- BLINDAJE DE TIPOS PARA EVITAR EL ERROR DE REACT ---
+        # Convertir cualquier objeto remanente (como geometrías o dicts) a texto para que Streamlit no colapse
+        for col in df_tabla_limpia.columns:
+            if df_tabla_limpia[col].dtype == 'object':
+                # Validar si contiene objetos complejos o convertirlos a string de forma segura
+                df_tabla_limpia[col] = df_tabla_limpia[col].astype(str).replace({'nan': None, 'None': None})
+
         st.dataframe(df_tabla_limpia, use_container_width=True)
