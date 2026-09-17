@@ -1217,14 +1217,14 @@ if 'datos_instalaciones' in st.session_state:
                     </div>
                 """, unsafe_allow_html=True)
 
-# --- Columna Derecha: Resumen por Sector (Ordenado por % de avance de mayor a menor) & Dona ---
+# --- Columna Derecha: Resumen por Sector (Tipografía y números más grandes) & Dona ---
         with col_c_der:
             with st.container(border=True):
-                st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:6px;'>Resumen por Sector</p>", unsafe_allow_html=True)
+                st.markdown("<p style='font-size:14px; font-weight:bold; margin-bottom:8px;'>Resumen por Sector</p>", unsafe_allow_html=True)
                 
-                # Encabezados de la tabla de sectores
+                # Encabezados de la tabla con letra más grande
                 st.markdown("""
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #94a3b8; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; margin-bottom: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #cbd5e1; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 6px; margin-bottom: 8px;">
                         <div style="width: 25%;">Sector</div>
                         <div style="width: 25%; text-align: center;">Medidores (BD)</div>
                         <div style="width: 25%; text-align: center;">Instalados (API)</div>
@@ -1233,7 +1233,6 @@ if 'datos_instalaciones' in st.session_state:
                 """, unsafe_allow_html=True)
                 
                 if not df_poligonos.empty and 'Sector_comercial' in df_poligonos.columns:
-                    # Obtenemos un registro único por FID para evitar duplicidad por vértices
                     df_fids_unicos = df_poligonos.groupby(['FID', 'Sector_comercial']).agg({
                         'Medidores': 'first',
                         'Area_km2': 'first'
@@ -1241,7 +1240,6 @@ if 'datos_instalaciones' in st.session_state:
                     
                     sectores_unicos = df_fids_unicos['Sector_comercial'].dropna().unique()
                     
-                    # Recopilamos los datos en una lista para poder ordenarlos
                     lista_sectores_datos = []
                     for s_nombre in sectores_unicos:
                         df_sec_subset = df_fids_unicos[df_fids_unicos['Sector_comercial'] == s_nombre]
@@ -1259,7 +1257,6 @@ if 'datos_instalaciones' in st.session_state:
                             'avance': s_avance
                         })
                     
-                    # Convertimos a DataFrame temporal y ordenamos por avance de mayor a menor
                     df_resumen_sectores = pd.DataFrame(lista_sectores_datos)
                     if not df_resumen_sectores.empty:
                         df_resumen_sectores = df_resumen_sectores.sort_values(by='avance', ascending=False)
@@ -1269,27 +1266,27 @@ if 'datos_instalaciones' in st.session_state:
                             s_med_db = row_sec['med_db']
                             s_med_instalados = row_sec['med_inst']
                             s_avance = row_sec['avance']
-                            s_avance_cap = min(s_avance, 100.0)  # Para la barra visual
+                            s_avance_cap = min(s_avance, 100.0)
                             
-                            # Reglas de color exactas: >= 80% Verde, <= 40% Rojo, Intermedio Amarillo
+                            # Reglas de color: >= 80% Verde, <= 40% Rojo, Intermedio Amarillo
                             if s_avance >= 80.0:
-                                dot_color = "#22c55e"  # Verde
+                                dot_color = "#22c55e"
                             elif s_avance <= 40.0:
-                                dot_color = "#ef4444"  # Rojo
+                                dot_color = "#ef4444"
                             else:
-                                dot_color = "#eab308"  # Amarillo
+                                dot_color = "#eab308"
                             
                             st.markdown(f"""
-                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 6px;">
-                                    <div style="width: 25%; display: flex; align-items: center; gap: 6px; color: white; font-weight: bold;">
-                                        <span style="width: 8px; height: 8px; background-color: {dot_color}; border-radius: 50%; display: inline-block;"></span>
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">
+                                    <div style="width: 25%; display: flex; align-items: center; gap: 8px; color: white; font-weight: bold; font-size: 14px;">
+                                        <span style="width: 10px; height: 10px; background-color: {dot_color}; border-radius: 50%; display: inline-block;"></span>
                                         {s_nombre}
                                     </div>
-                                    <div style="width: 25%; color: #94a3b8; text-align: center;">{s_med_db:,}</div>
-                                    <div style="width: 25%; color: #ffffff; text-align: center; font-weight: bold;">{s_med_instalados:,}</div>
+                                    <div style="width: 25%; color: #cbd5e1; text-align: center; font-weight: 600; font-size: 13px;">{s_med_db:,}</div>
+                                    <div style="width: 25%; color: #ffffff; text-align: center; font-weight: bold; font-size: 13px;">{s_med_instalados:,}</div>
                                     <div style="width: 25%; text-align: right;">
-                                        <div style="font-size: 10px; color: white; margin-bottom: 2px;">{s_avance}%</div>
-                                        <div style="background-color: rgba(255,255,255,0.1); border-radius: 4px; width: 100%; height: 6px; overflow: hidden;">
+                                        <div style="font-size: 12px; color: white; font-weight: bold; margin-bottom: 3px;">{s_avance}%</div>
+                                        <div style="background-color: rgba(255,255,255,0.12); border-radius: 4px; width: 100%; height: 8px; overflow: hidden;">
                                             <div style="background-color: {dot_color}; width: {s_avance_cap}%; height: 100%; border-radius: 4px;"></div>
                                         </div>
                                     </div>
@@ -1299,7 +1296,7 @@ if 'datos_instalaciones' in st.session_state:
                     st.info("Sin datos de sectores disponibles.")
 
             with st.container(border=True):
-                st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:2px;'>Distribución de Polígonos</p>", unsafe_allow_html=True)
+                st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>Distribución de Polígonos</p>", unsafe_allow_html=True)
                 
                 fig_dona_real = go.Figure(go.Pie(
                     labels=['Mayor instalación', 'Instalación media', 'Sin medidores'],
@@ -1311,11 +1308,11 @@ if 'datos_instalaciones' in st.session_state:
                 ))
                 
                 fig_dona_real.update_layout(
-                    annotations=[dict(text=f"<b>{tot_poligonos_val}</b><br><span style='font-size:9px;'>Total</span>", x=0.5, y=0.5, font_size=14, font_color="white", showarrow=False)],
+                    annotations=[dict(text=f"<b>{tot_poligonos_val}</b><br><span style='font-size:10px;'>Total</span>", x=0.5, y=0.5, font_size=15, font_color="white", showarrow=False)],
                     plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff',
                     margin=dict(t=5, b=5, l=5, r=5), height=140,
                     showlegend=True,
-                    legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=0.98, font=dict(size=9))
+                    legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=0.98, font=dict(size=10))
                 )
                 st.plotly_chart(fig_dona_real, use_container_width=True)
 
