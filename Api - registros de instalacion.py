@@ -1217,7 +1217,7 @@ if 'datos_instalaciones' in st.session_state:
                     </div>
                 """, unsafe_allow_html=True)
 
-# --- Columna Derecha: Resumen por Sector (Corregido con totales reales) & Dona ---
+# --- Columna Derecha: Resumen por Sector (Corregido con unicidad por FID) & Dona ---
         with col_c_der:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:6px;'>Resumen por Sector</p>", unsafe_allow_html=True)
@@ -1233,15 +1233,21 @@ if 'datos_instalaciones' in st.session_state:
                 """, unsafe_allow_html=True)
                 
                 if not df_poligonos.empty and 'Sector_comercial' in df_poligonos.columns:
-                    sectores_unicos = df_poligonos['Sector_comercial'].dropna().unique()
+                    # Obtenemos un registro único por FID para evitar duplicidad por vértices
+                    df_fids_unicos = df_poligonos.groupby(['FID', 'Sector_comercial']).agg({
+                        'Medidores': 'first',
+                        'Area_km2': 'first'
+                    }).reset_index()
+                    
+                    sectores_unicos = df_fids_unicos['Sector_comercial'].dropna().unique()
                     
                     for s_nombre in sorted(sectores_unicos):
-                        df_sec_subset = df_poligonos[df_poligonos['Sector_comercial'] == s_nombre]
+                        df_sec_subset = df_fids_unicos[df_fids_unicos['Sector_comercial'] == s_nombre]
                         
-                        # Suma exacta y limpia de la columna de medidores de la BD para este sector
+                        # Suma limpia basada en polígonos únicos (FID)
                         s_med_db = int(pd.to_numeric(df_sec_subset['Medidores'], errors='coerce').sum())
                         
-                        # Suma exacta de los medidores instalados reales (calculados por polígono mediante API)
+                        # Suma de medidores instalados reales por los FIDs de este sector
                         fids_del_sector = df_sec_subset['FID'].tolist()
                         s_med_instalados = int(sum(conteo_medidores_instalados.get(f, 0) for f in fids_del_sector))
                         
