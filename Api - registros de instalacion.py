@@ -1217,12 +1217,12 @@ if 'datos_instalaciones' in st.session_state:
                     </div>
                 """, unsafe_allow_html=True)
 
-# --- Columna Derecha: Resumen por Sector (Con Medidores BD, Instalados API y Nuevas Reglas de Color) & Dona ---
+# --- Columna Derecha: Resumen por Sector (Corregido con totales reales) & Dona ---
         with col_c_der:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:6px;'>Resumen por Sector</p>", unsafe_allow_html=True)
                 
-                # Encabezados actualizados de la tabla de sectores
+                # Encabezados de la tabla de sectores
                 st.markdown("""
                     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #94a3b8; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; margin-bottom: 6px;">
                         <div style="width: 25%;">Sector</div>
@@ -1232,26 +1232,24 @@ if 'datos_instalaciones' in st.session_state:
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # Cálculo real agrupado por Sector Comercial a partir de df_poligonos y los datos calculados
                 if not df_poligonos.empty and 'Sector_comercial' in df_poligonos.columns:
                     sectores_unicos = df_poligonos['Sector_comercial'].dropna().unique()
                     
                     for s_nombre in sorted(sectores_unicos):
                         df_sec_subset = df_poligonos[df_poligonos['Sector_comercial'] == s_nombre]
-                        s_med_db = df_sec_subset['Medidores'].sum() if 'Medidores' in df_sec_subset.columns else 0
                         
-                        # Sumar medidores instalados reales (API / df_filtrado) en los polígonos de este sector
+                        # Suma exacta y limpia de la columna de medidores de la BD para este sector
+                        s_med_db = int(pd.to_numeric(df_sec_subset['Medidores'], errors='coerce').sum())
+                        
+                        # Suma exacta de los medidores instalados reales (calculados por polígono mediante API)
                         fids_del_sector = df_sec_subset['FID'].tolist()
-                        s_med_instalados = sum(conteo_medidores_instalados.get(f, 0) for f in fids_del_sector)
+                        s_med_instalados = int(sum(conteo_medidores_instalados.get(f, 0) for f in fids_del_sector))
                         
-                        # Cálculo del porcentaje de avance del sector
+                        # Cálculo real del porcentaje de avance
                         s_avance = round((s_med_instalados / s_med_db * 100), 1) if s_med_db > 0 else 0.0
-                        s_avance_cap = min(s_avance, 100.0)  # Para el límite visual de la barra
+                        s_avance_cap = min(s_avance, 100.0)  # Para la barra visual
                         
-                        # Reglas de color solicitadas:
-                        # >= 80% -> Verde
-                        # <= 40% -> Rojo
-                        # Entre 40% y 80% -> Amarillo (intermedio)
+                        # Reglas de color exactas solicitadas: >= 80% Verde, <= 40% Rojo, Intermedio Amarillo
                         if s_avance >= 80.0:
                             dot_color = "#22c55e"  # Verde
                         elif s_avance <= 40.0:
@@ -1265,8 +1263,8 @@ if 'datos_instalaciones' in st.session_state:
                                     <span style="width: 8px; height: 8px; background-color: {dot_color}; border-radius: 50%; display: inline-block;"></span>
                                     {s_nombre}
                                 </div>
-                                <div style="width: 25%; color: #94a3b8; text-align: center;">{int(s_med_db):,}</div>
-                                <div style="width: 25%; color: #ffffff; text-align: center; font-weight: bold;">{int(s_med_instalados):,}</div>
+                                <div style="width: 25%; color: #94a3b8; text-align: center;">{s_med_db:,}</div>
+                                <div style="width: 25%; color: #ffffff; text-align: center; font-weight: bold;">{s_med_instalados:,}</div>
                                 <div style="width: 25%; text-align: right;">
                                     <div style="font-size: 10px; color: white; margin-bottom: 2px;">{s_avance}%</div>
                                     <div style="background-color: rgba(255,255,255,0.1); border-radius: 4px; width: 100%; height: 6px; overflow: hidden;">
@@ -1281,7 +1279,6 @@ if 'datos_instalaciones' in st.session_state:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:2px;'>Distribución de Polígonos</p>", unsafe_allow_html=True)
                 
-                # Gráfica de Dona con los datos reales calculados previamente
                 fig_dona_real = go.Figure(go.Pie(
                     labels=['Mayor instalación', 'Instalación media', 'Sin medidores'],
                     values=[pol_mayor_instalacion, pol_media_instalacion, pol_sin_instalacion],
