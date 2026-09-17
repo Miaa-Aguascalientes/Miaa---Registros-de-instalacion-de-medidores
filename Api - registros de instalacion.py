@@ -1681,7 +1681,7 @@ if 'datos_instalaciones' in st.session_state:
                 )
                 st.plotly_chart(fig_nivel, use_container_width=True)
             else:
-                st.info("La columna 'nivel' no se encuentra disponible en los registros.")
+                st.info("La columna 'nivel' não se encuentra disponible en los registros.")
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
@@ -1691,6 +1691,28 @@ if 'datos_instalaciones' in st.session_state:
         columnas_a_excluir = [c for c in df_tabla_limpia.columns if any(term in c.lower() for term in terminos_excluidos)]
         df_tabla_limpia = df_tabla_limpia.drop(columns=columnas_a_excluir, errors='ignore')
         
+        # Asignar el polígono donde fue instalado el medidor basado en coordenadas y los polígonos geográficos cargados
+        poligonos_asignados = []
+        if 'shapely_polygons' in locals() and shapely_polygons:
+            for _, row_m in df_tabla_limpia.iterrows():
+                lat, lon = row_m.get('latitud'), row_m.get('longitud')
+                assigned_fid = "SIN POLÍGONO"
+                if pd.notna(lat) and pd.notna(lon):
+                    pt = Point(lat, lon)
+                    for fid, poly in shapely_polygons.items():
+                        if poly.contains(pt):
+                            assigned_fid = str(fid)
+                            break
+                poligonos_asignados.append(assigned_fid)
+        else:
+            poligonos_asignados = ["SIN POLÍGONO"] * len(df_tabla_limpia)
+        
+        df_tabla_limpia['poligono'] = poligonos_asignados
+
+        # Eliminar los campos solicitados por el usuario
+        campos_a_quitar = ['anomaliaId', 'lugarInstalacionId', 'usuarioId', 'lugarInstalacion_id_str', 'anomalia_id_str']
+        df_tabla_limpia = df_tabla_limpia.drop(columns=campos_a_quitar, errors='ignore')
+
         if 'fechaInstalacion' in df_tabla_limpia.columns:
             df_tabla_limpia['fechaInstalacion'] = pd.to_datetime(df_tabla_limpia['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
 
