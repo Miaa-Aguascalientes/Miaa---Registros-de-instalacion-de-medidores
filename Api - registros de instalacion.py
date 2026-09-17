@@ -464,17 +464,34 @@ if 'datos_instalaciones' in st.session_state:
         df_externo = pd.DataFrame(columns=df_filtrado.columns)
         df_miaa_pers = df_filtrado.copy()
 
+    # CONSTRUCCIÓN DE LA TABLA DE EFICIENCIA ACTUALIZADA CON Usuarios_nueva_instalacion Y CONTEO DE API
     if not df_metas_filtrado.empty:
         df_tabla_eficiencia = df_metas_filtrado.copy()
 
+        # Agrupar metas por Colonia y Polígono sumando Usuarios_nueva_instalacion
         df_eficiencia = df_tabla_eficiencia.groupby(['Colonia_ATL', 'Poligono_de_instalacion'], as_index=False).agg({
-            'Usuarios_Reales': 'sum',
-            'Usuarios_con_medidor_inteligente': 'sum'
+            'Usuarios_nueva_instalacion': 'sum'
         })
         
+        # Normalizar clave de colonia para el cruce con los registros de la API
+        df_eficiencia['colonia_key'] = df_eficiencia['Colonia_ATL'].astype(str).str.strip().str.upper()
+        
+        # Contar medidores instalados reales desde la API (df_filtrado) por colonia
+        if not df_filtrado.empty and 'colonia' in df_filtrado.columns:
+            df_api_colonia = df_filtrado.copy()
+            df_api_colonia['colonia_key'] = df_api_colonia['colonia'].astype(str).str.strip().str.upper()
+            conteo_api_colonia = df_api_colonia.groupby('colonia_key', as_index=False).size().rename(columns={'size': 'Med_Instalados_API'})
+        else:
+            conteo_api_colonia = pd.DataFrame(columns=['colonia_key', 'Med_Instalados_API'])
+            
+        # Unir el conteo de instalaciones de la API
+        df_eficiencia = pd.merge(df_eficiencia, conteo_api_colonia, on='colonia_key', how='left')
+        df_eficiencia['Med_Instalados_API'] = df_eficiencia['Med_Instalados_API'].fillna(0).astype(int)
+        
+        # Calcular porcentaje de avance basado en Usuarios_nueva_instalacion
         df_eficiencia['pct_sort'] = np.where(
-            df_eficiencia['Usuarios_Reales'] > 0, 
-            (df_eficiencia['Usuarios_con_medidor_inteligente'] / df_eficiencia['Usuarios_Reales']) * 100, 
+            df_eficiencia['Usuarios_nueva_instalacion'] > 0, 
+            (df_eficiencia['Med_Instalados_API'] / df_eficiencia['Usuarios_nueva_instalacion']) * 100, 
             0.0
         )
         
@@ -483,14 +500,14 @@ if 'datos_instalaciones' in st.session_state:
         
         df_eficiencia = df_eficiencia.rename(columns={
             'Colonia_ATL': 'Colonia',
-            'Usuarios_Reales': 'Med. tot',
-            'Usuarios_con_medidor_inteligente': 'Med. inst',
+            'Usuarios_nueva_instalacion': 'Med. a instalar',
+            'Med_Instalados_API': 'Med. instalados',
             'Poligono_de_instalacion': 'Polígono'
         })
         
-        df_eficiencia = df_eficiencia[['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono']]
+        df_eficiencia = df_eficiencia[['Colonia', 'Med. a instalar', 'Med. instalados', '%', 'Polígono']]
     else:
-        df_eficiencia = pd.DataFrame(columns=['Colonia', 'Med. tot', 'Med. inst', '%', 'Polígono'])
+        df_eficiencia = pd.DataFrame(columns=['Colonia', 'Med. a instalar', 'Med. instalados', '%', 'Polígono'])
 
 
     # SECCIÓN 7: ----------------------------------------------------------------- ESTRUCTURA DE PESTAÑAS PRINCIPALES ------------------------------------------------------------------------------------------------
