@@ -1217,46 +1217,47 @@ if 'datos_instalaciones' in st.session_state:
                     </div>
                 """, unsafe_allow_html=True)
 
-        # --- Columna Derecha: Resumen por Sector (Diseño Actualizado con Barra de Avance) & Dona ---
+# --- Columna Derecha: Resumen por Sector (Con Medidores BD, Instalados API y Nuevas Reglas de Color) & Dona ---
         with col_c_der:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:6px;'>Resumen por Sector</p>", unsafe_allow_html=True)
                 
-                # Encabezados de la tabla de sectores
+                # Encabezados actualizados de la tabla de sectores
                 st.markdown("""
                     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #94a3b8; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; margin-bottom: 6px;">
                         <div style="width: 25%;">Sector</div>
-                        <div style="width: 25%; text-align: center;">Área (km²)</div>
-                        <div style="width: 25%; text-align: center;">Medidores</div>
+                        <div style="width: 25%; text-align: center;">Medidores (BD)</div>
+                        <div style="width: 25%; text-align: center;">Instalados (API)</div>
                         <div style="width: 25%; text-align: right;">Avance</div>
                     </div>
                 """, unsafe_allow_html=True)
                 
                 # Cálculo real agrupado por Sector Comercial a partir de df_poligonos y los datos calculados
                 if not df_poligonos.empty and 'Sector_comercial' in df_poligonos.columns:
-                    # Agrupamos los polígonos por sector comercial
                     sectores_unicos = df_poligonos['Sector_comercial'].dropna().unique()
                     
                     for s_nombre in sorted(sectores_unicos):
                         df_sec_subset = df_poligonos[df_poligonos['Sector_comercial'] == s_nombre]
-                        s_area = df_sec_subset['Area_km2'].sum() if 'Area_km2' in df_sec_subset.columns else 0
                         s_med_db = df_sec_subset['Medidores'].sum() if 'Medidores' in df_sec_subset.columns else 0
                         
-                        # Sumar medidores instalados reales en los polígonos de este sector
+                        # Sumar medidores instalados reales (API / df_filtrado) en los polígonos de este sector
                         fids_del_sector = df_sec_subset['FID'].tolist()
                         s_med_instalados = sum(conteo_medidores_instalados.get(f, 0) for f in fids_del_sector)
                         
                         # Cálculo del porcentaje de avance del sector
                         s_avance = round((s_med_instalados / s_med_db * 100), 1) if s_med_db > 0 else 0.0
-                        s_avance_cap = min(s_avance, 100.0)  # Para el ancho visual de la barra de progreso
+                        s_avance_cap = min(s_avance, 100.0)  # Para el límite visual de la barra
                         
-                        # Determinación del color del semáforo y la barra según el avance
-                        if s_avance >= 70:
+                        # Reglas de color solicitadas:
+                        # >= 80% -> Verde
+                        # <= 40% -> Rojo
+                        # Entre 40% y 80% -> Amarillo (intermedio)
+                        if s_avance >= 80.0:
                             dot_color = "#22c55e"  # Verde
-                        elif s_avance >= 30:
-                            dot_color = "#eab308"  # Amarillo
-                        else:
+                        elif s_avance <= 40.0:
                             dot_color = "#ef4444"  # Rojo
+                        else:
+                            dot_color = "#eab308"  # Amarillo
                         
                         st.markdown(f"""
                             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 6px;">
@@ -1264,8 +1265,8 @@ if 'datos_instalaciones' in st.session_state:
                                     <span style="width: 8px; height: 8px; background-color: {dot_color}; border-radius: 50%; display: inline-block;"></span>
                                     {s_nombre}
                                 </div>
-                                <div style="width: 25%; color: #94a3b8; text-align: center;">{s_area:,.2f}</div>
-                                <div style="width: 25%; color: #ffffff; text-align: center;">{int(s_med_db):,}</div>
+                                <div style="width: 25%; color: #94a3b8; text-align: center;">{int(s_med_db):,}</div>
+                                <div style="width: 25%; color: #ffffff; text-align: center; font-weight: bold;">{int(s_med_instalados):,}</div>
                                 <div style="width: 25%; text-align: right;">
                                     <div style="font-size: 10px; color: white; margin-bottom: 2px;">{s_avance}%</div>
                                     <div style="background-color: rgba(255,255,255,0.1); border-radius: 4px; width: 100%; height: 6px; overflow: hidden;">
