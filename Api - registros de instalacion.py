@@ -998,11 +998,11 @@ if 'datos_instalaciones' in st.session_state:
             st.success("¡Excelente! No hay registros con anomalías reportadas para los filtros seleccionados.")
 
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # SECCION 8: PESTAÑA MAPA TRIDIMENSIONAL DE POLÍGONOS Y DENSIDAD DE INSTALACIONES (FOLIUM 3D / VECTORIAL)
+    # SECCION 8: PESTAÑA MAPA TRIDIMENSIONAL DE POLÍGONOS Y DENSIDAD DE INSTALACIONES (LIMPIO Y PROFESIONAL)
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_poligonos:
-        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:5px;'>🗺️ Mapa de Polígonos de Instalación y Tarjetas de Información</p>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:12px; color: #94a3b8; margin-bottom:12px;'>Visualización geoespacial por densidad de instalaciones: <span style='color: #22c55e; font-weight:bold;'>Verde</span> (alta densidad), <span style='color: #eab308; font-weight:bold;'>Amarillo</span> (moderada) y <span style='color: #ef4444; font-weight:bold;'>Rojo</span> (sin instalaciones).</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:5px;'>🗺️ Mapa de Polígonos de Instalación</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:12px; color: #94a3b8; margin-bottom:12px;'>Visualización por densidad de instalaciones: <span style='color: #22c55e; font-weight:bold;'>Verde</span> (alta densidad), <span style='color: #eab308; font-weight:bold;'>Amarillo</span> (moderada) y <span style='color: #ef4444; font-weight:bold;'>Rojo</span> (sin instalaciones). Haz clic en cualquier polígono para ver su tarjeta de información.</p>", unsafe_allow_html=True)
         
         if not df_poligonos.empty:
             fids_disponibles = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
@@ -1116,11 +1116,9 @@ if 'datos_instalaciones' in st.session_state:
                 counts_act = [conteo_medidores_instalados.get(fid, 0) for fid in fids_seleccionados_mapa]
                 max_inst = max(counts_act) if counts_act and max(counts_act) > 0 else 1
 
-                # Crear mapa base con Folium
-                mapa_poligonos_3d = folium.Map(location=[m_p_lat, m_p_lon], zoom_start=11, tiles=None)
-                agregar_capas_base(mapa_poligonos_3d)
-
-                offset_tarjeta_lon = 0.05  # Desplazamiento horizontal para las tarjetas flotantes
+                # Crear mapa limpio con Folium
+                mapa_poligonos_limpio = folium.Map(location=[m_p_lat, m_p_lon], zoom_start=11, tiles=None)
+                agregar_capas_base(mapa_poligonos_limpio)
 
                 for fid, datos in poligonos_procesados.items():
                     if fid in fids_seleccionados_mapa:
@@ -1135,62 +1133,44 @@ if 'datos_instalaciones' in st.session_state:
                         else:
                             color_hex = '#eab308'  # Amarillo
 
-                        # Dibujar el polígono en el mapa
+                        # HTML limpio para el Popup al hacer clic
+                        popup_html = f"""
+                        <div style="
+                            background: #0f172a;
+                            color: #ffffff;
+                            padding: 12px;
+                            border-radius: 8px;
+                            font-family: sans-serif;
+                            width: 200px;
+                            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+                            border: 1px solid rgba(255,255,255,0.15);
+                        ">
+                            <b style="color: #38bdf8; font-size: 13px;">Polígono FID: {fid}</b><br>
+                            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.2); margin: 6px 0;">
+                            <span style="font-size: 11px; color: #cbd5e1;">
+                                <b>Sector:</b> {datos['sector']}<br>
+                                <b>Instalaciones:</b> {inst_count:,}<br>
+                                <b>Medidores DB:</b> {datos['medidores_db']:,}<br>
+                                <b>Área:</b> {datos['area']} km²
+                            </span>
+                        </div>
+                        """
+
+                        popup_obj = folium.Popup(popup_html, max_width=220)
+
+                        # Dibujar el polígono interactivo
                         folium.Polygon(
                             locations=coords,
                             color=color_hex,
                             weight=2,
                             fill=True,
                             fill_color=color_hex,
-                            fill_opacity=0.45
-                        ).add_to(mapa_poligonos_3d)
+                            fill_opacity=0.5,
+                            popup=popup_obj,
+                            tooltip=f"Polígono {fid} (Instalaciones: {inst_count})"
+                        ).add_to(mapa_poligonos_limpio)
 
-                        # Calcular centroide del polígono
-                        lats_p = [c[0] for c in coords]
-                        lons_p = [c[1] for c in coords]
-                        c_lat = sum(lats_p) / len(lats_p)
-                        c_lon = sum(lons_p) / len(lons_p)
-
-                        # Coordenada de la tarjeta flotante a la derecha
-                        tarjeta_lon = c_lon + offset_tarjeta_lon
-                        tarjeta_lat = c_lat
-
-                        # Línea conectora entre el polígono y la tarjeta flotante
-                        folium.PolyLine(
-                            locations=[[c_lat, c_lon], [tarjeta_lat, tarjeta_lon]],
-                            color='#ffffff',
-                            weight=1.5,
-                            opacity=0.8
-                        ).add_to(mapa_poligonos_3d)
-
-                        # HTML de la tarjeta flotante con la información del polígono
-                        html_tarjeta = f"""
-                        <div style="
-                            background: rgba(15, 23, 42, 0.95);
-                            border: 1px solid rgba(255, 255, 255, 0.2);
-                            border-radius: 8px;
-                            padding: 10px;
-                            width: 170px;
-                            color: white;
-                            font-family: sans-serif;
-                            font-size: 11px;
-                            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-                        ">
-                            <b style="color: #38bdf8; font-size: 12px;">Polígono FID: {fid}</b><br>
-                            <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 5px 0;">
-                            <b>Sector:</b> {datos['sector']}<br>
-                            <b>Instalaciones:</b> {inst_count:,}<br>
-                            <b>Medidores DB:</b> {datos['medidores_db']:,}
-                        </div>
-                        """
-
-                        # Marcador con la tarjeta flotante en el extremo de la línea conector
-                        folium.Marker(
-                            location=[tarjeta_lat, tarjeta_lon],
-                            icon=folium.DivIcon(html=html_tarjeta, icon_size=(170, 90), icon_anchor=(0, 45))
-                        ).add_to(mapa_poligonos_3d)
-
-                st_folium(mapa_poligonos_3d, width=None, height=520, key="mapa_poligonos_folium", returned_objects=[])
+                st_folium(mapa_poligonos_limpio, width=None, height=520, key="mapa_poligonos_limpio", returned_objects=[])
 
             st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:20px; margin-bottom:10px;'>📋 Detalle de Polígonos de Instalación y Conteo de Medidores</p>", unsafe_allow_html=True)
             
