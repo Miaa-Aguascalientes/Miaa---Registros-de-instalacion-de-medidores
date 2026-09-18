@@ -1075,8 +1075,12 @@ if 'datos_instalaciones' in st.session_state:
                 
                 if coordenadas_poligono:
                     poligonos_procesados[bi_label] = {
-                        'coordenadas': coordenadas_poligono, 'sector': sec_comercial,
-                        'area': area_val, 'medidores_db': med_val, 'vertis': len(coordenadas_poligono)
+                        'fid': str(raw_fid),  # Se guarda el valor numérico real del FID (ej. 883)
+                        'coordenadas': coordenadas_poligono, 
+                        'sector': sec_comercial,
+                        'area': area_val, 
+                        'medidores_db': med_val, 
+                        'vertis': len(coordenadas_poligono)
                     }
                     try:
                         poly_geom = Polygon(coordenadas_poligono)
@@ -1097,9 +1101,6 @@ if 'datos_instalaciones' in st.session_state:
             except: pass
 
         # Clasificación real para métricas superiores y gráfica de dona
-        # - Sin instalación (Rojo): 0 medidores instalados
-        # - Instalación media (Amarillo): entre 1 y el 50% del máximo del polígono
-        # - Mayor instalación (Verde): > 50% del máximo del polígono
         counts_list = list(conteo_medidores_instalados.values())
         max_inst_val = max(counts_list) if counts_list and max(counts_list) > 0 else 1
 
@@ -1111,7 +1112,7 @@ if 'datos_instalaciones' in st.session_state:
         pct_media = round((pol_media_instalacion / tot_poligonos_val * 100), 1) if tot_poligonos_val > 0 else 0
         pct_sin = round((pol_sin_instalacion / tot_poligonos_val * 100), 1) if tot_poligonos_val > 0 else 0
 
-        # 1. BARRA SUPERIOR DE MÉTRICAS REALES (4 tarjetas distribuidas en el ancho)
+        # 1. BARRA SUPERIOR DE MÉTRICAS REALES
         top_k1, top_k2, top_k3, top_k4 = st.columns(4)
 
         with top_k1:
@@ -1160,7 +1161,7 @@ if 'datos_instalaciones' in st.session_state:
 
         st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
-        # 2. SECCIÓN CENTRAL A TRES COLUMNAS (Selección Polígonos | Mapa Principal 3D | Resumen y Dona Real)
+        # 2. SECCIÓN CENTRAL A TRES COLUMNAS
         col_c_izq, col_c_centro, col_c_der = st.columns([0.22, 0.52, 0.26])
 
         # --- Columna Izquierda: Selección de Polígonos con Buscador ---
@@ -1193,7 +1194,7 @@ if 'datos_instalaciones' in st.session_state:
                         if chk_estado:
                             fids_seleccionados_mapa.append(bi_label)
 
-        # --- Columna Central: Mapa 3D PyDeck con colores reales según instalaciones ---
+        # --- Columna Central: Mapa 3D PyDeck ---
         with col_c_centro:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:2px;'>Mapa de Polígonos de Instalación</p>", unsafe_allow_html=True)
@@ -1211,10 +1212,10 @@ if 'datos_instalaciones' in st.session_state:
                             color = [239, 68, 68, 190]    # Rojo
                             elevation = 15
                         elif inst_count >= max_inst_val * 0.5:
-                            color = [34, 197, 94, 190]    # Verde (mayor instalación)
+                            color = [34, 197, 94, 190]    # Verde
                             elevation = float(inst_count * 10 + 40)
                         else:
-                            color = [234, 179, 8, 190]    # Amarillo (instalación media)
+                            color = [234, 179, 8, 190]    # Amarillo
                             elevation = float(inst_count * 10 + 25)
                             
                         pydeck_data.append({
@@ -1264,9 +1265,7 @@ if 'datos_instalaciones' in st.session_state:
                         'Area_km2': 'first'
                     }).reset_index()
                     
-                    # Añadir la etiqueta BI a cada fila para el cálculo por sector
                     df_fids_unicos['bi_label'] = df_fids_unicos['FID'].astype(str).map(fid_to_bi)
-                    
                     sectores_unicos = df_fids_unicos['Sector_comercial'].dropna().unique()
                     
                     lista_sectores_datos = []
@@ -1323,7 +1322,7 @@ if 'datos_instalaciones' in st.session_state:
                 else:
                     st.info("Sin datos de sectores disponibles.")
 
-        # 3. SECCIÓN INFERIOR: TABLA DETALLADA DE POLÍGONOS
+        # 3. SECCIÓN INFERIOR: TABLA DETALLADA DE POLÍGONOS (Con el FID numérico al inicio y sin la columna de Polígono)
         with st.container(border=True):
             col_t_head1, col_t_head2 = st.columns([3, 1])
             col_t_head1.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Detalle de Polígonos de Instalación y Conteo de Medidores</p>", unsafe_allow_html=True)
@@ -1338,7 +1337,7 @@ if 'datos_instalaciones' in st.session_state:
                     pct_avance_pol = round((inst_count / med_db * 100), 2) if med_db > 0 else 0.0
                     
                     resumen_poligonos.append({
-                        'FID': datos.get('fid'),  # Muestra el número de FID (ej. 883)
+                        'FID': datos.get('fid'),  # Muestra correctamente el FID numérico (ej. 883)
                         'Sector Comercial': datos['sector'], 
                         'Área (km²)': datos['area'],
                         'Medidores (DB)': med_db, 
@@ -1347,7 +1346,7 @@ if 'datos_instalaciones' in st.session_state:
                         'Vértices Totales': datos['vertis']
                     })
             
-            df_resumen_tabla = pd.DataFrame(resumen_poligonos) if resumen_poligonos else pd.DataFrame(columns=['Polígono', 'Sector Comercial', 'Área (km²)', 'Medidores (DB)', 'Medidores Instalados (API)', 'Avance (%)', 'Vértices Totales'])
+            df_resumen_tabla = pd.DataFrame(resumen_poligonos) if resumen_poligonos else pd.DataFrame(columns=['FID', 'Sector Comercial', 'Área (km²)', 'Medidores (DB)', 'Medidores Instalados (API)', 'Avance (%)', 'Vértices Totales'])
             st.dataframe(df_resumen_tabla, use_container_width=True, hide_index=True, height=250)
 
     # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
