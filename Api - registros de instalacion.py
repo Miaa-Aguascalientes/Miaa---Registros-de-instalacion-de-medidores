@@ -1323,7 +1323,7 @@ if 'datos_instalaciones' in st.session_state:
                 else:
                     st.info("Sin datos de sectores disponibles.")
 
-        # 3. SECCIÓN INFERIOR: TABLA DETALLADA DE POLÍGONOS (Se eliminó el bloque de estadísticas generales)
+        # 3. SECCIÓN INFERIOR: TABLA DETALLADA DE POLÍGONOS
         with st.container(border=True):
             col_t_head1, col_t_head2 = st.columns([3, 1])
             col_t_head1.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Detalle de Polígonos de Instalación y Conteo de Medidores</p>", unsafe_allow_html=True)
@@ -1338,8 +1338,7 @@ if 'datos_instalaciones' in st.session_state:
                     pct_avance_pol = round((inst_count / med_db * 100), 2) if med_db > 0 else 0.0
                     
                     resumen_poligonos.append({
-                        'FID': datos.get('fid', bi_label),  # Asegúrate de cambiar 'fid' por la llave exacta en tu diccionario 'datos' si es distinta
-                        'Polígono': bi_label, 
+                        'FID': datos.get('fid'),  # Muestra el número de FID (ej. 883)
                         'Sector Comercial': datos['sector'], 
                         'Área (km²)': datos['area'],
                         'Medidores (DB)': med_db, 
