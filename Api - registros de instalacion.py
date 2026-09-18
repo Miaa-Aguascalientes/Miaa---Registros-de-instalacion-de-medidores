@@ -1133,7 +1133,7 @@ if 'datos_instalaciones' in st.session_state:
                 busqueda_fid = st.text_input("Buscar FID...", placeholder="Buscar FID...", label_visibility="collapsed")
                 st.markdown("<div style='margin-bottom: 4px;'></div>", unsafe_allow_html=True)
 
-                with st.container(height=360):
+                with st.container(height=370):
                     fids_seleccionados_mapa = []
                     for f_id in fids_disponibles:
                         if f"map_fid_chk_{f_id}" not in st.session_state:
@@ -1189,7 +1189,7 @@ if 'datos_instalaciones' in st.session_state:
                              "style": {"backgroundColor": "rgba(15, 23, 42, 0.95)", "color": "white", "fontSize": "11px", "padding": "6px", "borderRadius": "4px"}}
                 )
 
-                st.pydeck_chart(r, use_container_width=True)
+                st.pydeck_chart(r, use_container_width=True, height=520)
 
         # --- Columna Derecha: Resumen por Sector ---
         with col_c_der:
