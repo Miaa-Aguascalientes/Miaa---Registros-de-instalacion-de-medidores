@@ -1265,10 +1265,7 @@ if 'datos_instalaciones' in st.session_state:
 
         # 3. SECCIÓN INFERIOR: TABLA DETALLADA DE POLÍGONOS (Ordenada por FID real)
         with st.container(border=True):
-            col_t_head1, col_t_head2 = st.columns([3, 1])
-            col_t_head1.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Detalle de Polígonos de Instalación y Conteo de Medidores</p>", unsafe_allow_html=True)
-            if col_t_head2.button("📤 Exportar", key="btn_export_pol_ref"):
-                st.toast("Exportando registros de polígonos...")
+            st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Detalle de Polígonos de Instalación y Conteo de Medidores</p>", unsafe_allow_html=True)
 
             resumen_poligonos = []
             for f_id, datos in poligonos_procesados.items():
