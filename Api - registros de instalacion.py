@@ -1133,7 +1133,7 @@ if 'datos_instalaciones' in st.session_state:
                 busqueda_fid = st.text_input("Buscar FID...", placeholder="Buscar FID...", label_visibility="collapsed")
                 st.markdown("<div style='margin-bottom: 4px;'></div>", unsafe_allow_html=True)
 
-                with st.container(height=400):
+                with st.container(height=360):
                     fids_seleccionados_mapa = []
                     for f_id in fids_disponibles:
                         if f"map_fid_chk_{f_id}" not in st.session_state:
