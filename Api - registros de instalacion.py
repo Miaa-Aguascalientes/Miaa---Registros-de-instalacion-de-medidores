@@ -1336,10 +1336,16 @@ if 'datos_instalaciones' in st.session_state:
                     med_db = datos['medidores_db']
                     inst_count = conteo_medidores_instalados.get(bi_label, 0)
                     pct_avance_pol = round((inst_count / med_db * 100), 2) if med_db > 0 else 0.0
+                    
                     resumen_poligonos.append({
-                        'Polígono': bi_label, 'Sector Comercial': datos['sector'], 'Área (km²)': datos['area'],
-                        'Medidores (DB)': med_db, 'Medidores Instalados (API)': inst_count,
-                        'Avance (%)': f"{pct_avance_pol}%", 'Vértices Totales': datos['vertis']
+                        'FID': datos.get('fid', bi_label),  # Asegúrate de cambiar 'fid' por la llave exacta en tu diccionario 'datos' si es distinta
+                        'Polígono': bi_label, 
+                        'Sector Comercial': datos['sector'], 
+                        'Área (km²)': datos['area'],
+                        'Medidores (DB)': med_db, 
+                        'Medidores Instalados (API)': inst_count,
+                        'Avance (%)': f"{pct_avance_pol}%", 
+                        'Vértices Totales': datos['vertis']
                     })
             
             df_resumen_tabla = pd.DataFrame(resumen_poligonos) if resumen_poligonos else pd.DataFrame(columns=['Polígono', 'Sector Comercial', 'Área (km²)', 'Medidores (DB)', 'Medidores Instalados (API)', 'Avance (%)', 'Vértices Totales'])
