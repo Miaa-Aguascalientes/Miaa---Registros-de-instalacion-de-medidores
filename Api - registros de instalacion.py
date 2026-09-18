@@ -1028,8 +1028,14 @@ if 'datos_instalaciones' in st.session_state:
     with tab_poligonos:
         
         if not df_poligonos.empty:
-            raw_fids = sorted(df_poligonos['FID'].dropna().unique().tolist(), key=lambda x: int(x) if str(x).isdigit() else str(x))
+            # Ordenamiento robusto para evitar mezclas alfabéticas (maneja enteros, decimales y textos)
+            raw_fids_sucios = df_poligonos['FID'].dropna().unique().tolist()
+            raw_fids = sorted(
+                raw_fids_sucios, 
+                key=lambda x: float(x) if pd.notna(pd.to_numeric(x, errors='coerce')) else str(x)
+            )
             tot_poligonos_val = len(raw_fids)
+            
             # Diccionario para mapear FID original a nomenclatura BI-01, BI-02, etc.
             fid_to_bi = {str(fid): f"BI-{str(i+1).zfill(2)}" for i, fid in enumerate(raw_fids)}
             bi_to_fid = {v: k for k, v in fid_to_bi.items()}
