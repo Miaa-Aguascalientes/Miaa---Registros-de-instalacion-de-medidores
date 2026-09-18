@@ -1023,7 +1023,7 @@ if 'datos_instalaciones' in st.session_state:
             st.success("¡Excelente! No hay registros con anomalías reportadas para los filtros seleccionados.")
 
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    # SECCIÓN 8: MAPA DE POLÍGONOS DE INSTALACIÓN (DATOS 100% REALES - FID, CONTEO Y ETIQUETA BI-XX)
+    # SECCIÓN 8: MAPA DE POLÍGONOS DE INSTALACIÓN (DATOS 100% REALES - USANDO FID REAL)
     # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     with tab_poligonos:
         
@@ -1037,18 +1037,11 @@ if 'datos_instalaciones' in st.session_state:
                 
             tot_poligonos_val = len(raw_fids)
             
-            # Diccionario para asociar cada FID real con su etiqueta BI-01, BI-02, etc. según su orden numérico
-            fid_to_bi = {}
-            fids_disponibles = []
-            for i, f in enumerate(raw_fids):
-                f_str = str(int(float(f))) if str(f).replace('.','',1).isdigit() else str(f)
-                bi_lbl = f"BI-{str(i+1).zfill(2)}"
-                fid_to_bi[f_str] = bi_lbl
-                fids_disponibles.append(f_str)
+            # Usar el FID real directamente como identificador (sin inventar BI-XX)
+            fids_disponibles = [str(int(float(f))) if str(f).replace('.','',1).isdigit() else str(f) for f in raw_fids]
         else:
             raw_fids = []
             fids_disponibles = []
-            fid_to_bi = {}
             tot_poligonos_val = 0
 
         # Procesamiento geométrico y cálculo real de medidores instalados por polígono usando el FID real
@@ -1124,10 +1117,10 @@ if 'datos_instalaciones' in st.session_state:
         # 2. SECCIÓN CENTRAL A TRES COLUMNAS
         col_c_izq, col_c_centro, col_c_der = st.columns([0.22, 0.52, 0.26])
 
-        # --- Columna Izquierda: Selección de Polígonos ---
+        # --- Columna Izquierda: Selección de Polígonos por FID Real ---
         with col_c_izq:
             with st.container(border=True):
-                st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Seleccionar Polígonos</p>", unsafe_allow_html=True)
+                st.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Seleccionar Polígonos (FID)</p>", unsafe_allow_html=True)
                 
                 b_col1, b_col2 = st.columns(2)
                 if b_col1.button("Todos", key="btn_all_fids_ref"):
@@ -1137,7 +1130,7 @@ if 'datos_instalaciones' in st.session_state:
                     for f_id in fids_disponibles:
                         st.session_state[f"map_fid_chk_{f_id}"] = False
 
-                busqueda_fid = st.text_input("Buscar polígono...", placeholder="Buscar polígono...", label_visibility="collapsed")
+                busqueda_fid = st.text_input("Buscar FID...", placeholder="Buscar FID...", label_visibility="collapsed")
                 st.markdown("<div style='margin-bottom: 4px;'></div>", unsafe_allow_html=True)
 
                 with st.container(height=350):
@@ -1146,16 +1139,12 @@ if 'datos_instalaciones' in st.session_state:
                         if f"map_fid_chk_{f_id}" not in st.session_state:
                             st.session_state[f"map_fid_chk_{f_id}"] = True
                         
-                        bi_label = fid_to_bi.get(f_id, "")
-                        texto_busqueda_completo = f"FID {f_id} {bi_label}".lower()
-                        if busqueda_fid and busqueda_fid.lower() not in texto_busqueda_completo:
+                        if busqueda_fid and busqueda_fid.lower() not in str(f_id).lower():
                             continue
                             
                         inst_cnt_local = conteo_medidores_instalados.get(f_id, 0)
-                        # Formato exacto solicitado: FID 886 (263) BI-03
-                        label_checkbox = f"FID {f_id} ({inst_cnt_local}) {bi_label}"
-                        
-                        chk_estado = st.checkbox(label_checkbox, key=f"map_fid_chk_{f_id}")
+                        # Muestra directamente el FID real y entre paréntesis su cantidad instalada
+                        chk_estado = st.checkbox(f"FID {f_id} ({inst_cnt_local})", key=f"map_fid_chk_{f_id}")
                         if chk_estado:
                             fids_seleccionados_mapa.append(f_id)
 
@@ -1172,7 +1161,6 @@ if 'datos_instalaciones' in st.session_state:
                     if f_id in fids_seleccionados_mapa:
                         inst_count = conteo_medidores_instalados.get(f_id, 0)
                         polygon_coords_lon_lat = [[coord[1], coord[0]] for coord in datos['coordenadas']]
-                        bi_label = fid_to_bi.get(f_id, "")
                         
                         if inst_count == 0:
                             color = [239, 68, 68, 190]    # Rojo
@@ -1186,7 +1174,7 @@ if 'datos_instalaciones' in st.session_state:
                             
                         pydeck_data.append({
                             "polygon": polygon_coords_lon_lat, "elevation": elevation, "color": color,
-                            "fid": f"FID {f_id} ({bi_label})", "sector": str(datos['sector']), "instalados": int(inst_count), "medidores_db": int(datos['medidores_db'])
+                            "fid": str(f_id), "sector": str(datos['sector']), "instalados": int(inst_count), "medidores_db": int(datos['medidores_db'])
                         })
 
                 layer = pdk.Layer(
@@ -1197,7 +1185,7 @@ if 'datos_instalaciones' in st.session_state:
 
                 r = pdk.Deck(
                     layers=[layer], initial_view_state=pdk.ViewState(latitude=m_p_lat, longitude=m_p_lon, zoom=11.5, pitch=45, bearing=0),
-                    tooltip={"html": "<b>{fid}</b><br/>Sector: {sector}<br/>Medidores Instalados: {instalados}<br/>Medidores DB: {medidores_db}",
+                    tooltip={"html": "<b>Polígono FID: {fid}</b><br/>Sector: {sector}<br/>Medidores Instalados: {instalados}<br/>Medidores DB: {medidores_db}",
                              "style": {"backgroundColor": "rgba(15, 23, 42, 0.95)", "color": "white", "fontSize": "11px", "padding": "6px", "borderRadius": "4px"}}
                 )
 
@@ -1275,7 +1263,7 @@ if 'datos_instalaciones' in st.session_state:
                 else:
                     st.info("Sin datos de sectores disponibles.")
 
-        # 3. SECCIÓN INFERIOR: TABLA DETALLADA DE POLÍGONOS
+        # 3. SECCIÓN INFERIOR: TABLA DETALLADA DE POLÍGONOS (Ordenada por FID real)
         with st.container(border=True):
             col_t_head1, col_t_head2 = st.columns([3, 1])
             col_t_head1.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Detalle de Polígonos de Instalación y Conteo de Medidores</p>", unsafe_allow_html=True)
@@ -1288,7 +1276,6 @@ if 'datos_instalaciones' in st.session_state:
                     med_db = datos['medidores_db']
                     inst_count = conteo_medidores_instalados.get(f_id, 0)
                     pct_avance_pol = round((inst_count / med_db * 100), 2) if med_db > 0 else 0.0
-                    bi_label = fid_to_bi.get(f_id, "")
                     
                     try:
                         fid_val = int(float(datos.get('fid')))
@@ -1296,7 +1283,7 @@ if 'datos_instalaciones' in st.session_state:
                         fid_val = datos.get('fid')
                     
                     resumen_poligonos.append({
-                        'FID': f"FID {fid_val} ({bi_label})",  
+                        'FID': fid_val,  
                         'Sector Comercial': datos['sector'], 
                         'Área (km²)': datos['area'],
                         'Medidores (DB)': med_db, 
@@ -1307,7 +1294,7 @@ if 'datos_instalaciones' in st.session_state:
             
             if resumen_poligonos:
                 df_resumen_tabla = pd.DataFrame(resumen_poligonos)
-                df_resumen_tabla['FID_num'] = df_resumen_tabla['FID'].apply(lambda x: int(''.join(filter(str.isdigit, str(x).split('(')[0]))) if any(char.isdigit() for char in str(x)) else 0)
+                df_resumen_tabla['FID_num'] = pd.to_numeric(df_resumen_tabla['FID'], errors='coerce')
                 df_resumen_tabla = df_resumen_tabla.sort_values(by='FID_num').drop(columns=['FID_num'])
             else:
                 df_resumen_tabla = pd.DataFrame(columns=['FID', 'Sector Comercial', 'Área (km²)', 'Medidores (DB)', 'Medidores Instalados (API)', 'Avance (%)', 'Vértices Totales'])
