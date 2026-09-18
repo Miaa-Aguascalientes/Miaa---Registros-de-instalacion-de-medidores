@@ -1114,54 +1114,6 @@ if 'datos_instalaciones' in st.session_state:
         pct_media = round((pol_media_instalacion / tot_poligonos_val * 100), 1) if tot_poligonos_val > 0 else 0
         pct_sin = round((pol_sin_instalacion / tot_poligonos_val * 100), 1) if tot_poligonos_val > 0 else 0
 
-        # 1. BARRA SUPERIOR DE MÉTRICAS REALES
-        top_k1, top_k2, top_k3, top_k4 = st.columns(4)
-
-        with top_k1:
-            st.markdown(f"""
-                <div class="metric-card" style="height: 52px;">
-                    <div class="metric-icon-box" style="color: #38bdf8; font-size: 18px;"><i class="fa-solid fa-map"></i></div>
-                    <div class="metric-content">
-                        <div class="metric-title" style="font-size: 9px;">Polígonos totales</div>
-                        <div class="metric-value" style="font-size: 15px;">{tot_poligonos_val} <span style="font-size: 9px; color: #94a3b8; font-weight: normal;">En el sistema</span></div>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-            
-        with top_k2:
-            st.markdown(f"""
-                <div class="metric-card" style="height: 52px;">
-                    <div class="metric-icon-box" style="color: #22c55e; font-size: 18px;"><i class="fa-solid fa-circle-check"></i></div>
-                    <div class="metric-content">
-                        <div class="metric-title" style="font-size: 9px;">Mayor instalación (Verde)</div>
-                        <div class="metric-value" style="font-size: 15px;">{pol_mayor_instalacion} <span style="font-size: 9px; color: #22c55e; font-weight: normal;">{pct_mayor}% del total</span></div>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-
-        with top_k3:
-            st.markdown(f"""
-                <div class="metric-card" style="height: 52px;">
-                    <div class="metric-icon-box" style="color: #eab308; font-size: 18px;"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                    <div class="metric-content">
-                        <div class="metric-title" style="font-size: 9px;">Instalación media (Amarillo)</div>
-                        <div class="metric-value" style="font-size: 15px;">{pol_media_instalacion} <span style="font-size: 9px; color: #eab308; font-weight: normal;">{pct_media}% del total</span></div>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-
-        with top_k4:
-            st.markdown(f"""
-                <div class="metric-card" style="height: 52px;">
-                    <div class="metric-icon-box" style="color: #ef4444; font-size: 18px;"><i class="fa-solid fa-circle-xmark"></i></div>
-                    <div class="metric-content">
-                        <div class="metric-title" style="font-size: 9px;">Sin medidores (Rojo)</div>
-                        <div class="metric-value" style="font-size: 15px;">{pol_sin_instalacion} <span style="font-size: 9px; color: #ef4444; font-weight: normal;">{pct_sin}% del total</span></div>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-
-        st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
         # 2. SECCIÓN CENTRAL A TRES COLUMNAS
         col_c_izq, col_c_centro, col_c_der = st.columns([0.22, 0.52, 0.26])
