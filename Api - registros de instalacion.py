@@ -1028,11 +1028,16 @@ if 'datos_instalaciones' in st.session_state:
     with tab_poligonos:
         
         if not df_poligonos.empty:
-            # Se conserva el orden original de los polígonos tal como aparecen en el origen de datos
-            raw_fids = df_poligonos['FID'].dropna().unique().tolist()
+            # Extraer FIDs únicos, limpiarlos y ordenarlos numéricamente de forma ascendente
+            raw_fids_sucios = df_poligonos['FID'].dropna().unique().tolist()
+            try:
+                raw_fids = sorted(raw_fids_sucios, key=lambda x: float(x))
+            except:
+                raw_fids = sorted(raw_fids_sucios, key=str)
+                
             tot_poligonos_val = len(raw_fids)
             
-            # Diccionario para mapear FID original a nomenclatura BI-01, BI-02, etc. respetando su orden exacto
+            # Diccionario para mapear FID original ordenado numéricamente a BI-01, BI-02, etc.
             fid_to_bi = {str(fid): f"BI-{str(i+1).zfill(2)}" for i, fid in enumerate(raw_fids)}
             bi_to_fid = {v: k for k, v in fid_to_bi.items()}
             fids_disponibles = list(fid_to_bi.values())
@@ -1077,7 +1082,7 @@ if 'datos_instalaciones' in st.session_state:
                 
                 if coordenadas_poligono:
                     poligonos_procesados[bi_label] = {
-                        'fid': str(raw_fid),  # Se guarda el valor numérico real del FID (ej. 883)
+                        'fid': str(raw_fid),  # Se guarda el valor numérico real del FID
                         'coordenadas': coordenadas_poligono, 
                         'sector': sec_comercial,
                         'area': area_val, 
@@ -1276,7 +1281,7 @@ if 'datos_instalaciones' in st.session_state:
                 else:
                     st.info("Sin datos de sectores disponibles.")
 
-        # 3. SECCIÓN INFERIOR: TABLA DETALLADA DE POLÍGONOS (Con el FID numérico al inicio, ordenado correctamente y sin columna de Polígono)
+        # 3. SECCIÓN INFERIOR: TABLA DETALLADA DE POLÍGONOS
         with st.container(border=True):
             col_t_head1, col_t_head2 = st.columns([3, 1])
             col_t_head1.markdown("<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Detalle de Polígonos de Instalación y Conteo de Medidores</p>", unsafe_allow_html=True)
@@ -1290,14 +1295,13 @@ if 'datos_instalaciones' in st.session_state:
                     inst_count = conteo_medidores_instalados.get(bi_label, 0)
                     pct_avance_pol = round((inst_count / med_db * 100), 2) if med_db > 0 else 0.0
                     
-                    # Convertir el FID a entero limpio para visualización y ordenamiento correcto
                     try:
                         fid_val = int(float(datos.get('fid')))
                     except:
                         fid_val = datos.get('fid')
                     
                     resumen_poligonos.append({
-                        'FID': fid_val,  # FID numérico limpio al inicio
+                        'FID': fid_val,  
                         'Sector Comercial': datos['sector'], 
                         'Área (km²)': datos['area'],
                         'Medidores (DB)': med_db, 
@@ -1308,7 +1312,6 @@ if 'datos_instalaciones' in st.session_state:
             
             if resumen_poligonos:
                 df_resumen_tabla = pd.DataFrame(resumen_poligonos)
-                # Ordenar la tabla explícitamente y de forma numérica por FID
                 df_resumen_tabla['FID_num'] = pd.to_numeric(df_resumen_tabla['FID'], errors='coerce')
                 df_resumen_tabla = df_resumen_tabla.sort_values(by='FID_num').drop(columns=['FID_num'])
             else:
