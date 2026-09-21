@@ -188,8 +188,26 @@ st.markdown(custom_style, unsafe_allow_html=True)
 
 # SECCIÓN 2: ------------------------------------------------------------------- Cabecera superior del titulo de la pagina  ------------------------------------------------------------------------------------
 
-fecha_actual_str = pd.to_datetime(hoy).strftime('%d/%m/%Y')
+# 1. Obtención ultra segura de 'hoy' (evita errores si el max() es NaT o el df está vacío)
+try:
+    if 'df' in locals() and not df.empty and 'fecha_dt' in df.columns:
+        max_dt = df['fecha_dt'].max()
+        if pd.notna(max_dt):
+            hoy = pd.to_datetime(max_dt).date()
+        else:
+            hoy = datetime.date.today()
+    else:
+        hoy = datetime.date.today()
+except Exception:
+    hoy = datetime.date.today()
 
+# 2. Formateo seguro para la cabecera visual
+try:
+    fecha_actual_str = pd.to_datetime(hoy).strftime('%d/%m/%Y')
+except Exception:
+    fecha_actual_str = datetime.date.today().strftime('%d/%m/%Y')
+
+# 3. Tu cabecera HTML intacta
 st.markdown(
     f"""
     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px;">
