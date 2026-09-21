@@ -385,7 +385,11 @@ if 'datos_instalaciones' in st.session_state:
         index=0
     )
 
-    hoy = pd.to_datetime("2026-09-14").date()
+    # CORRECCIÓN: Se calcula 'hoy' de forma dinámica basándose en los datos o en el sistema
+    if 'df' in locals() and 'fecha_dt' in df.columns and not df['fecha_dt'].isna().all():
+        hoy = df['fecha_dt'].max().date()
+    else:
+        hoy = datetime.date.today()
     
     if opcion_periodo == "Este mes":
         fecha_inicio = hoy.replace(day=1)
