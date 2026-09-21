@@ -187,7 +187,7 @@ st.markdown(custom_style, unsafe_allow_html=True)
 
 # SECCIÓN 2: ------------------------------------------------------------------- Cabecera superior del titulo de la pagina  ------------------------------------------------------------------------------------
 
-fecha_actual_str = hoy.strftime('%d/%m/%Y')
+fecha_actual_str = pd.to_datetime(hoy).strftime('%d/%m/%Y')
 
 st.markdown(
     f"""
