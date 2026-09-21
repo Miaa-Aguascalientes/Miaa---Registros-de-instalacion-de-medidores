@@ -187,15 +187,17 @@ st.markdown(custom_style, unsafe_allow_html=True)
 
 # SECCIÓN 2: ------------------------------------------------------------------- Cabecera superior del titulo de la pagina  ------------------------------------------------------------------------------------
 
+fecha_actual_str = hoy.strftime('%d/%m/%Y')
+
 st.markdown(
-    """
+    f"""
     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px;">
         <div style="width: 180px;"></div>
         <div style="flex-grow: 1; text-align: center;">
             <h1 style="color: white; font-size: 26px; margin: 0; font-weight: bold;">DASHBOARD INSTALACIÓN MEDIDORES INTELIGENTES</h1>
         </div>
         <div style="width: 180px; text-align: right; color: #a0a0a0; font-size: 14px;">
-            Actualizado al: 14/09/2026
+            Actualizado al: {fecha_actual_str}
         </div>
     </div>
     """,
