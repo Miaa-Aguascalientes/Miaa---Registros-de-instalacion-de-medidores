@@ -647,7 +647,7 @@ with tab_principal:
                 yaxis_title=None,
                 yaxis=dict(range=[0, 500])
             )
-            st.plotly_chart(fig_dia, use_container_width=True)
+            st.plotly_chart(fig_dia, use_container_width=True, key="dash_prin_instalaciones_dia")
 
     with col_g2:
         with st.container(border=True):
@@ -689,7 +689,7 @@ with tab_principal:
                     font=dict(size=9)
                 )
             )
-            st.plotly_chart(fig_pie, use_container_width=True)
+            st.plotly_chart(fig_pie, use_container_width=True, key="dash_prin_tipo_inst_pie")
 
     with col_g3:
         with st.container(border=True):
@@ -742,7 +742,7 @@ with tab_principal:
                 fig_cr = go.Figure(go.Pie(labels=['Sin Datos'], values=[0], hole=0.6))
                 fig_cr.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', height=230)
 
-            st.plotly_chart(fig_cr, use_container_width=True)
+            st.plotly_chart(fig_cr, use_container_width=True, key="dash_prin_cuadro_vs_reg")
 
     col_inf1, col_inf2 = st.columns([1, 1.6])
 
@@ -895,7 +895,7 @@ with tab_principal:
                     yaxis=dict(showgrid=False, title=None, tickfont=dict(size=10), categoryorder='array', categoryarray=df_mes['Mes'].tolist()),
                     showlegend=False
                 )
-                st.plotly_chart(fig_mes_h, use_container_width=True)
+                st.plotly_chart(fig_mes_h, use_container_width=True, key="dash_prin_instalaciones_mes")
 
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:8px; font-weight:bold;'>Total de Anomalías</p>", unsafe_allow_html=True)
@@ -994,7 +994,7 @@ with tab_anomalias:
                     yaxis=dict(showgrid=False, title=None, categoryorder='total ascending'),
                     showlegend=False
                 )
-                st.plotly_chart(fig_anom_bar, use_container_width=True)
+                st.plotly_chart(fig_anom_bar, use_container_width=True, key="anomalias_dist_bar")
             else:
                 st.info("No se registran anomalías en el periodo o filtros seleccionados.")
 
@@ -1025,7 +1025,7 @@ with tab_anomalias:
                     showlegend=True,
                     legend=dict(orientation="h", y=-0.2, font=dict(size=9))
                 )
-                st.plotly_chart(fig_prop_pie, use_container_width=True)
+                st.plotly_chart(fig_prop_pie, use_container_width=True, key="anomalias_prop_pie")
             else:
                 st.info("Sin datos para mostrar proporción.")
 
@@ -1364,7 +1364,7 @@ with tab_personal:
                 
                 fig_ext_dia.update_traces(textposition='outside', textfont_size=10)
                 fig_ext_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None)
-                st.plotly_chart(fig_ext_dia, use_container_width=True)
+                st.plotly_chart(fig_ext_dia, use_container_width=True, key="ext_instalaciones_dia")
 
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Nivel Tarifario (Externo)</p>", unsafe_allow_html=True)
@@ -1377,7 +1377,7 @@ with tab_personal:
                     fig_ext_niv = px.bar(pd.DataFrame({'Nivel': ['Sin datos'], 'Cantidad': [0]}), x='Nivel', y='Cantidad', text='Cantidad')
                 
                 fig_ext_niv.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None, showlegend=False)
-                st.plotly_chart(fig_ext_niv, use_container_width=True)
+                st.plotly_chart(fig_ext_niv, use_container_width=True, key="ext_nivel_tarifario")
 
         with col_ex_right:
             with st.container(border=True):
@@ -1459,7 +1459,7 @@ with tab_personal:
                 
                 fig_miaa_dia.update_traces(textposition='outside', textfont_size=10)
                 fig_miaa_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None)
-                st.plotly_chart(fig_miaa_dia, use_container_width=True)
+                st.plotly_chart(fig_miaa_dia, use_container_width=True, key="grafico_miaa_dia_unico")
 
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Nivel Tarifario (MIAA)</p>", unsafe_allow_html=True)
@@ -1472,7 +1472,7 @@ with tab_personal:
                     fig_miaa_niv = px.bar(pd.DataFrame({'Nivel': ['Sin datos'], 'Cantidad': [0]}), x='Nivel', y='Cantidad', text='Cantidad')
                 
                 fig_miaa_niv.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None, showlegend=False)
-                st.plotly_chart(fig_miaa_niv, use_container_width=True)
+                st.plotly_chart(fig_miaa_niv, use_container_width=True, key="grafico_miaa_nivel_unico")
 
         with col_mi_right:
             with st.container(border=True):
@@ -1558,7 +1558,7 @@ with tab_tabla:
                 yaxis_title=None,
                 showlegend=False
             )
-            st.plotly_chart(fig_nivel, use_container_width=True)
+            st.plotly_chart(fig_nivel, use_container_width=True, key="tabla_completa_nivel_bar")
         else:
             st.info("La columna 'nivel' no se encuentra disponible en los registros.")
 
