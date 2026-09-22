@@ -407,6 +407,30 @@ logo_url = "https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978
 st.sidebar.image(logo_url, use_container_width=True)
 st.sidebar.markdown("---")
 
+# ------------------------------------------------------------------------------
+# INDICADOR DE ESTADO DE LA API Y BOTÓN DE RECONEXIÓN
+# ------------------------------------------------------------------------------
+st.sidebar.subheader("Estado de Conexión API")
+
+# Botón para forzar la reconexión (limpia la caché y recarga los datos)
+if st.sidebar.button("🔄 Reconectar API", use_container_width=True):
+    st.cache_data.clear()
+    if 'datos_instalaciones' in st.session_state:
+        del st.session_state['datos_instalaciones']
+    res = cargar_datos_api()
+    if res:
+        st.session_state['datos_instalaciones'] = res
+    st.rerun()
+
+# Comprobación del estado actual de los datos en la sesión
+api_conectada = 'datos_instalaciones' in st.session_state and st.session_state['datos_instalaciones'] is not None
+
+if api_conectada:
+    st.sidebar.success("API Conectada Correctamente", icon="🟢")
+else:
+    st.sidebar.error("Error de Conexión con la API", icon="🔴")
+
+st.sidebar.markdown("---")
 st.sidebar.subheader("Periodo de Fechas")
 opcion_periodo = st.sidebar.selectbox(
     "Seleccionar Rango",
