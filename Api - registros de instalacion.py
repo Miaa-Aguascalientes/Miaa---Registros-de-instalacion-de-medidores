@@ -83,11 +83,6 @@ custom_style = """
         white-space: nowrap;
     }
 
-    /* Separador visual para las pestañas de Streamlit */
-    .stTabs {
-        margin-top: 5px;
-    }
-
     /* Tarjetas Compactas: Indicadores KPI */
     .metric-card {
         background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
@@ -272,8 +267,14 @@ def cargar_anomalias_db():
 def cargar_usuarios_conmedidor_db():
     """Consulta la base de datos PostgreSQL para obtener la tabla usuarios_miaa_conmedidor."""
     try:
-        # Asegúrate de configurar la conexión postgres en tus st.secrets
-        engine_pg = create_engine(st.secrets["postgres"]["connection_string"])
+        pg_user = st.secrets["postgres"]["user"]
+        pg_pass = st.secrets["postgres"]["password"]
+        pg_host = st.secrets["postgres"]["host"]
+        pg_db = st.secrets["postgres"]["database"]
+        pg_port = st.secrets["postgres"]["port"]
+        
+        connection_url = f"postgresql://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/{pg_db}"
+        engine_pg = create_engine(connection_url)
         query = 'SELECT * FROM "Usuarios"."usuarios_miaa_conmedidor"'
         return pd.read_sql(query, con=engine_pg)
     except Exception as e:
@@ -375,45 +376,8 @@ if not df_metas.empty:
 else:
     df_metas_valido = pd.DataFrame()
 
-# Carga de la tabla PostgreSQL de usuarios con medidor
-df_conmedidor_pg = cargar_usuarios_conmedidor_db()
-
-if not df_conmedidor_pg.empty and not df_filtrado.empty:
-    # Estandarizamos llaves de cruce (ej. 'Cliente' o 'predio')
-    # Supongamos que cruzamos por el número de cliente o predio presente en ambas tablas
-    df_api_merge = df_filtrado.copy()
-    
-    # Mapear / renombrar columnas de la API para alimentar los campos _ de Postgres
-    # Adaptar las columnas según el JSON de la API: serieMedidor, colonia, domicilio, usuarioId/instalador, etc.
-    df_api_merge['key_join'] = df_api_merge.get('cliente', df_api_merge.get('numeroCliente', '')).astype(str).str.strip()
-    
-    # Creamos un diccionario o tabla temporal con los datos limpios de la API
-    dict_api_serie = dict(zip(df_api_merge['key_join'], df_api_merge.get('serieMedidor', df_api_merge.get('serie', ''))))
-    dict_api_colonia = dict(zip(df_api_merge['key_join'], df_api_merge.get('colonia', '')))
-    dict_api_domicilio = dict(zip(df_api_merge['key_join'], df_api_merge.get('domicilio', '')))
-    dict_api_instalador = dict(zip(df_api_merge['key_join'], df_api_merge.get('usuarioNombre', df_api_merge.get('instalador', ''))))
-    dict_api_tipo_inst = dict(zip(df_api_merge['key_join'], df_api_merge.get('tipo_instalacion_nombre', '')))
-    dict_api_lectura = dict(zip(df_api_merge['key_join'], df_api_merge.get('lecturaActual', df_api_merge.get('lectura_actual', 0))))
-    dict_api_f_reg = dict(zip(df_api_merge['key_join'], df_api_merge.get('fechaRegistro', '')))
-    dict_api_f_inst = dict(zip(df_api_merge['key_join'], df_api_merge.get('fechaInstalacion', '')))
-
-    # Completamos las columnas que empiezan con guion bajo en el DataFrame de Postgres
-    df_conmedidor_pg['key_join'] = df_conmedidor_pg.get('Cliente', '').astype(str).str.strip()
-    
-    df_conmedidor_pg['_Serie'] = df_conmedidor_pg['key_join'].map(dict_api_serie).fillna(df_conmedidor_pg.get('_Serie', ''))
-    df_conmedidor_pg['_Colonia'] = df_conmedidor_pg['key_join'].map(dict_api_colonia).fillna(df_conmedidor_pg.get('_Colonia', ''))
-    df_conmedidor_pg['_Domicilio'] = df_conmedidor_pg['key_join'].map(dict_api_domicilio).fillna(df_conmedidor_pg.get('_Domicilio', ''))
-    df_conmedidor_pg['_Instalador'] = df_conmedidor_pg['key_join'].map(dict_api_instalador).fillna(df_conmedidor_pg.get('_Instalador', ''))
-    df_conmedidor_pg['_Tipo_instalador'] = df_conmedidor_pg['key_join'].map(dict_api_tipo_inst).fillna(df_conmedidor_pg.get('_Tipo_instalador', ''))
-    df_conmedidor_pg['_Lectura_actual'] = pd.to_numeric(df_conmedidor_pg['key_join'].map(dict_api_lectura), errors='coerce').fillna(df_conmedidor_pg.get('_Lectura_actual', 0))
-    df_conmedidor_pg['_Fecha_registro'] = pd.to_datetime(df_conmedidor_pg['key_join'].map(dict_api_f_reg), errors='coerce').fillna(df_conmedidor_pg.get('_Fecha_registro', pd.NaT))
-    df_conmedidor_pg['_Fecha_instalacion'] = pd.to_datetime(df_conmedidor_pg['key_join'].map(dict_api_f_inst), errors='coerce').fillna(df_conmedidor_pg.get('_Fecha_instalacion', pd.NaT))
-    
-    df_conmedidor_pg = df_conmedidor_pg.drop(columns=['key_join'], errors='ignore')
-else:
-    df_conmedidor_pg = pd.DataFrame()
 # ==============================================================================
-# SECCIÓN 5: CABECERA SUPERIOR DEL TÍTULO DE LA PÁGINA (DATOS YA DISPONIBLES)
+# SECCIÓN 5: CABECERA SUPERIOR Y FILTRADO INICIAL
 # ==============================================================================
 
 try:
@@ -456,12 +420,8 @@ logo_url = "https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978
 st.sidebar.image(logo_url, use_container_width=True)
 st.sidebar.markdown("---")
 
-# ------------------------------------------------------------------------------
-# INDICADOR DE ESTADO DE LA API Y BOTÓN DE RECONEXIÓN
-# ------------------------------------------------------------------------------
 st.sidebar.subheader("Estado de Conexión API")
 
-# Botón para forzar la reconexión (limpia la caché y recarga los datos)
 if st.sidebar.button("🔄 Reconectar API", use_container_width=True):
     st.cache_data.clear()
     if 'datos_instalaciones' in st.session_state:
@@ -471,7 +431,6 @@ if st.sidebar.button("🔄 Reconectar API", use_container_width=True):
         st.session_state['datos_instalaciones'] = res
     st.rerun()
 
-# Comprobación del estado actual de los datos en la sesión
 api_conectada = 'datos_instalaciones' in st.session_state and st.session_state['datos_instalaciones'] is not None
 
 if api_conectada:
@@ -488,29 +447,29 @@ opcion_periodo = st.sidebar.selectbox(
 )
 
 if not df.empty and 'fecha_dt' in df.columns and not df['fecha_dt'].isna().all():
-    hoy = df['fecha_dt'].max().date()
+    hoy_periodo = df['fecha_dt'].max().date()
 else:
-    hoy = datetime.date.today()
+    hoy_periodo = datetime.date.today()
 
 if opcion_periodo == "Este mes":
-    fecha_inicio = hoy.replace(day=1)
-    fecha_fin = hoy
+    fecha_inicio = hoy_periodo.replace(day=1)
+    fecha_fin = hoy_periodo
 elif opcion_periodo == "El mes pasado":
-    mes_anterior = hoy.replace(day=1) - pd.Timedelta(days=1)
+    mes_anterior = hoy_periodo.replace(day=1) - pd.Timedelta(days=1)
     fecha_inicio = mes_anterior.replace(day=1)
     fecha_fin = mes_anterior
 elif opcion_periodo == "Últimos tres meses":
-    fecha_inicio = (pd.to_datetime(hoy) - pd.DateOffset(months=3)).date()
-    fecha_fin = hoy
+    fecha_inicio = (pd.to_datetime(hoy_periodo) - pd.DateOffset(months=3)).date()
+    fecha_fin = hoy_periodo
 elif opcion_periodo == "Últimos 6 meses":
-    fecha_inicio = (pd.to_datetime(hoy) - pd.DateOffset(months=6)).date()
-    fecha_fin = hoy
+    fecha_inicio = (pd.to_datetime(hoy_periodo) - pd.DateOffset(months=6)).date()
+    fecha_fin = hoy_periodo
 elif opcion_periodo == "Este año":
-    fecha_inicio = hoy.replace(month=1, day=1)
-    fecha_fin = hoy
+    fecha_inicio = hoy_periodo.replace(month=1, day=1)
+    fecha_fin = hoy_periodo
 elif opcion_periodo == "El año pasado":
-    fecha_inicio = hoy.replace(year=hoy.year - 1, month=1, day=1)
-    fecha_fin = hoy.replace(year=hoy.year - 1, month=12, day=31)
+    fecha_inicio = hoy_periodo.replace(year=hoy_periodo.year - 1, month=1, day=1)
+    fecha_fin = hoy_periodo.replace(year=hoy_periodo.year - 1, month=12, day=31)
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("Polígonos")
@@ -608,6 +567,35 @@ if not df_metas_filtrado.empty:
     df_eficiencia = df_eficiencia[['Colonia', 'Med. a instalar', 'Med. instalados', '%', 'Polígono']]
 else:
     df_eficiencia = pd.DataFrame(columns=['Colonia', 'Med. a instalar', 'Med. instalados', '%', 'Polígono'])
+
+# Carga de la tabla PostgreSQL de usuarios con medidor y cruce de datos
+df_conmedidor_pg = cargar_usuarios_conmedidor_db()
+
+if not df_conmedidor_pg.empty and not df_filtrado.empty:
+    df_api_merge = df_filtrado.copy()
+    df_api_merge['key_join'] = df_api_merge.get('cliente', df_api_merge.get('numeroCliente', '')).astype(str).str.strip()
+    
+    dict_api_serie = dict(zip(df_api_merge['key_join'], df_api_merge.get('serieMedidor', df_api_merge.get('serie', ''))))
+    dict_api_colonia = dict(zip(df_api_merge['key_join'], df_api_merge.get('colonia', '')))
+    dict_api_domicilio = dict(zip(df_api_merge['key_join'], df_api_merge.get('domicilio', '')))
+    dict_api_instalador = dict(zip(df_api_merge['key_join'], df_api_merge.get('usuarioNombre', df_api_merge.get('instalador', ''))))
+    dict_api_tipo_inst = dict(zip(df_api_merge['key_join'], df_api_merge.get('tipo_instalacion_nombre', '')))
+    dict_api_lectura = dict(zip(df_api_merge['key_join'], df_api_merge.get('lecturaActual', df_api_merge.get('lectura_actual', 0))))
+    dict_api_f_reg = dict(zip(df_api_merge['key_join'], df_api_merge.get('fechaRegistro', '')))
+    dict_api_f_inst = dict(zip(df_api_merge['key_join'], df_api_merge.get('fechaInstalacion', '')))
+
+    df_conmedidor_pg['key_join'] = df_conmedidor_pg.get('Cliente', '').astype(str).str.strip()
+    
+    df_conmedidor_pg['_Serie'] = df_conmedidor_pg['key_join'].map(dict_api_serie).fillna(df_conmedidor_pg.get('_Serie', ''))
+    df_conmedidor_pg['_Colonia'] = df_conmedidor_pg['key_join'].map(dict_api_colonia).fillna(df_conmedidor_pg.get('_Colonia', ''))
+    df_conmedidor_pg['_Domicilio'] = df_conmedidor_pg['key_join'].map(dict_api_domicilio).fillna(df_conmedidor_pg.get('_Domicilio', ''))
+    df_conmedidor_pg['_Instalador'] = df_conmedidor_pg['key_join'].map(dict_api_instalador).fillna(df_conmedidor_pg.get('_Instalador', ''))
+    df_conmedidor_pg['_Tipo_instalador'] = df_conmedidor_pg['key_join'].map(dict_api_tipo_inst).fillna(df_conmedidor_pg.get('_Tipo_instalador', ''))
+    df_conmedidor_pg['_Lectura_actual'] = pd.to_numeric(df_conmedidor_pg['key_join'].map(dict_api_lectura), errors='coerce').fillna(df_conmedidor_pg.get('_Lectura_actual', 0))
+    df_conmedidor_pg['_Fecha_registro'] = pd.to_datetime(df_conmedidor_pg['key_join'].map(dict_api_f_reg), errors='coerce').fillna(df_conmedidor_pg.get('_Fecha_registro', pd.NaT))
+    df_conmedidor_pg['_Fecha_instalacion'] = pd.to_datetime(df_conmedidor_pg['key_join'].map(dict_api_f_inst), errors='coerce').fillna(df_conmedidor_pg.get('_Fecha_instalacion', pd.NaT))
+    
+    df_conmedidor_pg = df_conmedidor_pg.drop(columns=['key_join'], errors='ignore')
 
 # ==============================================================================
 # SECCIÓN 7: ESTRUCTURA DE PESTAÑAS PRINCIPALES
@@ -983,143 +971,8 @@ with tab_principal:
                 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
-# PESTAÑA: ANÁLISIS DE ANOMALÍAS
-# ------------------------------------------------------------------------------
-with tab_anomalias:
-    st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>⚠️ Análisis Completo de Anomalías en Instalaciones</p>", unsafe_allow_html=True)
-    
-    df_con_anomalia = df_filtrado[df_filtrado['anomalia_nombre'] != "SIN ANOMALÍA / REGULAR"].copy() if not df_filtrado.empty and 'anomalia_nombre' in df_filtrado.columns else pd.DataFrame()
-    
-    total_anomalias_reg = len(df_con_anomalia)
-    total_registros_filtrados = len(df_filtrado)
-    pct_anomalias = round((total_anomalias_reg / total_registros_filtrados) * 100, 2) if total_registros_filtrados > 0 else 0.0
-    tipos_unicos_anomalias = df_con_anomalia['anomalia_nombre'].nunique() if not df_con_anomalia.empty else 0
-
-    a_k1, a_k2, a_k3, a_k4 = st.columns(4)
-    with a_k1:
-        st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-icon-box" style="color: #f43f5e;"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                <div class="metric-content">
-                    <div class="metric-title">Total con Anomalía</div>
-                    <div class="metric-value">{total_anomalias_reg:,}</div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-    with a_k2:
-        st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-icon-box" style="color: #f59e0b;"><i class="fa-solid fa-list-check"></i></div>
-                <div class="metric-content">
-                    <div class="metric-title">Tipos de Anomalías</div>
-                    <div class="metric-value">{tipos_unicos_anomalias:,}</div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-    with a_k3:
-        st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-icon-box" style="color: #a855f7;"><i class="fa-solid fa-percent"></i></div>
-                <div class="metric-content">
-                    <div class="metric-title">% Incidencia</div>
-                    <div class="metric-value">{pct_anomalias}%</div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-    with a_k4:
-        st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-clipboard-check"></i></div>
-                <div class="metric-content">
-                    <div class="metric-title">Instalaciones Regulares</div>
-                    <div class="metric-value">{(total_registros_filtrados - total_anomalias_reg):,}</div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
-
-    col_anom_g1, col_anom_g2 = st.columns([1.5, 1])
-
-    with col_anom_g1:
-        with st.container(border=True):
-            st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Tipo de Anomalía</p>", unsafe_allow_html=True)
-            if not df_con_anomalia.empty:
-                df_counts_anom = df_con_anomalia['anomalia_nombre'].value_counts().reset_index()
-                df_counts_anom.columns = ['Anomalía', 'Cantidad']
-                
-                fig_anom_bar = px.bar(
-                    df_counts_anom, 
-                    x='Cantidad', 
-                    y='Anomalía', 
-                    orientation='h', 
-                    text='Cantidad',
-                    color='Anomalía',
-                    color_discrete_sequence=px.colors.qualitative.Bold
-                )
-                fig_anom_bar.update_traces(textposition='outside', textfont_size=10)
-                fig_anom_bar.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)', 
-                    paper_bgcolor='rgba(0,0,0,0)', 
-                    font_color='#ffffff', 
-                    margin=dict(t=10, b=10, l=10, r=30), 
-                    height=270, 
-                    xaxis=dict(showgrid=True, title=None), 
-                    yaxis=dict(showgrid=False, title=None, categoryorder='total ascending'),
-                    showlegend=False
-                )
-                st.plotly_chart(fig_anom_bar, use_container_width=True, key="anomalias_dist_bar")
-            else:
-                st.info("No se registran anomalías en el periodo o filtros seleccionados.")
-
-    with col_anom_g2:
-        with st.container(border=True):
-            st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Proporción: Con Anomalía vs Regular</p>", unsafe_allow_html=True)
-            if total_registros_filtrados > 0:
-                df_prop = pd.DataFrame({
-                    'Estado': ['Con Anomalía', 'Regular / Sin Anomalía'],
-                    'Cantidad': [total_anomalias_reg, total_registros_filtrados - total_anomalias_reg]
-                })
-                
-                fig_prop_pie = px.pie(
-                    df_prop, 
-                    names='Estado', 
-                    values='Cantidad', 
-                    hole=0.5,
-                    color='Estado',
-                    color_discrete_map={'Con Anomalía': '#f43f5e', 'Regular / Sin Anomalía': '#3b82f6'}
-                )
-                fig_prop_pie.update_traces(textinfo='value+percent', textfont=dict(size=11))
-                fig_prop_pie.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)', 
-                    paper_bgcolor='rgba(0,0,0,0)', 
-                    font_color='#ffffff', 
-                    margin=dict(t=10, b=10, l=10, r=10), 
-                    height=270,
-                    showlegend=True,
-                    legend=dict(orientation="h", y=-0.2, font=dict(size=9))
-                )
-                st.plotly_chart(fig_prop_pie, use_container_width=True, key="anomalias_prop_pie")
-            else:
-                st.info("Sin datos para mostrar proporción.")
-
-    st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:20px; margin-bottom:8px;'>📋 Detalle de Registros con Anomalías Detectadas</p>", unsafe_allow_html=True)
-    if not df_con_anomalia.empty:
-        df_tabla_anom = df_con_anomalia.copy()
-        terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
-        cols_ex = [c for c in df_tabla_anom.columns if any(term in c.lower() for term in terminos_excluidos)]
-        df_tabla_anom = df_tabla_anom.drop(columns=cols_ex, errors='ignore')
-        if 'fechaInstalacion' in df_tabla_anom.columns:
-            df_tabla_anom['fechaInstalacion'] = pd.to_datetime(df_tabla_anom['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
-        df_tabla_anom = df_tabla_anom.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
-        st.dataframe(df_tabla_anom, use_container_width=True)
-    else:
-        st.success("¡Excelente! No hay registros con anomalías reportadas para los filtros seleccionados.")
-
-# ------------------------------------------------------------------------------
 # PESTAÑA: MAPA DE POLÍGONOS DE INSTALACIÓN
 # ------------------------------------------------------------------------------
-script_poligonos_procesados = {}
 shapely_polygons = {}
 lat_acumuladas, lon_acumuladas = [], []
 
@@ -1533,7 +1386,7 @@ with tab_personal:
                 
                 fig_miaa_dia.update_traces(textposition='outside', textfont_size=10)
                 fig_miaa_dia.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None)
-                st.plotly_chart(fig_miaa_dia, use_container_width=True, key="grafico_miaa_dia_unico")
+                st.plotly_chart(fig_miaa_dia, use_container_width=True, key="miaa_instalaciones_dia")
 
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Nivel Tarifario (MIAA)</p>", unsafe_allow_html=True)
@@ -1546,22 +1399,22 @@ with tab_personal:
                     fig_miaa_niv = px.bar(pd.DataFrame({'Nivel': ['Sin datos'], 'Cantidad': [0]}), x='Nivel', y='Cantidad', text='Cantidad')
                 
                 fig_miaa_niv.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ffffff', margin=dict(t=30, b=5, l=5, r=5), height=210, xaxis_title=None, yaxis_title=None, showlegend=False)
-                st.plotly_chart(fig_miaa_niv, use_container_width=True, key="grafico_miaa_nivel_unico")
+                st.plotly_chart(fig_miaa_niv, use_container_width=True, key="miaa_nivel_tarifario")
 
         with col_mi_right:
             with st.container(border=True):
                 st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones - Personal MIAA</p>", unsafe_allow_html=True)
                 df_miaa_map = df_miaa_pers.dropna(subset=['latitud', 'longitud']) if not df_miaa_pers.empty and 'latitud' in df_miaa_pers.columns else pd.DataFrame()
-                mm_lat = df_miaa_map['latitud'].mean() if not df_miaa_map.empty else lat_centro
-                mm_lon = df_miaa_map['longitud'].mean() if not df_miaa_map.empty else lon_centro
+                m_lat_m = df_miaa_map['latitud'].mean() if not df_miaa_map.empty else lat_centro
+                m_lon_m = df_miaa_map['longitud'].mean() if not df_miaa_map.empty else lon_centro
                 
-                mapa_miaa_pers = folium.Map(location=[mm_lat, mm_lon], zoom_start=12, tiles=None)
-                agregar_capas_base(mapa_miaa_pers)
+                mapa_miaa_int = folium.Map(location=[m_lat_m, m_lon_m], zoom_start=12, tiles=None)
+                agregar_capas_base(mapa_miaa_int)
 
                 for _, row in df_miaa_map.iterrows():
-                    folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#10b981', fill=True, fill_color='#10b981', fill_opacity=0.7).add_to(mapa_miaa_pers)
+                    folium.CircleMarker(location=[float(row['latitud']), float(row['longitud'])], radius=2.5, color='#a855f7', fill=True, fill_color='#a855f7', fill_opacity=0.7).add_to(mapa_miaa_int)
                 
-                st_folium(mapa_miaa_pers, width=None, height=460, key="mapa_miaa_personal_unificado", returned_objects=[])
+                st_folium(mapa_miaa_int, width=None, height=460, key="mapa_miaa_unificado", returned_objects=[])
 
         st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal MIAA</p>", unsafe_allow_html=True)
         df_tabla_miaa = df_miaa_pers.copy()
@@ -1575,164 +1428,206 @@ with tab_personal:
         st.dataframe(df_tabla_miaa, use_container_width=True)
 
 # ------------------------------------------------------------------------------
+# PESTAÑA: ANÁLISIS DE ANOMALÍAS
+# ------------------------------------------------------------------------------
+with tab_anomalias:
+    st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>⚠️ Análisis Completo de Anomalías en Instalaciones</p>", unsafe_allow_html=True)
+    
+    df_con_anomalia = df_filtrado[df_filtrado['anomalia_nombre'] != "SIN ANOMALÍA / REGULAR"].copy() if not df_filtrado.empty and 'anomalia_nombre' in df_filtrado.columns else pd.DataFrame()
+    
+    total_anomalias_reg = len(df_con_anomalia)
+    total_registros_filtrados = len(df_filtrado)
+    pct_anomalias = round((total_anomalias_reg / total_registros_filtrados) * 100, 2) if total_registros_filtrados > 0 else 0.0
+    tipos_unicos_anomalias = df_con_anomalia['anomalia_nombre'].nunique() if not df_con_anomalia.empty else 0
+
+    a_k1, a_k2, a_k3, a_k4 = st.columns(4)
+    with a_k1:
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-icon-box" style="color: #f43f5e;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div class="metric-content">
+                    <div class="metric-title">Total con Anomalía</div>
+                    <div class="metric-value">{total_anomalias_reg:,}</div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+    with a_k2:
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-icon-box" style="color: #f59e0b;"><i class="fa-solid fa-list-check"></i></div>
+                <div class="metric-content">
+                    <div class="metric-title">Tipos de Anomalías</div>
+                    <div class="metric-value">{tipos_unicos_anomalias:,}</div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+    with a_k3:
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-icon-box" style="color: #a855f7;"><i class="fa-solid fa-percent"></i></div>
+                <div class="metric-content">
+                    <div class="metric-title">% Incidencia</div>
+                    <div class="metric-value">{pct_anomalias}%</div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+    with a_k4:
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-clipboard-check"></i></div>
+                <div class="metric-content">
+                    <div class="metric-title">Instalaciones Regulares</div>
+                    <div class="metric-value">{(total_registros_filtrados - total_anomalias_reg):,}</div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+
+    col_anom_g1, col_anom_g2 = st.columns([1.5, 1])
+
+    with col_anom_g1:
+        with st.container(border=True):
+            st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Tipo de Anomalía</p>", unsafe_allow_html=True)
+            if not df_con_anomalia.empty:
+                df_counts_anom = df_con_anomalia['anomalia_nombre'].value_counts().reset_index()
+                df_counts_anom.columns = ['Anomalía', 'Cantidad']
+                
+                fig_anom_bar = px.bar(
+                    df_counts_anom, 
+                    x='Cantidad', 
+                    y='Anomalía', 
+                    orientation='h', 
+                    text='Cantidad',
+                    color='Anomalía',
+                    color_discrete_sequence=px.colors.qualitative.Bold
+                )
+                fig_anom_bar.update_traces(textposition='outside', textfont_size=10)
+                fig_anom_bar.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)', 
+                    paper_bgcolor='rgba(0,0,0,0)', 
+                    font_color='#ffffff', 
+                    margin=dict(t=10, b=10, l=10, r=30), 
+                    height=270, 
+                    xaxis=dict(showgrid=True, title=None), 
+                    yaxis=dict(showgrid=False, title=None, categoryorder='total ascending'),
+                    showlegend=False
+                )
+                st.plotly_chart(fig_anom_bar, use_container_width=True, key="anomalias_dist_bar")
+            else:
+                st.info("No se registran anomalías en el periodo o filtros seleccionados.")
+
+    with col_anom_g2:
+        with st.container(border=True):
+            st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Proporción: Con Anomalía vs Regular</p>", unsafe_allow_html=True)
+            if total_registros_filtrados > 0:
+                df_prop = pd.DataFrame({
+                    'Estado': ['Con Anomalía', 'Regular / Sin Anomalía'],
+                    'Cantidad': [total_anomalias_reg, total_registros_filtrados - total_anomalias_reg]
+                })
+                
+                fig_prop_pie = px.pie(
+                    df_prop, 
+                    names='Estado', 
+                    values='Cantidad', 
+                    hole=0.5,
+                    color='Estado',
+                    color_discrete_map={'Con Anomalía': '#f43f5e', 'Regular / Sin Anomalía': '#3b82f6'}
+                )
+                fig_prop_pie.update_traces(textinfo='value+percent', textfont=dict(size=11))
+                fig_prop_pie.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)', 
+                    paper_bgcolor='rgba(0,0,0,0)', 
+                    font_color='#ffffff', 
+                    margin=dict(t=10, b=10, l=10, r=10), 
+                    height=270,
+                    showlegend=True,
+                    legend=dict(orientation="h", y=-0.2, font=dict(size=9))
+                )
+                st.plotly_chart(fig_prop_pie, use_container_width=True, key="anomalias_prop_pie")
+            else:
+                st.info("Sin datos para mostrar proporción.")
+
+    st.markdown("<p style='font-size:14px; font-weight:bold; margin-top:20px; margin-bottom:8px;'>📋 Detalle de Registros con Anomalías Detectadas</p>", unsafe_allow_html=True)
+    if not df_con_anomalia.empty:
+        df_tabla_anom = df_con_anomalia.copy()
+        terminos_excluidos = ['foto', 'fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
+        cols_ex = [c for c in df_tabla_anom.columns if any(term in c.lower() for term in terminos_excluidos)]
+        df_tabla_anom = df_tabla_anom.drop(columns=cols_ex, errors='ignore')
+        if 'fechaInstalacion' in df_tabla_anom.columns:
+            df_tabla_anom['fechaInstalacion'] = pd.to_datetime(df_tabla_anom['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
+        df_tabla_anom = df_tabla_anom.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
+        st.dataframe(df_tabla_anom, use_container_width=True)
+    else:
+        st.success("¡Excelente! No hay registros con anomalías reportadas para los filtros seleccionados.")
+
+# ------------------------------------------------------------------------------
 # PESTAÑA: TABLA BASE DE DATOS COMPLETA
 # ------------------------------------------------------------------------------
 with tab_tabla:
-    st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📋 Tabla Completa de Registros de la API</p>", unsafe_allow_html=True)
-    
-    total_registros_tabla = len(df_filtrado)
-    total_colonias_tabla = df_filtrado['colonia'].nunique() if not df_filtrado.empty and 'colonia' in df_filtrado.columns else 0
-
-    t_col1, t_col2 = st.columns(2)
-    with t_col1:
-        st.markdown(f"""
-            <div class="metric-card">
-                <div class="icon-box" style="color: #38bdf8;"><i class="fa-solid fa-table-list"></i></div>
-                <div class="metric-content">
-                    <div class="metric-title">Total de Registros</div>
-                    <div class="metric-value">{total_registros_tabla:,}</div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-    with t_col2:
-        st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-icon-box" style="color: #4ade80;"><i class="fa-solid fa-map-pin"></i></div>
-                <div class="metric-content">
-                    <div class="metric-title">Colonias Registradas</div>
-                    <div class="metric-value">{total_colonias_tabla:,}</div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
-
-    with st.container(border=True):
-        st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>Distribución por Nivel (Comercial / Doméstico)</p>", unsafe_allow_html=True)
-        if not df_filtrado.empty and 'nivel' in df_filtrado.columns:
-            df_nivel = df_filtrado['nivel'].fillna("SIN NIVEL").value_counts().reset_index()
-            df_nivel.columns = ['Nivel', 'Cantidad']
-            
-            fig_nivel = px.bar(
-                df_nivel, 
-                x='Nivel', 
-                y='Cantidad', 
-                text='Cantidad',
-                color='Nivel',
-                color_discrete_sequence=px.colors.qualitative.Prism
-            )
-            fig_nivel.update_traces(textposition='outside', textfont_size=11)
-            fig_nivel.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)', 
-                paper_bgcolor='rgba(0,0,0,0)', 
-                font_color='#ffffff', 
-                margin=dict(t=30, b=5, l=5, r=5), 
-                height=220, 
-                xaxis_title=None, 
-                yaxis_title=None,
-                showlegend=False
-            )
-            st.plotly_chart(fig_nivel, use_container_width=True, key="tabla_completa_nivel_bar")
-        else:
-            st.info("La columna 'nivel' no se encuentra disponible en los registros.")
-
-    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
-
-    df_tabla_limpia = df_filtrado.copy()
-    
-    terminos_excluidos = ['foto', 'modoIdentificacion', 'giro','fecharegistro', 'fechamodificacion', 'uuid', 'horafin', 'lecturaanterior', 'lecturaactual', 'folio']
-    columnas_a_excluir = [c for c in df_tabla_limpia.columns if any(term in c.lower() for term in terminos_excluidos)]
-    df_tabla_limpia = df_tabla_limpia.drop(columns=columnas_a_excluir, errors='ignore')
-    
-    poligonos_asignados = []
-    if shapely_polygons and not df_tabla_limpia.empty and 'latitud' in df_tabla_limpia.columns:
-        for _, row_m in df_tabla_limpia.iterrows():
-            lat, lon = row_m.get('latitud'), row_m.get('longitud')
-            assigned_fid = "SIN POLÍGONO"
-            if pd.notna(lat) and pd.notna(lon):
-                pt = Point(lat, lon)
-                for bi_label, poly in shapely_polygons.items():
-                    if poly.contains(pt):
-                        assigned_fid = str(bi_label)
-                        break
-            poligonos_asignados.append(assigned_fid)
+    st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📋 Base de Datos Completa de Instalaciones</p>", unsafe_allow_html=True)
+    if not df_filtrado.empty:
+        df_completa_view = df_filtrado.copy()
+        if 'fechaInstalacion' in df_completa_view.columns:
+            df_completa_view['fechaInstalacion'] = pd.to_datetime(df_completa_view['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
+        if 'fechaRegistro' in df_completa_view.columns:
+            df_completa_view['fechaRegistro'] = pd.to_datetime(df_completa_view['fechaRegistro'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
+        df_completa_view = df_completa_view.drop(columns=['fecha_dt', 'fecha_dia'], errors='ignore')
+        st.dataframe(df_completa_view, use_container_width=True)
     else:
-        poligonos_asignados = ["SIN POLÍGONO"] * len(df_tabla_limpia)
-    
-    df_tabla_limpia['poligono'] = poligonos_asignados
-
-    campos_a_quitar = ['anomaliaId', 'modoIdentificacion','giro', 'lugarInstalacionId', 'usuarioId', 'lugarInstalacion_id_str', 'anomalia_id_str']
-    df_tabla_limpia = df_tabla_limpia.drop(columns=campos_a_quitar, errors='ignore')
-
-    if 'fechaInstalacion' in df_tabla_limpia.columns:
-        df_tabla_limpia['fechaInstalacion'] = pd.to_datetime(df_tabla_limpia['fechaInstalacion'], errors='coerce').dt.strftime('%d/%m/%Y %H:%M:%S')
-
-    if 'horaInicio' in df_tabla_limpia.columns:
-        df_tabla_limpia['horaInicio'] = pd.to_datetime(df_tabla_limpia['horaInicio'], errors='coerce').dt.strftime('%H:%M')
-
-    df_tabla_limpia = df_tabla_limpia.drop(columns=['fecha_dt', 'Semana', 'fecha_dia', 'anio_mes', 'periodo_mes'], errors='ignore')
-
-    for col in df_tabla_limpia.columns:
-        if df_tabla_limpia[col].dtype == 'object':
-            df_tabla_limpia[col] = df_tabla_limpia[col].astype(str).replace({'nan': None, 'None': None})
-
-    st.dataframe(df_tabla_limpia, use_container_width=True)
+        st.info("No hay registros disponibles para mostrar.")
 
 # ------------------------------------------------------------------------------
-# PESTAÑA: GESTION DE USUARIOS CON MEDIDOR
+# PESTAÑA: GESTIÓN DE USUARIOS MIAA CON MEDIDOR (POSTGRESQL)
 # ------------------------------------------------------------------------------
 with tab_conmedidor:
-    st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🚰 Gestión de Tabla PostgreSQL: usuarios_miaa_conmedidor</p>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size:13px; color: #94a3b8; margin-bottom:15px;'>Visualización y completado automático de columnas de control interno (con guion bajo) sincronizadas desde la API de instalaciones.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🚰 Gestión y Consulta: usuarios_miaa_conmedidor (PostgreSQL)</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:13px; color: #94a3b8; margin-bottom:15px;'>Datos sincronizados desde la base de datos espacial PostgreSQL conectada al esquema <code>Usuarios</code>.</p>", unsafe_allow_html=True)
 
     if not df_conmedidor_pg.empty:
-        c_m1, c_m2, c_m3 = st.columns(3)
-        with c_m1:
+        pg_total_reg = len(df_conmedidor_pg)
+        
+        pg_c1, pg_c2, pg_c3 = st.columns(3)
+        with pg_c1:
             st.markdown(f"""
                 <div class="metric-card">
                     <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-database"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Total Registros (PG)</div>
-                        <div class="metric-value">{len(df_conmedidor_pg):,}</div>
+                        <div class="metric-value">{pg_total_reg:,}</div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
-        with c_m2:
-            completados_serie = df_conmedidor_pg['_Serie'].notna().sum() if '_Serie' in df_conmedidor_pg.columns else 0
+        with pg_c2:
             st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #4ade80;"><i class="fa-solid fa-circle-check"></i></div>
+                    <div class="metric-icon-box" style="color: #4ade80;"><i class="fa-solid fa-table-columns"></i></div>
                     <div class="metric-content">
-                        <div class="metric-title">Series Sincronizadas</div>
-                        <div class="metric-value">{completados_serie:,}</div>
+                        <div class="metric-title">Columnas Totales</div>
+                        <div class="metric-value">{len(df_conmedidor_pg.columns):,}</div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
-        with c_m3:
-            pendientes_serie = len(df_conmedidor_pg) - completados_serie
+        with pg_c3:
             st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #f59e0b;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="metric-icon-box" style="color: #f59e0b;"><i class="fa-solid fa-server"></i></div>
                     <div class="metric-content">
-                        <div class="metric-title">Sin Serie API</div>
-                        <div class="metric-value">{pendientes_serie:,}</div>
+                        <div class="metric-title">Base de Datos</div>
+                        <div class="metric-value" style="font-size: 13px;">qgis (ti.miaa.mx)</div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
 
         st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+        
+        busqueda_pg = st.text_input("🔍 Buscar en la tabla de PostgreSQL (Cliente, Domicilio, Serie, etc.):", placeholder="Escribe para filtrar...")
+        
+        df_pg_view = df_conmedidor_pg.copy()
+        if busqueda_pg:
+            mask_pg = df_pg_view.astype(str).apply(lambda x: x.str.contains(busqueda_pg, case=False, na=False)).any(axis=1)
+            df_pg_view = df_pg_view[mask_pg]
 
-        with st.container(border=True):
-            st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>Vista Previa de la Tabla Actualizada con Datos de la API</p>", unsafe_allow_html=True)
-            st.dataframe(df_conmedidor_pg, use_container_width=True, height=450)
-
-            if st.button("💾 Guardar / Actualizar Cambios en PostgreSQL", key="btn_save_pg_conmedidor"):
-                try:
-                    engine_pg = create_engine(st.secrets["postgres"]["connection_string"])
-                    # Guardado de vuelta a la base de datos PostgreSQL si se requiere persistencia
-                    df_conmedidor_pg.to_sql("usuarios_miaa_conmedidor", con=engine_pg, schema="Usuarios", if_exists="replace", index=False)
-                    st.success("¡Los registros con las columnas completadas se han actualizado correctamente en PostgreSQL!")
-                except Exception as ex:
-                    st.error(f"Error al guardar en la base de datos: {ex}")
+        st.dataframe(df_pg_view, use_container_width=True, height=450)
     else:
-        st.warning("No se encontraron registros en la tabla `usuarios_miaa_conmedidor` del esquema de PostgreSQL.")
+        st.warning("No se pudieron cargar los registros de la tabla `usuarios_miaa_conmedidor` desde PostgreSQL o la tabla se encuentra vacía. Verifica las credenciales de conexión en los secretos de Streamlit.")
