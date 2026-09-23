@@ -268,6 +268,18 @@ def cargar_anomalias_db():
     except Exception:
         return pd.DataFrame()
 
+@st.cache_data(ttl=600)
+def cargar_usuarios_conmedidor_db():
+    """Consulta la base de datos PostgreSQL para obtener la tabla usuarios_miaa_conmedidor."""
+    try:
+        # Asegúrate de configurar la conexión postgres en tus st.secrets
+        engine_pg = create_engine(st.secrets["postgres"]["connection_string"])
+        query = 'SELECT * FROM "Usuarios"."usuarios_miaa_conmedidor"'
+        return pd.read_sql(query, con=engine_pg)
+    except Exception as e:
+        st.error(f"Error al conectar con PostgreSQL: {e}")
+        return pd.DataFrame()
+
 # ==============================================================================
 # SECCIÓN 3: FUNCIONES AUXILIARES PARA MAPAS
 # ==============================================================================
@@ -363,6 +375,43 @@ if not df_metas.empty:
 else:
     df_metas_valido = pd.DataFrame()
 
+# Carga de la tabla PostgreSQL de usuarios con medidor
+df_conmedidor_pg = cargar_usuarios_conmedidor_db()
+
+if not df_conmedidor_pg.empty and not df_filtrado.empty:
+    # Estandarizamos llaves de cruce (ej. 'Cliente' o 'predio')
+    # Supongamos que cruzamos por el número de cliente o predio presente en ambas tablas
+    df_api_merge = df_filtrado.copy()
+    
+    # Mapear / renombrar columnas de la API para alimentar los campos _ de Postgres
+    # Adaptar las columnas según el JSON de la API: serieMedidor, colonia, domicilio, usuarioId/instalador, etc.
+    df_api_merge['key_join'] = df_api_merge.get('cliente', df_api_merge.get('numeroCliente', '')).astype(str).str.strip()
+    
+    # Creamos un diccionario o tabla temporal con los datos limpios de la API
+    dict_api_serie = dict(zip(df_api_merge['key_join'], df_api_merge.get('serieMedidor', df_api_merge.get('serie', ''))))
+    dict_api_colonia = dict(zip(df_api_merge['key_join'], df_api_merge.get('colonia', '')))
+    dict_api_domicilio = dict(zip(df_api_merge['key_join'], df_api_merge.get('domicilio', '')))
+    dict_api_instalador = dict(zip(df_api_merge['key_join'], df_api_merge.get('usuarioNombre', df_api_merge.get('instalador', ''))))
+    dict_api_tipo_inst = dict(zip(df_api_merge['key_join'], df_api_merge.get('tipo_instalacion_nombre', '')))
+    dict_api_lectura = dict(zip(df_api_merge['key_join'], df_api_merge.get('lecturaActual', df_api_merge.get('lectura_actual', 0))))
+    dict_api_f_reg = dict(zip(df_api_merge['key_join'], df_api_merge.get('fechaRegistro', '')))
+    dict_api_f_inst = dict(zip(df_api_merge['key_join'], df_api_merge.get('fechaInstalacion', '')))
+
+    # Completamos las columnas que empiezan con guion bajo en el DataFrame de Postgres
+    df_conmedidor_pg['key_join'] = df_conmedidor_pg.get('Cliente', '').astype(str).str.strip()
+    
+    df_conmedidor_pg['_Serie'] = df_conmedidor_pg['key_join'].map(dict_api_serie).fillna(df_conmedidor_pg.get('_Serie', ''))
+    df_conmedidor_pg['_Colonia'] = df_conmedidor_pg['key_join'].map(dict_api_colonia).fillna(df_conmedidor_pg.get('_Colonia', ''))
+    df_conmedidor_pg['_Domicilio'] = df_conmedidor_pg['key_join'].map(dict_api_domicilio).fillna(df_conmedidor_pg.get('_Domicilio', ''))
+    df_conmedidor_pg['_Instalador'] = df_conmedidor_pg['key_join'].map(dict_api_instalador).fillna(df_conmedidor_pg.get('_Instalador', ''))
+    df_conmedidor_pg['_Tipo_instalador'] = df_conmedidor_pg['key_join'].map(dict_api_tipo_inst).fillna(df_conmedidor_pg.get('_Tipo_instalador', ''))
+    df_conmedidor_pg['_Lectura_actual'] = pd.to_numeric(df_conmedidor_pg['key_join'].map(dict_api_lectura), errors='coerce').fillna(df_conmedidor_pg.get('_Lectura_actual', 0))
+    df_conmedidor_pg['_Fecha_registro'] = pd.to_datetime(df_conmedidor_pg['key_join'].map(dict_api_f_reg), errors='coerce').fillna(df_conmedidor_pg.get('_Fecha_registro', pd.NaT))
+    df_conmedidor_pg['_Fecha_instalacion'] = pd.to_datetime(df_conmedidor_pg['key_join'].map(dict_api_f_inst), errors='coerce').fillna(df_conmedidor_pg.get('_Fecha_instalacion', pd.NaT))
+    
+    df_conmedidor_pg = df_conmedidor_pg.drop(columns=['key_join'], errors='ignore')
+else:
+    df_conmedidor_pg = pd.DataFrame()
 # ==============================================================================
 # SECCIÓN 5: CABECERA SUPERIOR DEL TÍTULO DE LA PÁGINA (DATOS YA DISPONIBLES)
 # ==============================================================================
@@ -564,12 +613,13 @@ else:
 # SECCIÓN 7: ESTRUCTURA DE PESTAÑAS PRINCIPALES
 # ==============================================================================
 
-tab_principal, tab_poligonos, tab_personal, tab_anomalias, tab_tabla = st.tabs([
+tab_principal, tab_poligonos, tab_personal, tab_anomalias, tab_tabla, tab_conmedidor = st.tabs([
     "📊 Dashboard Principal", 
     "🗺️ Mapa Polígonos",
     "👥 Personal (Externo y MIAA)",
     "⚠️ Análisis de Anomalías",
-    "📋 Tabla Base de Datos Completa"
+    "📋 Tabla Base de Datos Completa",
+    "🚰 Gestión usuarios_miaa_conmedidor"
 ])
 
 # ------------------------------------------------------------------------------
@@ -1627,3 +1677,62 @@ with tab_tabla:
             df_tabla_limpia[col] = df_tabla_limpia[col].astype(str).replace({'nan': None, 'None': None})
 
     st.dataframe(df_tabla_limpia, use_container_width=True)
+
+# ------------------------------------------------------------------------------
+# PESTAÑA: GESTION DE USUARIOS CON MEDIDOR
+# ------------------------------------------------------------------------------
+with tab_conmedidor:
+    st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🚰 Gestión de Tabla PostgreSQL: usuarios_miaa_conmedidor</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:13px; color: #94a3b8; margin-bottom:15px;'>Visualización y completado automático de columnas de control interno (con guion bajo) sincronizadas desde la API de instalaciones.</p>", unsafe_allow_html=True)
+
+    if not df_conmedidor_pg.empty:
+        c_m1, c_m2, c_m3 = st.columns(3)
+        with c_m1:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-database"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Total Registros (PG)</div>
+                        <div class="metric-value">{len(df_conmedidor_pg):,}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+        with c_m2:
+            completados_serie = df_conmedidor_pg['_Serie'].notna().sum() if '_Serie' in df_conmedidor_pg.columns else 0
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon-box" style="color: #4ade80;"><i class="fa-solid fa-circle-check"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Series Sincronizadas</div>
+                        <div class="metric-value">{completados_serie:,}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+        with c_m3:
+            pendientes_serie = len(df_conmedidor_pg) - completados_serie
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon-box" style="color: #f59e0b;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="metric-content">
+                        <div class="metric-title">Sin Serie API</div>
+                        <div class="metric-value">{pendientes_serie:,}</div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
+
+        with st.container(border=True):
+            st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>Vista Previa de la Tabla Actualizada con Datos de la API</p>", unsafe_allow_html=True)
+            st.dataframe(df_conmedidor_pg, use_container_width=True, height=450)
+
+            if st.button("💾 Guardar / Actualizar Cambios en PostgreSQL", key="btn_save_pg_conmedidor"):
+                try:
+                    engine_pg = create_engine(st.secrets["postgres"]["connection_string"])
+                    # Guardado de vuelta a la base de datos PostgreSQL si se requiere persistencia
+                    df_conmedidor_pg.to_sql("usuarios_miaa_conmedidor", con=engine_pg, schema="Usuarios", if_exists="replace", index=False)
+                    st.success("¡Los registros con las columnas completadas se han actualizado correctamente en PostgreSQL!")
+                except Exception as ex:
+                    st.error(f"Error al guardar en la base de datos: {ex}")
+    else:
+        st.warning("No se encontraron registros en la tabla `usuarios_miaa_conmedidor` del esquema de PostgreSQL.")
