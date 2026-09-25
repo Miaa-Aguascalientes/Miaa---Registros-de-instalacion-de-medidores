@@ -2703,7 +2703,22 @@ with tab_sheets_interno:
           " Tabla de Datos - Google Sheets (Instalaciones)</p>",
           unsafe_allow_html=True,
       )
-      st.dataframe(df_sheets_interno, use_container_width=True, height=320)
+
+      # Filtrar estrictamente la tabla inferior para que solo muestre las columnas solicitadas
+      columnas_deseadas = [
+          "Fecha de Instalacion",
+          "Instalados",
+          "Cuadro",
+          "Registro",
+          "Retirados",
+          "sin medidor",
+      ]
+      cols_existentes = [
+          c for c in columnas_deseadas if c in df_sheets_interno.columns
+      ]
+      df_tabla_filtrada = df_sheets_interno[cols_existentes].copy()
+
+      st.dataframe(df_tabla_filtrada, use_container_width=True, height=320)
   else:
     st.warning(
         "No se pudo cargar la información de la hoja 'Instalaciones' del"
