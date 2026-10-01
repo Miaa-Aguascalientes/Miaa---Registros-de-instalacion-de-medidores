@@ -525,7 +525,7 @@ opcion_periodo = st.sidebar.selectbox(
         "Este año",
         "El año pasado",
     ],
-    index=0,
+    index=4,
 )
 
 if not df.empty and "fecha_dt" in df.columns and not df["fecha_dt"].isna().all():
