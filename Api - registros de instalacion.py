@@ -2694,6 +2694,12 @@ with tab_sheets_interno:
         col_ret_sheets = cols_lower.get("retirados", None)
         col_sin_sheets = cols_lower.get("sin medidor", cols_lower.get("sin_medidor", None))
 
+        # Convertir columna de fecha a datetime para agrupar por mes correctamente
+        if col_fecha_sheets and col_fecha_sheets in df_sheets_interno.columns:
+            df_sheets_interno["_fecha_dt_sheets"] = pd.to_datetime(df_sheets_interno[col_fecha_sheets], errors="coerce")
+        else:
+            df_sheets_interno["_fecha_dt_sheets"] = pd.NaT
+
         # Limpiar y convertir a numéricos las columnas clave si existen
         for col_name in [col_inst_sheets, col_cuadro_sheets, col_reg_sheets, col_ret_sheets, col_sin_sheets]:
             if col_name and col_name in df_sheets_interno.columns:
@@ -2784,7 +2790,7 @@ with tab_sheets_interno:
 
         st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
-        # 1. Gráfico de barras: Instalaciones por día
+        # 1. Gráfico de barras superior: Instalaciones por día
         with st.container(border=True):
             st.markdown(
                 "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día</p>",
@@ -2814,10 +2820,61 @@ with tab_sheets_interno:
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-        g_col1, g_col2 = st.columns(2)
+        # Distribución en 3 columnas para los gráficos inferiores
+        g_col1, g_col2, g_col3 = st.columns(3)
 
-        # 2. Gráfico de pastel: Medidores en Cuadro vs Registro
+        # 2. Gráfico Izquierda: Instalaciones por Mes (Barras Horizontales)
         with g_col1:
+            with st.container(border=True):
+                st.markdown(
+                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Mes</p>",
+                    unsafe_allow_html=True,
+                )
+                if not df_sheets_interno["_fecha_dt_sheets"].isna().all() and col_inst_sheets:
+                    df_mes_sheets = df_sheets_interno.copy()
+                    df_mes_sheets["periodo_mes"] = df_mes_sheets["_fecha_dt_sheets"].dt.to_period("M")
+                    df_mes_group = df_mes_sheets.groupby("periodo_mes", as_index=False)[col_inst_sheets].sum()
+                    df_mes_group.columns = ["Periodo", "Cantidad"]
+
+                    meses_es = {
+                        1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+                        5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+                        9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
+                    }
+                    df_mes_group["Mes"] = df_mes_group["Periodo"].apply(
+                        lambda x: f"{meses_es[x.month]} {x.year}"
+                    )
+                    df_mes_group = df_mes_group.sort_values(by="Periodo", ascending=True)
+
+                    colores_barras_mes = ["#1e3a8a", "#3b82f6"] * ((len(df_mes_group) // 2) + 1)
+                    max_cant_mes = df_mes_group["Cantidad"].max() if not df_mes_group.empty else 10
+
+                    fig_mes_h_sheets = px.bar(
+                        df_mes_group,
+                        x="Cantidad",
+                        y="Mes",
+                        orientation="h",
+                        text="Cantidad",
+                        color="Mes",
+                        color_discrete_sequence=colores_barras_mes,
+                    )
+                    fig_mes_h_sheets.update_traces(textposition="outside", textfont_size=10)
+                    fig_mes_h_sheets.update_layout(
+                        plot_bgcolor="rgba(0,0,0,0)",
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        font_color="#ffffff",
+                        margin=dict(t=10, b=5, l=5, r=30),
+                        height=280,
+                        xaxis=dict(showgrid=False, showticklabels=False, title=None, range=[0, max_cant_mes * 1.25]),
+                        yaxis=dict(showgrid=False, title=None, tickfont=dict(size=10), categoryorder="array", categoryarray=df_mes_group["Mes"].tolist()),
+                        showlegend=False,
+                    )
+                    st.plotly_chart(fig_mes_h_sheets, use_container_width=True, key="sheets_instalaciones_mes")
+                else:
+                    st.info("No hay datos de fechas válidos para agrupar por mes.")
+
+        # 3. Gráfico Centro: Medidores en Cuadro vs Registro
+        with g_col2:
             with st.container(border=True):
                 st.markdown(
                     "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Medidores en Cuadro vs Registro</p>",
@@ -2852,8 +2909,8 @@ with tab_sheets_interno:
                         fig_pie_cr, use_container_width=True, key="sheets_pie_cuadro_reg"
                     )
 
-        # 3. Gráfico para Retirados y Sin Medidor
-        with g_col2:
+        # 4. Gráfico Derecha: Evolución de Retirados y Sin Medidor
+        with g_col3:
             with st.container(border=True):
                 st.markdown(
                     "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Evolución de Retirados y Sin Medidor</p>",
@@ -2870,7 +2927,6 @@ with tab_sheets_interno:
                             col_sin_sheets: "#f43f5e",
                         },
                     )
-                    # Renombrar leyendas para mayor claridad visual
                     fig_ret_sin.for_each_trace(lambda t: t.update(name="Retirados" if t.name == col_ret_sheets else "Sin Medidor"))
                     
                     fig_ret_sin.update_layout(
