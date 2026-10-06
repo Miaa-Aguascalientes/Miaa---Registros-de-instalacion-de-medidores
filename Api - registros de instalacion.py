@@ -1309,6 +1309,7 @@ with tab_principal:
     )
 
     if not df.empty and col_fecha_ref:
+      # Determinar la fecha más reciente (día en curso con registros)
       max_fecha_reg = df["fecha_dt"].max()
       if pd.notna(max_fecha_reg):
         dia_actual_ref = pd.to_datetime(max_fecha_reg).date()
@@ -1325,6 +1326,7 @@ with tab_principal:
       )
 
       if not df_hoy_inst.empty:
+        # Selector de zona o colonia para facilitar la búsqueda interactiva
         lista_colonias_hoy = sorted(
             [
                 str(c)
@@ -1360,6 +1362,7 @@ with tab_principal:
           )
           df_hoy_filtrado = df_hoy_filtrado[mask_txt]
 
+        # Seleccionar y renombrar columnas clave para mostrar de forma limpia
         cols_mostrar = []
         candidatos_cols = [
             "nombreCliente",
@@ -1380,6 +1383,7 @@ with tab_principal:
 
         df_tabla_hoy_final = df_hoy_filtrado[cols_mostrar].copy()
 
+        # Formatear fecha si está presente
         if "fechaRegistro" in df_tabla_hoy_final.columns:
           df_tabla_hoy_final["fechaRegistro"] = pd.to_datetime(
               df_tabla_hoy_final["fechaRegistro"], errors="coerce"
