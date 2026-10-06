@@ -2681,28 +2681,38 @@ with tab_sheets_interno:
     )
 
     if not df_sheets_interno.empty:
+        # Limpiar nombres de columnas para evitar errores por espacios o mayúsculas
         df_sheets_interno.columns = [str(c).strip() for c in df_sheets_interno.columns]
-        cols_numericas = ["Instalados", "Cuadro", "Registro", "Retirados", "sin medidor"]
-        for col in cols_numericas:
-            if col in df_sheets_interno.columns:
-                df_sheets_interno[col] = pd.to_numeric(
-                    df_sheets_interno[col].astype(str).str.replace(",", ""),
+        
+        # Diccionario para buscar nombres de columnas flexibles
+        cols_lower = {c.lower(): c for c in df_sheets_interno.columns}
+        
+        col_fecha_sheets = cols_lower.get("fecha de instalacion", cols_lower.get("fecha", None))
+        col_inst_sheets = cols_lower.get("instalados", None)
+        col_cuadro_sheets = cols_lower.get("cuadro", None)
+        col_reg_sheets = cols_lower.get("registro", None)
+        col_ret_sheets = cols_lower.get("retirados", None)
+        col_sin_sheets = cols_lower.get("sin medidor", cols_lower.get("sin_medidor", None))
+
+        # Limpiar y convertir a numéricos las columnas clave si existen
+        for col_name in [col_inst_sheets, col_cuadro_sheets, col_reg_sheets, col_ret_sheets, col_sin_sheets]:
+            if col_name and col_name in df_sheets_interno.columns:
+                df_sheets_interno[col_name] = pd.to_numeric(
+                    df_sheets_interno[col_name].astype(str).str.replace(",", ""),
                     errors="coerce",
                 ).fillna(0)
 
         # ======================================================================
         # CÁLCULO DE INDICADORES (KPIs) DE INSTALACIÓN
         # ======================================================================
-        if "Instalados" in df_sheets_interno.columns:
-            total_medidores_sheets = int(df_sheets_interno["Instalados"].sum())
-            
-            # Filtrar días con instalaciones registradas mayores a 0 para el cálculo de promedios, máximos y mínimos
-            df_con_instalacion = df_sheets_interno[df_sheets_interno["Instalados"] > 0]
+        if col_inst_sheets and col_inst_sheets in df_sheets_interno.columns:
+            total_medidores_sheets = int(df_sheets_interno[col_inst_sheets].sum())
+            df_con_instalacion = df_sheets_interno[df_sheets_interno[col_inst_sheets] > 0]
             
             if not df_con_instalacion.empty:
-                promedio_diario = round(df_con_instalacion["Instalados"].mean(), 1)
-                max_diario = int(df_con_instalacion["Instalados"].max())
-                min_diario = int(df_con_instalacion["Instalados"].min())
+                promedio_diario = round(df_con_instalacion[col_inst_sheets].mean(), 1)
+                max_diario = int(df_con_instalacion[col_inst_sheets].max())
+                min_diario = int(df_con_instalacion[col_inst_sheets].min())
             else:
                 promedio_diario = 0.0
                 max_diario = 0
@@ -2780,15 +2790,12 @@ with tab_sheets_interno:
                 "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día</p>",
                 unsafe_allow_html=True,
             )
-            if (
-                "Fecha de Instalacion" in df_sheets_interno.columns
-                and "Instalados" in df_sheets_interno.columns
-            ):
+            if col_fecha_sheets and col_inst_sheets:
                 fig_bar_inst = px.bar(
                     df_sheets_interno,
-                    x="Fecha de Instalacion",
-                    y="Instalados",
-                    text="Instalados",
+                    x=col_fecha_sheets,
+                    y=col_inst_sheets,
+                    text=col_inst_sheets,
                     color_discrete_sequence=["#3b82f6"],
                 )
                 fig_bar_inst.update_traces(textposition="outside", textfont_size=10)
@@ -2816,12 +2823,9 @@ with tab_sheets_interno:
                     "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Medidores en Cuadro vs Registro</p>",
                     unsafe_allow_html=True,
                 )
-                if (
-                    "Cuadro" in df_sheets_interno.columns
-                    and "Registro" in df_sheets_interno.columns
-                ):
-                    sum_cuadro = df_sheets_interno["Cuadro"].sum()
-                    sum_registro = df_sheets_interno["Registro"].sum()
+                if col_cuadro_sheets and col_reg_sheets:
+                    sum_cuadro = df_sheets_interno[col_cuadro_sheets].sum()
+                    sum_registro = df_sheets_interno[col_reg_sheets].sum()
                     df_pie_cr = pd.DataFrame({
                         "Tipo": ["Cuadro", "Registro"],
                         "Cantidad": [sum_cuadro, sum_registro],
@@ -2855,21 +2859,20 @@ with tab_sheets_interno:
                     "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Evolución de Retirados y Sin Medidor</p>",
                     unsafe_allow_html=True,
                 )
-                if (
-                    "Fecha de Instalacion" in df_sheets_interno.columns
-                    and "Retirados" in df_sheets_interno.columns
-                    and "sin medidor" in df_sheets_interno.columns
-                ):
+                if col_fecha_sheets and col_ret_sheets and col_sin_sheets:
                     fig_ret_sin = px.bar(
                         df_sheets_interno,
-                        x="Fecha de Instalacion",
-                        y=["Retirados", "sin medidor"],
+                        x=col_fecha_sheets,
+                        y=[col_ret_sheets, col_sin_sheets],
                         barmode="group",
                         color_discrete_map={
-                            "Retirados": "#f59e0b",
-                            "sin medidor": "#f43f5e",
+                            col_ret_sheets: "#f59e0b",
+                            col_sin_sheets: "#f43f5e",
                         },
                     )
+                    # Renombrar leyendas para mayor claridad visual
+                    fig_ret_sin.for_each_trace(lambda t: t.update(name="Retirados" if t.name == col_ret_sheets else "Sin Medidor"))
+                    
                     fig_ret_sin.update_layout(
                         plot_bgcolor="rgba(0,0,0,0)",
                         paper_bgcolor="rgba(0,0,0,0)",
@@ -2883,6 +2886,8 @@ with tab_sheets_interno:
                     st.plotly_chart(
                         fig_ret_sin, use_container_width=True, key="sheets_retirados_sin"
                     )
+                else:
+                    st.info("No se encontraron las columnas 'Retirados' o 'sin medidor' en el archivo.")
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
@@ -2893,14 +2898,14 @@ with tab_sheets_interno:
             )
 
             columnas_deseadas = [
-                "Fecha de Instalacion",
-                "Instalados",
-                "Cuadro",
-                "Registro",
-                "Retirados",
-                "sin medidor",
+                col_fecha_sheets,
+                col_inst_sheets,
+                col_cuadro_sheets,
+                col_reg_sheets,
+                col_ret_sheets,
+                col_sin_sheets,
             ]
-            cols_existentes = [c for c in columnas_deseadas if c in df_sheets_interno.columns]
+            cols_existentes = [c for c in columnas_deseadas if c and c in df_sheets_interno.columns]
             df_tabla_filtrada = df_sheets_interno[cols_existentes].copy()
 
             st.dataframe(df_tabla_filtrada, use_container_width=True, height=320)
