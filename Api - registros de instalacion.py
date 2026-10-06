@@ -194,8 +194,9 @@ st.markdown(custom_style, unsafe_allow_html=True)
 # SECCIÓN 2: FUNCIONES DE CONEXIÓN Y DATOS (API Y BASE DE DATOS)
 # ==============================================================================
 
-url_login = "https://prelec.miaa.mx/auth/v2/login"
-url_instalaciones = "https://prelec.miaa.mx/msvc-tecnica/medidores/instalaciones"
+BASE_URL = "https://prelec.miaa.mx"
+URL_LOGIN_CORRECTA = "/auth/login"
+URL_INSTALACIONES = "https://prelec.miaa.mx/msvc-tecnica/medidores/instalaciones"
 
 
 @st.cache_data(ttl=300)
