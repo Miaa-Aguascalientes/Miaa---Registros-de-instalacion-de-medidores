@@ -234,8 +234,8 @@ def cargar_datos_api():
     return res_inst.json()
     
   except Exception as e:
-    st.error(fAbu}Excepción crítica al conectar con la API: {str(e)}")
-    return None
+      st.error(f"Excepción crítica al conectar con la API: {str(e)}")
+      return None
 
 
 @st.cache_data(ttl=600)
