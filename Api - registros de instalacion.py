@@ -1318,6 +1318,7 @@ with tab_principal:
     )
 
     if not df.empty and col_fecha_ref:
+      # Determinar la fecha más reciente (día en curso con registros)
       max_fecha_reg = df["fecha_dt"].max()
       if pd.notna(max_fecha_reg):
         dia_actual_ref = pd.to_datetime(max_fecha_reg).date()
@@ -1325,43 +1326,31 @@ with tab_principal:
         dia_actual_ref = datetime.date.today()
 
       df_hoy_inst = df[df["fecha_dt"].dt.date == dia_actual_ref].copy()
+      total_hoy_cant = len(df_hoy_inst)
 
+      # Indicador KPI exclusivo para esta tabla del día en curso
       st.markdown(
-          f"<p style='font-size:12px; color: #94a3b8; margin-bottom:10px;'>Mostrando"
-          f" registros correspondientes a la fecha: <b>{dia_actual_ref.strftime('%d/%m/%Y')}</b>"
-          f" (Total instalados hoy: <b>{len(df_hoy_inst):,}</b>)</p>",
+          f"""
+                <div style="display: flex; align-items: center; gap: 12px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); padding: 8px 12px; border-radius: 6px; margin-bottom: 10px;">
+                    <div style="font-size: 20px; color: #38bdf8;"><i class="fa-solid fa-calendar-day"></i></div>
+                    <div>
+                        <div style="font-size: 11px; color: #94a3b8; font-weight: bold; text-transform: uppercase;">Medidores Instalados Hoy ({dia_actual_ref.strftime('%d/%m/%Y')})</div>
+                        <div style="font-size: 16px; color: #ffffff; font-weight: bold;">{total_hoy_cant:,} unidades</div>
+                    </div>
+                </div>
+            """,
           unsafe_allow_html=True,
       )
 
       if not df_hoy_inst.empty:
-        lista_colonias_hoy = sorted(
-            [
-                str(c)
-                for c in df_hoy_inst["colonia"].dropna().unique()
-                if str(c).strip() != ""
-            ]
+        # Campo exclusivo de búsqueda por texto (sin el filtro de colonias)
+        busqueda_texto_hoy = st.text_input(
+            "Buscar por Predio, Cliente o Serie",
+            placeholder="Ej. Predio, Nombre o Serie...",
+            key="filtro_texto_hoy",
         )
-        col_f_1, col_f_2 = st.columns([2, 2])
-        with col_f_1:
-          colonia_seleccionada = st.selectbox(
-              "Filtrar por Colonia / Zona",
-              ["Todas las zonas"] + lista_colonias_hoy,
-              key="filtro_colonia_hoy",
-          )
-        with col_f_2:
-          busqueda_texto_hoy = st.text_input(
-              "Buscar por Predio, Cliente o Serie",
-              placeholder="Ej. Predio, Nombre o Serie...",
-              key="filtro_texto_hoy",
-          )
 
         df_hoy_filtrado = df_hoy_inst.copy()
-        if colonia_seleccionada != "Todas las zonas":
-          df_hoy_filtrado = df_hoy_filtrado[
-              df_hoy_filtrado["colonia"].astype(str).str.strip()
-              == colonia_seleccionada
-          ]
-
         if busqueda_texto_hoy:
           b_txt = busqueda_texto_hoy.lower()
           mask_txt = df_hoy_filtrado.astype(str).apply(
@@ -1369,6 +1358,17 @@ with tab_principal:
           )
           df_hoy_filtrado = df_hoy_filtrado[mask_txt]
 
+        # Crear columna de Instalador (Externo / MIAA)
+        if "usuarioExterno" in df_hoy_filtrado.columns:
+          df_hoy_filtrado["Instalador"] = np.where(
+              df_hoy_filtrado["usuarioExterno"].fillna(False).astype(bool),
+              "Externo",
+              "MIAA",
+          )
+        else:
+          df_hoy_filtrado["Instalador"] = "MIAA"
+
+        # Seleccionar y renombrar columnas clave
         cols_mostrar = []
         candidatos_cols = [
             "nombreCliente",
@@ -1380,6 +1380,7 @@ with tab_principal:
             "serieMedidor",
             "serie",
             "tipo_instalacion_nombre",
+            "Instalador",
             "anomalia_nombre",
             "fechaRegistro",
         ]
@@ -1389,7 +1390,14 @@ with tab_principal:
 
         df_tabla_hoy_final = df_hoy_filtrado[cols_mostrar].copy()
 
+        # Ordenar de la hora más actual a la más antigua
         if "fechaRegistro" in df_tabla_hoy_final.columns:
+          df_tabla_hoy_final["_temp_dt"] = pd.to_datetime(
+              df_tabla_hoy_final["fechaRegistro"], errors="coerce"
+          )
+          df_tabla_hoy_final = df_tabla_hoy_final.sort_values(
+              by="_temp_dt", ascending=False
+          ).drop(columns=["_temp_dt"])
           df_tabla_hoy_final["fechaRegistro"] = pd.to_datetime(
               df_tabla_hoy_final["fechaRegistro"], errors="coerce"
           ).dt.strftime("%H:%M:%S")
