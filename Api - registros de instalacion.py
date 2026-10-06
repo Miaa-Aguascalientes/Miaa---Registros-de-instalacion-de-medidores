@@ -1313,7 +1313,7 @@ with tab_principal:
   with st.container(border=True):
     st.markdown(
         "<p style='font-size:14px; font-weight:bold; margin-bottom:6px;'>📍"
-        " Listado Interactivo: Instalaciones de Medidores del Día en Curso</p>",
+        " Instalacion de Medidores del Día en Curso</p>",
         unsafe_allow_html=True,
     )
 
