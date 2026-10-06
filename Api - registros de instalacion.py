@@ -1306,7 +1306,7 @@ with tab_principal:
             unsafe_allow_html=True,
         )
 
-  # ==============================================================================
+# ==============================================================================
   # NUEVA SECCIÓN: LISTADO INTERACTIVO DE INSTALACIONES DEL DÍA EN CURSO
   # ==============================================================================
   st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
