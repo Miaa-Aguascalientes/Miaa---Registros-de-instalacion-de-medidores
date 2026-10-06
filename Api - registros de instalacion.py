@@ -201,43 +201,42 @@ URL_INSTALACIONES = "https://prelec.miaa.mx/msvc-tecnica/medidores/instalaciones
 
 @st.cache_data(ttl=300)
 def cargar_datos_api():
-  """Conecta con la API externa de MIAA usando credenciales de st.secrets para obtener registros de instalaciones."""
-  try:
-    usuario = st.secrets["api"]["usuario"]
-    password = st.secrets["api"]["password"]
+    """Conecta con la API externa de MIAA usando credenciales de st.secrets para obtener registros de instalaciones."""
+    try:
+        usuario = st.secrets["api"]["usuario"]
+        password = st.secrets["api"]["password"]
 
-    # Se incluyen ambas variantes de clave ('username' y 'usuario') para garantizar compatibilidad con el backend
-    payload = {"username": usuario, "usuario": usuario, "password": password}
-    headers = {"Content-Type": "application/json"}
+        # Payload limpio
+        payload = {"username": usuario, "password": password}
+        headers = {"Content-Type": "application/json"}
 
-    res_login = requests.post(
-        url_login, json=payload, headers=headers, verify=False, timeout=15
-    )
+        # CORREGIDO: Se define la URL de login usando las constantes
+        url_login = BASE_URL + URL_LOGIN_CORRECTA
 
-    if res_login.status_code == 200:
-      data_json = res_login.json()
-      token = (
-          data_json.get("token")
-          or data_json.get("access_token")
-          or data_json.get("accessToken")
-          or data_json.get("data", {}).get("token")
-      )
-
-      if token:
-        res_inst = requests.get(
-            url_instalaciones,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {token}",
-            },
-            verify=False,
-            timeout=15,
+        res_login = requests.post(
+            url_login, json=payload, headers=headers, timeout=15
         )
-        if res_inst.status_code == 200:
-          return res_inst.json()
-    return None
-  except Exception:
-    return None
+
+        if res_login.status_code == 200:
+            data_json = res_login.json()
+            token = data_json.get("token") or data_json.get("access_token")
+
+            if token:
+                res_inst = requests.get(
+                    URL_INSTALACIONES,
+                    headers={
+                        "Content-Type": "application/json",
+                        "Authorization": f"Bearer {token}",
+                    },
+                    timeout=30,
+                )
+                if res_inst.status_code == 200:
+                    return res_inst.json()
+        return None
+    except Exception as e:
+        # Imprimir o registrar el error ayuda a depurar si falla de nuevo
+        print(f"Error en cargar_datos_api: {e}")
+        return None
 
 
 @st.cache_data(ttl=600)
