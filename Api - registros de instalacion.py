@@ -12,10 +12,6 @@ from shapely.geometry import Point, Polygon
 from sqlalchemy import create_engine
 import streamlit as st
 from streamlit_folium import st_folium
-import urllib3
-
-# Desactivar advertencias de SSL para peticiones corporativas/municipales
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # ==============================================================================
 # SECCIÓN 1: CONFIGURACIÓN GENERAL DE LA PÁGINA Y ESTILOS CSS
@@ -507,6 +503,7 @@ st.sidebar.markdown("---")
 # ------------------------------------------------------------------------------
 st.sidebar.subheader("Estado de Conexión API")
 
+# Botón para forzar la reconexión (limpia la caché y recarga los datos)
 if st.sidebar.button("🔄 Reconectar API", use_container_width=True):
   st.cache_data.clear()
   if "datos_instalaciones" in st.session_state:
@@ -516,6 +513,7 @@ if st.sidebar.button("🔄 Reconectar API", use_container_width=True):
     st.session_state["datos_instalaciones"] = res
   st.rerun()
 
+# Comprobación del estado actual de los datos en la sesión
 api_conectada = (
     "datos_instalaciones" in st.session_state
     and st.session_state["datos_instalaciones"] is not None
@@ -715,7 +713,7 @@ else:
   )
 
 # ==============================================================================
-# SECCIÓN 7: ESTRUCTURA DE PESTAÑAS PRINCIPALES
+# SECCIÓN 7: ESTRUCTURA DE PESTAÑAS PRINCIPALES (Con la pestaña solicitada)
 # ==============================================================================
 
 (
@@ -2576,7 +2574,164 @@ with tab_sheets_interno:
       " Registro de Instalaciones Interno (Google Sheets)</p>",
       unsafe_allow_html=True,
   )
+
   if not df_sheets_interno.empty:
-    st.dataframe(df_sheets_interno, use_container_width=True)
+    df_sheets_interno.columns = [
+        str(c).strip() for c in df_sheets_interno.columns
+    ]
+    cols_numericas = [
+        "Instalados",
+        "Cuadro",
+        "Registro",
+        "Retirados",
+        "sin medidor",
+    ]
+    for col in cols_numericas:
+      if col in df_sheets_interno.columns:
+        df_sheets_interno[col] = pd.to_numeric(
+            df_sheets_interno[col].astype(str).str.replace(",", ""),
+            errors="coerce",
+        ).fillna(0)
+
+    # 1. Gráfico de barras: Instalaciones por día
+    with st.container(border=True):
+      st.markdown(
+          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones"
+          " por Día</p>",
+          unsafe_allow_html=True,
+      )
+      if (
+          "Fecha de Instalacion" in df_sheets_interno.columns
+          and "Instalados" in df_sheets_interno.columns
+      ):
+        fig_bar_inst = px.bar(
+            df_sheets_interno,
+            x="Fecha de Instalacion",
+            y="Instalados",
+            text="Instalados",
+            color_discrete_sequence=["#3b82f6"],
+        )
+        fig_bar_inst.update_traces(textposition="outside", textfont_size=10)
+        fig_bar_inst.update_layout(
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            font_color="#ffffff",
+            margin=dict(t=20, b=5, l=5, r=5),
+            height=300,
+            xaxis_title=None,
+            yaxis_title=None,
+        )
+        st.plotly_chart(
+            fig_bar_inst, use_container_width=True, key="sheets_inst_dia"
+        )
+
+    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+    g_col1, g_col2 = st.columns(2)
+
+    # 2. Gráfico de pastel: Medidores en Cuadro vs Registro
+    with g_col1:
+      with st.container(border=True):
+        st.markdown(
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Medidores"
+            " en Cuadro vs Registro</p>",
+            unsafe_allow_html=True,
+        )
+        if (
+            "Cuadro" in df_sheets_interno.columns
+            and "Registro" in df_sheets_interno.columns
+        ):
+          sum_cuadro = df_sheets_interno["Cuadro"].sum()
+          sum_registro = df_sheets_interno["Registro"].sum()
+          df_pie_cr = pd.DataFrame({
+              "Tipo": ["Cuadro", "Registro"],
+              "Cantidad": [sum_cuadro, sum_registro],
+          })
+
+          fig_pie_cr = px.pie(
+              df_pie_cr,
+              names="Tipo",
+              values="Cantidad",
+              hole=0.5,
+              color="Tipo",
+              color_discrete_map={"Cuadro": "#0066cc", "Registro": "#e83e8c"},
+          )
+          fig_pie_cr.update_traces(textinfo="value+percent", textfont=dict(size=11))
+          fig_pie_cr.update_layout(
+              plot_bgcolor="rgba(0,0,0,0)",
+              paper_bgcolor="rgba(0,0,0,0)",
+              font_color="#ffffff",
+              margin=dict(t=20, b=5, l=5, r=5),
+              height=280,
+              legend=dict(orientation="h", y=-0.1, x=0),
+          )
+          st.plotly_chart(
+              fig_pie_cr, use_container_width=True, key="sheets_pie_cuadro_reg"
+          )
+
+    # 3. Gráfico para Retirados y Sin Medidor
+    with g_col2:
+      with st.container(border=True):
+        st.markdown(
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Evolución"
+            " de Retirados y Sin Medidor</p>",
+            unsafe_allow_html=True,
+        )
+        if (
+            "Fecha de Instalacion" in df_sheets_interno.columns
+            and "Retirados" in df_sheets_interno.columns
+            and "sin medidor" in df_sheets_interno.columns
+        ):
+          fig_ret_sin = px.bar(
+              df_sheets_interno,
+              x="Fecha de Instalacion",
+              y=["Retirados", "sin medidor"],
+              barmode="group",
+              color_discrete_map={
+                  "Retirados": "#f59e0b",
+                  "sin medidor": "#f43f5e",
+              },
+          )
+          fig_ret_sin.update_layout(
+              plot_bgcolor="rgba(0,0,0,0)",
+              paper_bgcolor="rgba(0,0,0,0)",
+              font_color="#ffffff",
+              margin=dict(t=20, b=5, l=5, r=5),
+              height=280,
+              xaxis_title=None,
+              yaxis_title=None,
+              legend=dict(orientation="h", y=1.1, x=0),
+          )
+          st.plotly_chart(
+              fig_ret_sin, use_container_width=True, key="sheets_retirados_sin"
+          )
+
+    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+    with st.container(border=True):
+      st.markdown(
+          "<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>📋"
+          " Tabla de Datos - Google Sheets (Instalaciones)</p>",
+          unsafe_allow_html=True,
+      )
+
+      # Filtrar estrictamente la tabla inferior para que solo muestre las columnas solicitadas
+      columnas_deseadas = [
+          "Fecha de Instalacion",
+          "Instalados",
+          "Cuadro",
+          "Registro",
+          "Retirados",
+          "sin medidor",
+      ]
+      cols_existentes = [
+          c for c in columnas_deseadas if c in df_sheets_interno.columns
+      ]
+      df_tabla_filtrada = df_sheets_interno[cols_existentes].copy()
+
+      st.dataframe(df_tabla_filtrada, use_container_width=True, height=320)
   else:
-    st.warning("No se pudieron cargar los datos de Google Sheets.")
+    st.warning(
+        "No se pudo cargar la información de la hoja 'Instalaciones' del"
+        " archivo de Google Sheets."
+    )
