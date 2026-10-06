@@ -1306,6 +1306,104 @@ with tab_principal:
             unsafe_allow_html=True,
         )
 
+  # ==============================================================================
+  # NUEVA SECCIÓN: LISTADO INTERACTIVO DE INSTALACIONES DEL DÍA EN CURSO
+  # ==============================================================================
+  st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+  with st.container(border=True):
+    st.markdown(
+        "<p style='font-size:14px; font-weight:bold; margin-bottom:6px;'>📍"
+        " Listado Interactivo: Instalaciones de Medidores del Día en Curso</p>",
+        unsafe_allow_html=True,
+    )
+
+    if not df.empty and col_fecha_ref:
+      max_fecha_reg = df["fecha_dt"].max()
+      if pd.notna(max_fecha_reg):
+        dia_actual_ref = pd.to_datetime(max_fecha_reg).date()
+      else:
+        dia_actual_ref = datetime.date.today()
+
+      df_hoy_inst = df[df["fecha_dt"].dt.date == dia_actual_ref].copy()
+
+      st.markdown(
+          f"<p style='font-size:12px; color: #94a3b8; margin-bottom:10px;'>Mostrando"
+          f" registros correspondientes a la fecha: <b>{dia_actual_ref.strftime('%d/%m/%Y')}</b>"
+          f" (Total instalados hoy: <b>{len(df_hoy_inst):,}</b>)</p>",
+          unsafe_allow_html=True,
+      )
+
+      if not df_hoy_inst.empty:
+        lista_colonias_hoy = sorted(
+            [
+                str(c)
+                for c in df_hoy_inst["colonia"].dropna().unique()
+                if str(c).strip() != ""
+            ]
+        )
+        col_f_1, col_f_2 = st.columns([2, 2])
+        with col_f_1:
+          colonia_seleccionada = st.selectbox(
+              "Filtrar por Colonia / Zona",
+              ["Todas las zonas"] + lista_colonias_hoy,
+              key="filtro_colonia_hoy",
+          )
+        with col_f_2:
+          busqueda_texto_hoy = st.text_input(
+              "Buscar por Predio, Cliente o Serie",
+              placeholder="Ej. Predio, Nombre o Serie...",
+              key="filtro_texto_hoy",
+          )
+
+        df_hoy_filtrado = df_hoy_inst.copy()
+        if colonia_seleccionada != "Todas las zonas":
+          df_hoy_filtrado = df_hoy_filtrado[
+              df_hoy_filtrado["colonia"].astype(str).str.strip()
+              == colonia_seleccionada
+          ]
+
+        if busqueda_texto_hoy:
+          b_txt = busqueda_texto_hoy.lower()
+          mask_txt = df_hoy_filtrado.astype(str).apply(
+              lambda row: row.str.lower().str.contains(b_txt).any(), axis=1
+          )
+          df_hoy_filtrado = df_hoy_filtrado[mask_txt]
+
+        cols_mostrar = []
+        candidatos_cols = [
+            "nombreCliente",
+            "predio",
+            "numeroPredio",
+            "cliente",
+            "domicilio",
+            "colonia",
+            "serieMedidor",
+            "serie",
+            "tipo_instalacion_nombre",
+            "anomalia_nombre",
+            "fechaRegistro",
+        ]
+        for c in candidatos_cols:
+          if c in df_hoy_filtrado.columns:
+            cols_mostrar.append(c)
+
+        df_tabla_hoy_final = df_hoy_filtrado[cols_mostrar].copy()
+
+        if "fechaRegistro" in df_tabla_hoy_final.columns:
+          df_tabla_hoy_final["fechaRegistro"] = pd.to_datetime(
+              df_tabla_hoy_final["fechaRegistro"], errors="coerce"
+          ).dt.strftime("%H:%M:%S")
+
+        st.dataframe(
+            df_tabla_hoy_final, use_container_width=True, hide_index=True
+        )
+      else:
+        st.info(
+            "No se encontraron instalaciones registradas para el día en curso."
+        )
+    else:
+      st.info("No hay datos de fechas disponibles para el día en curso.")
+
 # ------------------------------------------------------------------------------
 # PESTAÑA: ANÁLISIS DE ANOMALÍAS
 # ------------------------------------------------------------------------------
