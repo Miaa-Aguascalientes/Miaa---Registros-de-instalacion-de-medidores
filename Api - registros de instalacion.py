@@ -202,8 +202,11 @@ def cargar_datos_api():
         usuario = st.secrets["api"]["usuario"]
         password = st.secrets["api"]["password"]
 
+        # Payload limpio
         payload = {"username": usuario, "password": password}
         headers = {"Content-Type": "application/json"}
+
+        # CORREGIDO: Se define la URL de login usando las constantes
         url_login = BASE_URL + URL_LOGIN_CORRECTA
 
         res_login = requests.post(
@@ -227,6 +230,7 @@ def cargar_datos_api():
                     return res_inst.json()
         return None
     except Exception as e:
+        # Imprimir o registrar el error ayuda a depurar si falla de nuevo
         print(f"Error en cargar_datos_api: {e}")
         return None
 
@@ -499,6 +503,7 @@ st.sidebar.markdown("---")
 # ------------------------------------------------------------------------------
 st.sidebar.subheader("Estado de Conexión API")
 
+# Botón para forzar la reconexión (limpia la caché y recarga los datos)
 if st.sidebar.button("🔄 Reconectar API", use_container_width=True):
   st.cache_data.clear()
   if "datos_instalaciones" in st.session_state:
@@ -508,6 +513,7 @@ if st.sidebar.button("🔄 Reconectar API", use_container_width=True):
     st.session_state["datos_instalaciones"] = res
   st.rerun()
 
+# Comprobación del estado actual de los datos en la sesión
 api_conectada = (
     "datos_instalaciones" in st.session_state
     and st.session_state["datos_instalaciones"] is not None
@@ -707,7 +713,7 @@ else:
   )
 
 # ==============================================================================
-# SECCIÓN 7: ESTRUCTURA DE PESTAÑAS PRINCIPALES
+# SECCIÓN 7: ESTRUCTURA DE PESTAÑAS PRINCIPALES (Con la pestaña solicitada)
 # ==============================================================================
 
 (
@@ -828,7 +834,8 @@ with tab_principal:
   with col_g1:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día</p>",
+          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones"
+          " por Día</p>",
           unsafe_allow_html=True,
       )
       if (
@@ -874,7 +881,8 @@ with tab_principal:
   with col_g2:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Tipo de Instalación</p>",
+          "<p style='font-size:12px; margin-bottom:4px;"
+          " font-weight:bold;'>Distribución por Tipo de Instalación</p>",
           unsafe_allow_html=True,
       )
       if not df_filtrado.empty and "tipo_instalacion_nombre" in df_filtrado.columns:
@@ -937,7 +945,8 @@ with tab_principal:
   with col_g3:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Cuadro vs Registro</p>",
+          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Cuadro"
+          " vs Registro</p>",
           unsafe_allow_html=True,
       )
       if not df_filtrado.empty and "tipo_instalacion_nombre" in df_filtrado.columns:
@@ -1027,85 +1036,13 @@ with tab_principal:
           fig_cr, use_container_width=True, key="dash_prin_cuadro_vs_reg"
       )
 
-  # ==============================================================================
-  # NUEVA SECCIÓN: TABLA / LISTADO INTERACTIVO DE INSTALACIONES DEL DÍA EN CURSO
-  # ==============================================================================
-  st.markdown("<div style='margin-bottom: 5px;'></div>", unsafe_allow_html=True)
-  
-  with st.container(border=True):
-    st.markdown(
-        "<p style='font-size:14px; font-weight:bold; margin-bottom:6px; color:#38bdf8;'>📍 Zonas y Medidores Instalados en el Día en Curso</p>",
-        unsafe_allow_html=True,
-    )
-    
-    # Determinar la fecha de referencia para "el día en curso" (basado en la fecha máxima de los datos o la fecha actual real)
-    if not df.empty and "fecha_dt" in df.columns and not df["fecha_dt"].isna().all():
-      # Usamos la fecha máxima disponible en el DataFrame de la API como el "día actual" de trabajo, o datetime.date.today() si se prefiere
-      max_data_date = df["fecha_dt"].max().date()
-    else:
-      max_data_date = datetime.date.today()
-      
-    # Filtrar exclusivamente los registros del día en curso
-    if not df.empty and "fecha_dt" in df.columns:
-      df_hoy = df[df["fecha_dt"].dt.date == max_data_date].copy()
-    else:
-      df_hoy = pd.DataFrame()
-
-    if not df_hoy.empty:
-      # Asignar polígonos espaciales si están disponibles para ver en qué polígono/zona cae cada registro de hoy
-      poligonos_hoy = []
-      if shapely_polygons and "latitud" in df_hoy.columns:
-        for _, row_h in df_hoy.iterrows():
-          lat_h, lon_h = row_h.get("latitud"), row_h.get("longitud")
-          fid_asignado = "SIN ZONA / POLÍGONO"
-          if pd.notna(lat_h) and pd.notna(lon_h):
-            pt_h = Point(lat_h, lon_h)
-            for p_id, poly_obj in shapely_polygons.items():
-              if poly_obj.contains(pt_h):
-                fid_asignado = str(p_id)
-                break
-          poligonos_hoy.append(fid_asignado)
-      else:
-        poligonos_hoy = ["N/A"] * len(df_hoy)
-        
-      df_hoy["Polígono"] = poligonos_hoy
-
-      # Seleccionar y renombrar columnas clave para el monitoreo de la zona de instalación del día
-      cols_mostrar_hoy = []
-      posibles_cols = {
-          "colonia": "Colonia",
-          "Polígono": "Polígono",
-          "domicilio": "Domicilio",
-          "numeroPredio": "Nº Predio",
-          "cliente": "Cliente",
-          "serieMedidor": "Serie Medidor",
-          "tipo_instalacion_nombre": "Tipo Instalación",
-          "nivel": "Nivel Tarifario",
-          "anomalia_nombre": "Anomalía",
-      }
-      
-      for c_orig, c_nom in posibles_cols.items():
-        if c_orig in df_hoy.columns:
-          cols_mostrar_hoy.append(c_orig)
-
-      df_tabla_hoy_view = df_hoy[cols_mostrar_hoy].rename(columns=posibles_cols)
-      
-      # Mostrar métrica rápida de cuántos van hoy
-      st.markdown(f"<p style='font-size:12px; color:#94a3b8; margin-bottom:8px;'>Total de instalaciones registradas para hoy ({max_data_date.strftime('%d/%m/%Y')}): <b style='color:white;'>{len(df_hoy):,}</b></p>", unsafe_allow_html=True)
-      
-      # Mostrar la tabla interactiva de Streamlit
-      st.dataframe(df_tabla_hoy_view, use_container_width=True, hide_index=True, height=220)
-    else:
-      st.info(f"No se encontraron registros de instalaciones para la fecha actual ({max_data_date.strftime('%d/%m/%Y')}).")
-
-  st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
-
   col_inf1, col_inf2 = st.columns([1, 1.6])
 
   with col_inf1:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Eficiencia por Colonia y Polígono</p>",
+          "<p style='font-size:12px; margin-bottom:4px;"
+          " font-weight:bold;'>Eficiencia por Colonia y Polígono</p>",
           unsafe_allow_html=True,
       )
       if not df_eficiencia.empty:
@@ -1121,7 +1058,8 @@ with tab_principal:
     with col_map_h:
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones (Externo vs MIAA)</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa"
+            " de Instalaciones (Externo vs MIAA)</p>",
             unsafe_allow_html=True,
         )
 
@@ -1262,7 +1200,8 @@ with tab_principal:
     with col_graf_h:
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Mes</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones"
+            " por Mes</p>",
             unsafe_allow_html=True,
         )
 
@@ -1343,7 +1282,8 @@ with tab_principal:
 
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:8px; font-weight:bold;'>Total de Anomalías</p>",
+            "<p style='font-size:12px; margin-bottom:8px; font-weight:bold;'>Total"
+            " de Anomalías</p>",
             unsafe_allow_html=True,
         )
         total_anomalias_actual = (
@@ -1371,7 +1311,8 @@ with tab_principal:
 # ------------------------------------------------------------------------------
 with tab_anomalias:
   st.markdown(
-      "<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>⚠️ Análisis Completo de Anomalías en Instalaciones</p>",
+      "<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>⚠️"
+      " Análisis Completo de Anomalías en Instalaciones</p>",
       unsafe_allow_html=True,
   )
 
@@ -1457,7 +1398,8 @@ with tab_anomalias:
   with col_anom_g1:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Tipo de Anomalía</p>",
+          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución"
+          " por Tipo de Anomalía</p>",
           unsafe_allow_html=True,
       )
       if not df_con_anomalia.empty:
@@ -1497,7 +1439,8 @@ with tab_anomalias:
   with col_anom_g2:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Proporción: Con Anomalía vs Regular</p>",
+          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Proporción:"
+          " Con Anomalía vs Regular</p>",
           unsafe_allow_html=True,
       )
       if total_registros_filtrados > 0:
@@ -1537,7 +1480,8 @@ with tab_anomalias:
         st.info("Sin datos para mostrar proporción.")
 
   st.markdown(
-      "<p style='font-size:14px; font-weight:bold; margin-top:20px; margin-bottom:8px;'>📋 Detalle de Registros con Anomalías Detectadas</p>",
+      "<p style='font-size:14px; font-weight:bold; margin-top:20px;"
+      " margin-bottom:8px;'>📋 Detalle de Registros con Anomalías Detectadas</p>",
       unsafe_allow_html=True,
   )
   if not df_con_anomalia.empty:
@@ -1575,7 +1519,8 @@ with tab_anomalias:
     st.dataframe(df_tabla_anom, use_container_width=True)
   else:
     st.success(
-        "¡Excelente! No hay registros con anomalías reportadas para los filtros seleccionados."
+        "¡Excelente! No hay registros con anomalías reportadas para los filtros"
+        " seleccionados."
     )
 
 # ------------------------------------------------------------------------------
@@ -1700,7 +1645,8 @@ with tab_poligonos:
   with col_c_izq:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Seleccionar Polígonos (FID)</p>",
+          "<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Seleccionar"
+          " Polígonos (FID)</p>",
           unsafe_allow_html=True,
       )
 
@@ -1738,7 +1684,8 @@ with tab_poligonos:
   with col_c_centro:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:12px; font-weight:bold; margin-bottom:2px;'>Mapa de Polígonos de Instalación</p>",
+          "<p style='font-size:12px; font-weight:bold; margin-bottom:2px;'>Mapa"
+          " de Polígonos de Instalación</p>",
           unsafe_allow_html=True,
       )
 
@@ -1820,7 +1767,8 @@ with tab_poligonos:
   with col_c_der:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:14px; font-weight:bold; margin-bottom:8px;'>Resumen por Sector</p>",
+          "<p style='font-size:14px; font-weight:bold; margin-bottom:8px;'>Resumen"
+          " por Sector</p>",
           unsafe_allow_html=True,
       )
 
@@ -1920,7 +1868,8 @@ with tab_poligonos:
 
   with st.container(border=True):
     st.markdown(
-        "<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Detalle de Polígonos de Instalación y Conteo de Medidores</p>",
+        "<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Detalle"
+        " de Polígonos de Instalación y Conteo de Medidores</p>",
         unsafe_allow_html=True,
     )
 
@@ -1978,11 +1927,14 @@ with tab_poligonos:
 # ------------------------------------------------------------------------------
 with tab_personal:
   st.markdown(
-      "<p style='font-size:16px; font-weight:bold; margin-bottom:5px;'>👥 Resumen General de Instalaciones por Tipo de Personal</p>",
+      "<p style='font-size:16px; font-weight:bold; margin-bottom:5px;'>👥"
+      " Resumen General de Instalaciones por Tipo de Personal</p>",
       unsafe_allow_html=True,
   )
   st.markdown(
-      "<p style='font-size:13px; color: #94a3b8; margin-bottom:15px;'>Comparativa y desglose operacional entre Personal Externo y Personal Interno MIAA.</p>",
+      "<p style='font-size:13px; color: #94a3b8; margin-bottom:15px;'>Comparativa"
+      " y desglose operacional entre Personal Externo y Personal Interno"
+      " MIAA.</p>",
       unsafe_allow_html=True,
   )
 
@@ -2048,7 +2000,8 @@ with tab_personal:
     with col_ex_left:
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día (Externo)</p>",
+            "<p style='font-size:12px; margin-bottom:4px;"
+            " font-weight:bold;'>Instalaciones por Día (Externo)</p>",
             unsafe_allow_html=True,
         )
         if (
@@ -2093,7 +2046,9 @@ with tab_personal:
 
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Nivel Tarifario (Externo)</p>",
+            "<p style='font-size:12px; margin-bottom:4px;"
+            " font-weight:bold;'>Distribución por Nivel Tarifario"
+            " (Externo)</p>",
             unsafe_allow_html=True,
         )
         if not df_externo.empty and "nivel" in df_externo.columns:
@@ -2135,7 +2090,8 @@ with tab_personal:
     with col_ex_right:
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones - Personal Externo</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa"
+            " de Instalaciones - Personal Externo</p>",
             unsafe_allow_html=True,
         )
         df_ext_map = (
@@ -2176,7 +2132,8 @@ with tab_personal:
         )
 
     st.markdown(
-        "<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal Externo</p>",
+        "<p style='font-size:14px; font-weight:bold; margin-top:15px;"
+        " margin-bottom:5px;'>Tabla de Registros - Personal Externo</p>",
         unsafe_allow_html=True,
     )
     df_tabla_ext = df_externo.copy()
@@ -2273,7 +2230,8 @@ with tab_personal:
     with col_mi_left:
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día (MIAA)</p>",
+            "<p style='font-size:12px; margin-bottom:4px;"
+            " font-weight:bold;'>Instalaciones por Día (MIAA)</p>",
             unsafe_allow_html=True,
         )
         if (
@@ -2318,7 +2276,9 @@ with tab_personal:
 
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Nivel Tarifario (MIAA)</p>",
+            "<p style='font-size:12px; margin-bottom:4px;"
+            " font-weight:bold;'>Distribución por Nivel Tarifario"
+            " (MIAA)</p>",
             unsafe_allow_html=True,
         )
         if not df_miaa_pers.empty and "nivel" in df_miaa_pers.columns:
@@ -2363,7 +2323,8 @@ with tab_personal:
     with col_mi_right:
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones - Personal MIAA</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa"
+            " de Instalaciones - Personal MIAA</p>",
             unsafe_allow_html=True,
         )
         df_miaa_map = (
@@ -2406,7 +2367,8 @@ with tab_personal:
         )
 
     st.markdown(
-        "<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal MIAA</p>",
+        "<p style='font-size:14px; font-weight:bold; margin-top:15px;"
+        " margin-bottom:5px;'>Tabla de Registros - Personal MIAA</p>",
         unsafe_allow_html=True,
     )
     df_tabla_miaa = df_miaa_pers.copy()
@@ -2448,7 +2410,8 @@ with tab_personal:
 # ------------------------------------------------------------------------------
 with tab_tabla:
   st.markdown(
-      "<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📋 Tabla Completa de Registros de la API</p>",
+      "<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📋"
+      " Tabla Completa de Registros de la API</p>",
       unsafe_allow_html=True,
   )
 
@@ -2491,7 +2454,8 @@ with tab_tabla:
 
   with st.container(border=True):
     st.markdown(
-        "<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>Distribución por Nivel (Comercial / Doméstico)</p>",
+        "<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>Distribución"
+        " por Nivel (Comercial / Doméstico)</p>",
         unsafe_allow_html=True,
     )
     if not df_filtrado.empty and "nivel" in df_filtrado.columns:
@@ -2602,14 +2566,172 @@ with tab_tabla:
   st.dataframe(df_tabla_limpia, use_container_width=True)
 
 # ------------------------------------------------------------------------------
-# PESTAÑA: REGISTRO DE INSTALACIONES INTERNO (GOOGLE SHEETS)
+# PESTAÑA: REGISTRO DE INSTALACIONES INTERNO (Google Sheets)
 # ------------------------------------------------------------------------------
 with tab_sheets_interno:
   st.markdown(
-      "<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📑 Registro de Instalaciones Interno (Google Sheets)</p>",
+      "<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📑"
+      " Registro de Instalaciones Interno (Google Sheets)</p>",
       unsafe_allow_html=True,
   )
+
   if not df_sheets_interno.empty:
-    st.dataframe(df_sheets_interno, use_container_width=True, height=400)
+    df_sheets_interno.columns = [
+        str(c).strip() for c in df_sheets_interno.columns
+    ]
+    cols_numericas = [
+        "Instalados",
+        "Cuadro",
+        "Registro",
+        "Retirados",
+        "sin medidor",
+    ]
+    for col in cols_numericas:
+      if col in df_sheets_interno.columns:
+        df_sheets_interno[col] = pd.to_numeric(
+            df_sheets_interno[col].astype(str).str.replace(",", ""),
+            errors="coerce",
+        ).fillna(0)
+
+    # 1. Gráfico de barras: Instalaciones por día
+    with st.container(border=True):
+      st.markdown(
+          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones"
+          " por Día</p>",
+          unsafe_allow_html=True,
+      )
+      if (
+          "Fecha de Instalacion" in df_sheets_interno.columns
+          and "Instalados" in df_sheets_interno.columns
+      ):
+        fig_bar_inst = px.bar(
+            df_sheets_interno,
+            x="Fecha de Instalacion",
+            y="Instalados",
+            text="Instalados",
+            color_discrete_sequence=["#3b82f6"],
+        )
+        fig_bar_inst.update_traces(textposition="outside", textfont_size=10)
+        fig_bar_inst.update_layout(
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            font_color="#ffffff",
+            margin=dict(t=20, b=5, l=5, r=5),
+            height=300,
+            xaxis_title=None,
+            yaxis_title=None,
+        )
+        st.plotly_chart(
+            fig_bar_inst, use_container_width=True, key="sheets_inst_dia"
+        )
+
+    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+    g_col1, g_col2 = st.columns(2)
+
+    # 2. Gráfico de pastel: Medidores en Cuadro vs Registro
+    with g_col1:
+      with st.container(border=True):
+        st.markdown(
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Medidores"
+            " en Cuadro vs Registro</p>",
+            unsafe_allow_html=True,
+        )
+        if (
+            "Cuadro" in df_sheets_interno.columns
+            and "Registro" in df_sheets_interno.columns
+        ):
+          sum_cuadro = df_sheets_interno["Cuadro"].sum()
+          sum_registro = df_sheets_interno["Registro"].sum()
+          df_pie_cr = pd.DataFrame({
+              "Tipo": ["Cuadro", "Registro"],
+              "Cantidad": [sum_cuadro, sum_registro],
+          })
+
+          fig_pie_cr = px.pie(
+              df_pie_cr,
+              names="Tipo",
+              values="Cantidad",
+              hole=0.5,
+              color="Tipo",
+              color_discrete_map={"Cuadro": "#0066cc", "Registro": "#e83e8c"},
+          )
+          fig_pie_cr.update_traces(textinfo="value+percent", textfont=dict(size=11))
+          fig_pie_cr.update_layout(
+              plot_bgcolor="rgba(0,0,0,0)",
+              paper_bgcolor="rgba(0,0,0,0)",
+              font_color="#ffffff",
+              margin=dict(t=20, b=5, l=5, r=5),
+              height=280,
+              legend=dict(orientation="h", y=-0.1, x=0),
+          )
+          st.plotly_chart(
+              fig_pie_cr, use_container_width=True, key="sheets_pie_cuadro_reg"
+          )
+
+    # 3. Gráfico para Retirados y Sin Medidor
+    with g_col2:
+      with st.container(border=True):
+        st.markdown(
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Evolución"
+            " de Retirados y Sin Medidor</p>",
+            unsafe_allow_html=True,
+        )
+        if (
+            "Fecha de Instalacion" in df_sheets_interno.columns
+            and "Retirados" in df_sheets_interno.columns
+            and "sin medidor" in df_sheets_interno.columns
+        ):
+          fig_ret_sin = px.bar(
+              df_sheets_interno,
+              x="Fecha de Instalacion",
+              y=["Retirados", "sin medidor"],
+              barmode="group",
+              color_discrete_map={
+                  "Retirados": "#f59e0b",
+                  "sin medidor": "#f43f5e",
+              },
+          )
+          fig_ret_sin.update_layout(
+              plot_bgcolor="rgba(0,0,0,0)",
+              paper_bgcolor="rgba(0,0,0,0)",
+              font_color="#ffffff",
+              margin=dict(t=20, b=5, l=5, r=5),
+              height=280,
+              xaxis_title=None,
+              yaxis_title=None,
+              legend=dict(orientation="h", y=1.1, x=0),
+          )
+          st.plotly_chart(
+              fig_ret_sin, use_container_width=True, key="sheets_retirados_sin"
+          )
+
+    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+    with st.container(border=True):
+      st.markdown(
+          "<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>📋"
+          " Tabla de Datos - Google Sheets (Instalaciones)</p>",
+          unsafe_allow_html=True,
+      )
+
+      # Filtrar estrictamente la tabla inferior para que solo muestre las columnas solicitadas
+      columnas_deseadas = [
+          "Fecha de Instalacion",
+          "Instalados",
+          "Cuadro",
+          "Registro",
+          "Retirados",
+          "sin medidor",
+      ]
+      cols_existentes = [
+          c for c in columnas_deseadas if c in df_sheets_interno.columns
+      ]
+      df_tabla_filtrada = df_sheets_interno[cols_existentes].copy()
+
+      st.dataframe(df_tabla_filtrada, use_container_width=True, height=320)
   else:
-    st.warning("No se pudieron cargar los datos del Google Sheets interno o se encuentra vacío.")
+    st.warning(
+        "No se pudo cargar la información de la hoja 'Instalaciones' del"
+        " archivo de Google Sheets."
+    )
