@@ -2694,9 +2694,11 @@ with tab_sheets_interno:
         col_ret_sheets = cols_lower.get("retirados", None)
         col_sin_sheets = cols_lower.get("sin medidor", cols_lower.get("sin_medidor", None))
 
-        # Convertir columna de fecha a datetime para agrupar por mes correctamente
+        # CORREGIDO: Forzar conversión de fecha interpretando primero el día (dayfirst=True)
         if col_fecha_sheets and col_fecha_sheets in df_sheets_interno.columns:
-            df_sheets_interno["_fecha_dt_sheets"] = pd.to_datetime(df_sheets_interno[col_fecha_sheets], errors="coerce")
+            df_sheets_interno["_fecha_dt_sheets"] = pd.to_datetime(
+                df_sheets_interno[col_fecha_sheets], dayfirst=True, errors="coerce"
+            )
         else:
             df_sheets_interno["_fecha_dt_sheets"] = pd.NaT
 
@@ -2823,7 +2825,7 @@ with tab_sheets_interno:
         # Distribución en 3 columnas para los gráficos inferiores
         g_col1, g_col2, g_col3 = st.columns(3)
 
-        # 2. Gráfico Izquierda: Instalaciones por Mes (Barras Horizontales)
+        # 2. Gráfico Izquierda: Instalaciones por Mes (Barras Horizontales - Filtrando meses vacíos o con 0)
         with g_col1:
             with st.container(border=True):
                 st.markdown(
@@ -2831,10 +2833,14 @@ with tab_sheets_interno:
                     unsafe_allow_html=True,
                 )
                 if not df_sheets_interno["_fecha_dt_sheets"].isna().all() and col_inst_sheets:
-                    df_mes_sheets = df_sheets_interno.copy()
+                    df_mes_sheets = df_sheets_interno.dropna(subset=["_fecha_dt_sheets"]).copy()
                     df_mes_sheets["periodo_mes"] = df_mes_sheets["_fecha_dt_sheets"].dt.to_period("M")
+                    
                     df_mes_group = df_mes_sheets.groupby("periodo_mes", as_index=False)[col_inst_sheets].sum()
                     df_mes_group.columns = ["Periodo", "Cantidad"]
+                    
+                    # Filtrar estrictamente meses con más de 0 instalaciones reales
+                    df_mes_group = df_mes_group[df_mes_group["Cantidad"] > 0]
 
                     meses_es = {
                         1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
