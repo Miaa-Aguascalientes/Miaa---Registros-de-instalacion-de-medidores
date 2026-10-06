@@ -189,7 +189,7 @@ st.markdown(custom_style, unsafe_allow_html=True)
 # ==============================================================================
 # SECCIÓN 2: FUNCIONES DE CONEXIÓN Y DATOS (API Y BASE DE DATOS)
 # ==============================================================================
-BASE_URL = "https://prelec.miaa.mx"
+
 url_login = "https://prelec.miaa.mx/auth/v2/login"
 url_instalaciones = "https://prelec.miaa.mx/msvc-tecnica/medidores/instalaciones"
 
@@ -200,27 +200,41 @@ def cargar_datos_api():
   try:
     usuario = st.secrets["api"]["usuario"]
     password = st.secrets["api"]["password"]
+    
     res_login = requests.post(
         url_login,
         json={"username": usuario, "password": password},
         headers={"Content-Type": "application/json"},
     )
-    if res_login.status_code == 200:
-      token = res_login.json().get("token") or res_login.json().get(
-          "access_token"
-      )
-      if token:
-        res_inst = requests.get(
-            url_instalaciones,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {token}",
-            },
-        )
-        if res_inst.status_code == 200:
-          return res_inst.json()
-    return None
-  except Exception:
+    
+    # Depuración: Muestra el código de estado si falla el login
+    if res_login.status_code != 200:
+      st.error(f"Error de Login API: Código HTTP {res_login.status_code} - Respuesta: {res_login.text}")
+      return None
+
+    data_login = res_login.json()
+    token = data_login.get("token") or data_login.get("access_token") or data_login.get("data", {}).get("token")
+    
+    if not token:
+      st.error(f"No se encontró el token en la respuesta del login. JSON recibido: {data_login}")
+      return None
+
+    res_inst = requests.get(
+        url_instalaciones,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}",
+        },
+    )
+    
+    if res_inst.status_code != 200:
+      st.error(f"Error al obtener instalaciones: Código HTTP {res_inst.status_code} - Respuesta: {res_inst.text}")
+      return None
+
+    return res_inst.json()
+    
+  except Exception as e:
+    st.error(fAbu}Excepción crítica al conectar con la API: {str(e)}")
     return None
 
 
