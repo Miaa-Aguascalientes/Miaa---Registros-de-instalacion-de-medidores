@@ -2799,7 +2799,10 @@ with tab_tabla:
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-    # Mostrar la tabla única limpia al final
+    # Eliminar columnas duplicadas por nombre antes de renderizar
+    df_tabla_filtrada = df_tabla_filtrada.loc[:, ~df_tabla_filtrada.columns.duplicated()]
+
+    # Mostrar la tabla completa con los datos de PostgreSQL sin errores
     st.dataframe(df_tabla_filtrada, use_container_width=True, height=350)
 # -------------------------------------------------------------------------------------------------------------------------------------------
 
