@@ -309,14 +309,22 @@ def cargar_google_sheets_interno():
 
 @st.cache_data(ttl=600)
 def cargar_usuarios_miaa_conmedidor_db():
-    """Consulta la base de datos MySQL para obtener los registros de usuarios MIAA con medidor."""
+    """Consulta la base de datos MySQL para obtener los registros de usuarios_miaa_conmedidor y extrae las coordenadas de la columna geom."""
     try:
         engine = create_engine(st.secrets["mysql"]["connection_string"])
-        query = "SELECT * FROM usuarios_miaa_conmedidor"
-        return pd.read_sql(query, con=engine)
+        # Intentamos extraer X e Y directamente si es PostGIS geom, o traemos todo para parsearlo
+        query = "SELECT *, ST_X(geom) as lon_geom, ST_Y(geom) as lat_geom FROM usuarios_miaa_conmedidor"
+        df = pd.read_sql(query, con=engine)
+        return df
     except Exception as e:
-        print(f"Error al cargar usuarios_miaa_conmedidor: {e}")
-        return pd.DataFrame()
+        try:
+            # Plan B por si ST_X / ST_Y falla dependiendo de la versión de MySQL/MariaDB
+            engine = create_engine(st.secrets["mysql"]["connection_string"])
+            df = pd.read_sql("SELECT * FROM usuarios_miaa_conmedidor", con=engine)
+            return df
+        except Exception as ex:
+            print(f"Error al cargar usuarios_miaa_conmedidor: {ex}")
+            return pd.DataFrame()
 
 
 # ==============================================================================
@@ -2545,6 +2553,27 @@ with tab_personal:
 # ==============================================================================
 df_usuarios_miaa_medidor = cargar_usuarios_miaa_conmedidor_db()
 
+# Procesar coordenadas desde 'geom' si no se pudieron extraer con ST_X/ST_Y
+if not df_usuarios_miaa_medidor.empty:
+    if "lat_geom" not in df_usuarios_miaa_medidor.columns or df_usuarios_miaa_medidor["lat_geom"].isna().all():
+        lats, lons = [], []
+        for val_geom in df_usuarios_miaa_medidor.get("geom", []):
+            lat_f, lon_f = np.nan, np.nan
+            try:
+                if pd.notna(val_geom):
+                    s_geom = str(val_geom)
+                    # Si viene en formato WKT POINT(lon lat)
+                    if "POINT" in s_geom.upper():
+                        nums = [float(n) for n in s_geom.replace("POINT", "").replace("(", "").replace(")", "").strip().split() if n.replace(".", "", 1).replace("-", "", 1).isdigit()]
+                        if len(nums) >= 2:
+                            lon_f, lat_f = nums[0], nums[1]
+            except:
+                pass
+            lats.append(lat_f)
+            lons.append(lon_f)
+        df_usuarios_miaa_medidor["lat_geom"] = lats
+        df_usuarios_miaa_medidor["lon_geom"] = lons
+
 # ------------------------------------------------------------------------------
 # PESTAÑA: TABLA BASE DE DATOS COMPLETA (usuarios_miaa_conmedidor)
 # ------------------------------------------------------------------------------
@@ -2582,7 +2611,7 @@ with tab_tabla:
                 key="filtro_tab_predio_miaa",
             )
 
-    # Aplicar filtros sobre el DataFrame usando los nombres exactos de los campos de la imagen
+    # Aplicar filtros sobre el DataFrame
     df_tabla_filtrada = df_usuarios_miaa_medidor.copy()
     
     if not df_tabla_filtrada.empty:
@@ -2603,7 +2632,7 @@ with tab_tabla:
 
     total_registros_tabla = len(df_tabla_filtrada)
 
-    # Indicador de Total de Registros (Ancho completo, sin colonias)
+    # Indicador de Total de Registros
     st.markdown(
         f"""
         <div class="metric-card" style="width: 100%;">
@@ -2620,23 +2649,28 @@ with tab_tabla:
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
     # ==========================================================================
-    # MAPA UBICADO ARRIBA DE LA TABLA (Con Satélite, OpenStreetMap y Dark Mode)
+    # MAPA UBICADO ARRIBA DE LA TABLA (Con reglas de color para Etapa 1 y Etapa 2)
     # ==========================================================================
     with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>🗺️ Mapa de Registros (Filtrados)</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>🗺️ Mapa de Registros (Filtrados) - 🟡 Etapa 1 | 🟢 Etapa 2</p>",
             unsafe_allow_html=True,
         )
 
+        lat_col = "lat_geom" if "lat_geom" in df_tabla_filtrada.columns else "Latitud"
+        lon_col = "lon_geom" if "lon_geom" in df_tabla_filtrada.columns else "Longitud"
+
         df_mapa_tabla = (
-            df_tabla_filtrada.dropna(subset=["Latitud", "Longitud"])
-            if not df_tabla_filtrada.empty and "Latitud" in df_tabla_filtrada.columns and "Longitud" in df_tabla_filtrada.columns
+            df_tabla_filtrada.dropna(subset=[lat_col, lon_col])
+            if not df_tabla_filtrada.empty and lat_col in df_tabla_filtrada.columns and lon_col in df_tabla_filtrada.columns
             else pd.DataFrame()
         )
         
         if not df_mapa_tabla.empty:
-            m_lat_t = pd.to_numeric(df_mapa_tabla["Latitud"], errors="coerce").mean()
-            m_lon_t = pd.to_numeric(df_mapa_tabla["Longitud"], errors="coerce").mean()
+            m_lat_t = pd.to_numeric(df_mapa_tabla[lat_col], errors="coerce").mean()
+            m_lon_t = pd.to_numeric(df_mapa_tabla[lon_col], errors="coerce").mean()
+            if pd.isna(m_lat_t) or pd.isna(m_lon_t):
+                m_lat_t, m_lon_t = lat_centro, lon_centro
         else:
             m_lat_t, m_lon_t = lat_centro, lon_centro
 
@@ -2645,16 +2679,28 @@ with tab_tabla:
 
         for _, row in df_mapa_tabla.iterrows():
             try:
-                lat_val = float(row["Latitud"])
-                lon_val = float(row["Longitud"])
+                lat_val = float(row[lat_col])
+                lon_val = float(row[lon_col])
+                if pd.isna(lat_val) or pd.isna(lon_val):
+                    continue
             except:
                 continue
+
+            # Regla de colores según la columna 'etapa'
+            etapa_val = str(row.get("etapa", "")).strip().lower()
+            if "1" in etapa_val:
+                color_punto = "#eab308" # Amarillo para Etapa 1
+            elif "2" in etapa_val:
+                color_punto = "#22c55e" # Verde para Etapa 2
+            else:
+                color_punto = "#38bdf8" # Azul por defecto
 
             nombre = str(row.get("Nombre", "N/A"))
             predio_val = str(row.get("Predio_Viv", "N/A"))
             serie_val = str(row.get("_Serie", "N/A"))
             medidor_val = str(row.get("Medidor", "N/A"))
             colonia_val = str(row.get("Colonia", "N/A"))
+            etapa_txt = str(row.get("etapa", "N/A"))
 
             popup_html = f"""
             <div style="font-size: 11px; line-height: 1.4; color: #000000;">
@@ -2662,16 +2708,17 @@ with tab_tabla:
                 <b>Predio:</b> {predio_val}<br>
                 <b>Serie:</b> {serie_val}<br>
                 <b>Medidor:</b> {medidor_val}<br>
-                <b>Colonia:</b> {colonia_val}
+                <b>Colonia:</b> {colonia_val}<br>
+                <b>Etapa:</b> {etapa_txt}
             </div>
             """
             folium.CircleMarker(
                 location=[lat_val, lon_val],
-                radius=3,
-                color="#38bdf8",
+                radius=3.5,
+                color=color_punto,
                 fill=True,
-                fill_color="#38bdf8",
-                fill_opacity=0.8,
+                fill_color=color_punto,
+                fill_opacity=0.85,
                 popup=folium.Popup(popup_html, max_width=250),
             ).add_to(mapa_tabla_tab)
 
@@ -2688,6 +2735,8 @@ with tab_tabla:
     # Mostrar la tabla completa con los datos de usuarios_miaa_conmedidor
     st.dataframe(df_tabla_filtrada, use_container_width=True, height=350)
 
+    
+# -------------------------------------------------------------------------------------------------------------------------------------------
     with st.container(border=True):
         st.markdown(
             "<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>Distribución por Nivel (Comercial / Doméstico)</p>",
