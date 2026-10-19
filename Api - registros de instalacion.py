@@ -309,15 +309,16 @@ def cargar_google_sheets_interno():
 
 @st.cache_data(ttl=600)
 def cargar_usuarios_miaa_conmedidor_db():
-    """Consulta la tabla en PostgreSQL extrayendo X e Y nativamente desde geom y filtrando etapas 1 y 2."""
+    """Consulta PostgreSQL convirtiendo la geometría a texto WKT (POINT X Y) legible."""
     try:
         cfg = st.secrets["postgres"]
         conn_str = f"postgresql+psycopg2://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/{cfg['database']}"
         engine = create_engine(conn_str)
         
-        # Extraer coordenadas nativamente con ST_X y ST_Y y filtrar solo etapa 1 y 2
+        # ST_AsText(geom) convierte el binario 01010000... en 'POINT (X Y)'
         query = """
             SELECT *, 
+                   ST_AsText(geom) as geom,
                    ST_X(geom) as utm_x, 
                    ST_Y(geom) as utm_y 
             FROM "Usuarios"."usuarios_miaa_conmedidor"
@@ -332,6 +333,7 @@ def cargar_usuarios_miaa_conmedidor_db():
             engine = create_engine(conn_str)
             query = """
                 SELECT *, 
+                       ST_AsText(geom) as geom,
                        ST_X(geom) as utm_x, 
                        ST_Y(geom) as utm_y 
                 FROM usuarios_miaa_conmedidor
