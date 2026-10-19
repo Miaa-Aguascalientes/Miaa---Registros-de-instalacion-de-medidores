@@ -313,23 +313,41 @@ def cargar_google_sheets_interno():
 
 
 def agregar_capas_base(m):
-  """Agrega las capas base de mapa (Carto Dark Matter con API Key) y controles de pantalla completa."""
-  api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
+    """Agrega las capas base de mapa (OpenStreetMap, Satélite con Calles, Vista Nocturna) y controles de pantalla completa."""
+    api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
 
-  folium.TileLayer(
-      tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
-      name="Vista Nocturna",
-      attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains="abcd",
-      max_zoom=20,
-      control=False,
-  ).add_to(m)
+    # 1. OpenStreetMap
+    folium.TileLayer(
+        tiles="OpenStreetMap",
+        name="OpenStreetMap",
+        max_zoom=19,
+    ).add_to(m)
 
-  Fullscreen(
-      position="topright",
-      title="Ampliar Mapa",
-      cancel_title="Salir de pantalla completa",
-  ).add_to(m)
+    # 2. Satélite con nombres de calles (Esri World Imagery + Labels / Google Hybrid)
+    folium.TileLayer(
+        tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+        attr="Google Satellite",
+        name="Satélite con Calles",
+        max_zoom=20,
+    ).add_to(m)
+
+    # 3. Vista Nocturna (CartoDB Dark Matter)
+    folium.TileLayer(
+        tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
+        name="Vista Nocturna",
+        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains="abcd",
+        max_zoom=20,
+    ).add_to(m)
+
+    # Control de capas interactivo
+    folium.LayerControl(position="topleft").add_to(m)
+
+    Fullscreen(
+        position="topright",
+        title="Ampliar Mapa",
+        cancel_title="Salir de pantalla completa",
+    ).add_to(m)
 
 
 # ==============================================================================
@@ -2520,7 +2538,7 @@ with tab_tabla:
     )
 
     # ==========================================================================
-    # NUEVA SECCIÓN: FILTROS INTERACTIVOS (Serie, Medidor, Predio)
+    # FILTROS INTERACTIVOS (Serie, Medidor, Predio)
     # ==========================================================================
     with st.container(border=True):
         st.markdown(
@@ -2574,44 +2592,25 @@ with tab_tabla:
             df_tabla_filtrada = df_tabla_filtrada[mask]
 
     total_registros_tabla = len(df_tabla_filtrada)
-    total_colonias_tabla = (
-        df_tabla_filtrada["colonia"].nunique()
-        if not df_tabla_filtrada.empty and "colonia" in df_tabla_filtrada.columns
-        else 0
-    )
 
-    t_col1, t_col2 = st.columns(2)
-    with t_col1:
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <div class="icon-box" style="color: #38bdf8;"><i class="fa-solid fa-table-list"></i></div>
-                <div class="metric-content">
-                    <div class="metric-title">Total de Registros</div>
-                    <div class="metric-value">{total_registros_tabla:,}</div>
-                </div>
+    # Indicador de Total de Registros (Sin Colonias Registradas)
+    st.markdown(
+        f"""
+        <div class="metric-card" style="width: 100%;">
+            <div class="icon-box" style="color: #38bdf8;"><i class="fa-solid fa-table-list"></i></div>
+            <div class="metric-content">
+                <div class="metric-title">Total de Registros</div>
+                <div class="metric-value">{total_registros_tabla:,}</div>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with t_col2:
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <div class="metric-icon-box" style="color: #4ade80;"><i class="fa-solid fa-map-pin"></i></div>
-                <div class="metric-content">
-                    <div class="metric-title">Colonias Registradas</div>
-                    <div class="metric-value">{total_colonias_tabla:,}</div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
     # ==========================================================================
-    # NUEVA SECCIÓN: MAPA UBICADO ARRIBA DE LA TABLA
+    # MAPA UBICADO ARRIBA DE LA TABLA (Con capas Satélite y OpenStreetMap)
     # ==========================================================================
     with st.container(border=True):
         st.markdown(
