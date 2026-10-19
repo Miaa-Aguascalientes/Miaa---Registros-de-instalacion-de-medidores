@@ -307,6 +307,18 @@ def cargar_google_sheets_interno():
     return pd.DataFrame()
 
 
+@st.cache_data(ttl=600)
+def cargar_usuarios_miaa_conmedidor_db():
+    """Consulta la base de datos MySQL para obtener los registros de usuarios MIAA con medidor."""
+    try:
+        engine = create_engine(st.secrets["mysql"]["connection_string"])
+        query = "SELECT * FROM usuarios_miaa_conmedidor"
+        return pd.read_sql(query, con=engine)
+    except Exception as e:
+        print(f"Error al cargar usuarios_miaa_conmedidor: {e}")
+        return pd.DataFrame()
+
+
 # ==============================================================================
 # SECCIÓN 3: FUNCIONES AUXILIARES PARA MAPAS
 # ==============================================================================
@@ -2528,12 +2540,17 @@ with tab_personal:
       )
     st.dataframe(df_tabla_miaa, use_container_width=True)
 
+# ==============================================================================
+# Cargar el DataFrame de la tabla solicitada
+# ==============================================================================
+df_usuarios_miaa_medidor = cargar_usuarios_miaa_conmedidor_db()
+
 # ------------------------------------------------------------------------------
-# PESTAÑA: TABLA BASE DE DATOS COMPLETA
+# PESTAÑA: TABLA BASE DE DATOS COMPLETA (usuarios_miaa_conmedidor)
 # ------------------------------------------------------------------------------
 with tab_tabla:
     st.markdown(
-        "<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📋 Tabla Completa de Registros de la API</p>",
+        "<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📋 Registros de la Tabla: usuarios_miaa_conmedidor</p>",
         unsafe_allow_html=True,
     )
 
@@ -2550,56 +2567,58 @@ with tab_tabla:
             filtro_serie = st.text_input(
                 "Filtrar por Número de Serie",
                 placeholder="Ej. serie...",
-                key="filtro_tab_serie",
+                key="filtro_tab_serie_miaa",
             )
         with col_f2:
             filtro_medidor = st.text_input(
                 "Filtrar por Número de Medidor",
-                placeholder="Ej. medidorId...",
-                key="filtro_tab_medidor",
+                placeholder="Ej. medidor...",
+                key="filtro_tab_medidor_miaa",
             )
         with col_f3:
             filtro_predio = st.text_input(
                 "Filtrar por Predio",
                 placeholder="Ej. predio...",
-                key="filtro_tab_predio",
+                key="filtro_tab_predio_miaa",
             )
 
-    # Aplicar filtros sobre el DataFrame principal filtrado
-    df_tabla_filtrada = df_filtrado.copy()
-    if filtro_serie:
-        col_s_cand = [c for c in ["serie", "serieMedidor"] if c in df_tabla_filtrada.columns]
-        if col_s_cand:
-            mask = df_tabla_filtrada[col_s_cand].astype(str).apply(
-                lambda x: x.str.contains(filtro_serie, case=False, na=False)
-            ).any(axis=1)
-            df_tabla_filtrada = df_tabla_filtrada[mask]
+    # Aplicar filtros sobre el DataFrame de usuarios_miaa_conmedidor
+    df_tabla_filtrada = df_usuarios_miaa_medidor.copy()
+    
+    if not df_tabla_filtrada.empty:
+        if filtro_serie:
+            col_s_cand = [c for c in ["serie", "serieMedidor", "numero_serie"] if c in df_tabla_filtrada.columns]
+            if col_s_cand:
+                mask = df_tabla_filtrada[col_s_cand].astype(str).apply(
+                    lambda x: x.str.contains(filtro_serie, case=False, na=False)
+                ).any(axis=1)
+                df_tabla_filtrada = df_tabla_filtrada[mask]
 
-    if filtro_medidor:
-        col_m_cand = [c for c in ["medidorId", "medidor"] if c in df_tabla_filtrada.columns]
-        if col_m_cand:
-            mask = df_tabla_filtrada[col_m_cand].astype(str).apply(
-                lambda x: x.str.contains(filtro_medidor, case=False, na=False)
-            ).any(axis=1)
-            df_tabla_filtrada = df_tabla_filtrada[mask]
+        if filtro_medidor:
+            col_m_cand = [c for c in ["medidorId", "medidor", "numero_medidor"] if c in df_tabla_filtrada.columns]
+            if col_m_cand:
+                mask = df_tabla_filtrada[col_m_cand].astype(str).apply(
+                    lambda x: x.str.contains(filtro_medidor, case=False, na=False)
+                ).any(axis=1)
+                df_tabla_filtrada = df_tabla_filtrada[mask]
 
-    if filtro_predio:
-        col_p_cand = [c for c in ["predio", "numeroPredio"] if c in df_tabla_filtrada.columns]
-        if col_p_cand:
-            mask = df_tabla_filtrada[col_p_cand].astype(str).apply(
-                lambda x: x.str.contains(filtro_predio, case=False, na=False)
-            ).any(axis=1)
-            df_tabla_filtrada = df_tabla_filtrada[mask]
+        if filtro_predio:
+            col_p_cand = [c for c in ["predio", "numeroPredio", "cuenta", "predioId"] if c in df_tabla_filtrada.columns]
+            if col_p_cand:
+                mask = df_tabla_filtrada[col_p_cand].astype(str).apply(
+                    lambda x: x.str.contains(filtro_predio, case=False, na=False)
+                ).any(axis=1)
+                df_tabla_filtrada = df_tabla_filtrada[mask]
 
     total_registros_tabla = len(df_tabla_filtrada)
 
-    # Indicador de Total de Registros (Sin Colonias Registradas)
+    # Indicador de Total de Registros (Sin la tarjeta de colonias)
     st.markdown(
         f"""
         <div class="metric-card" style="width: 100%;">
             <div class="icon-box" style="color: #38bdf8;"><i class="fa-solid fa-table-list"></i></div>
             <div class="metric-content">
-                <div class="metric-title">Total de Registros</div>
+                <div class="metric-title">Total de Registros (usuarios_miaa_conmedidor)</div>
                 <div class="metric-value">{total_registros_tabla:,}</div>
             </div>
         </div>
@@ -2610,22 +2629,26 @@ with tab_tabla:
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
     # ==========================================================================
-    # MAPA UBICADO ARRIBA DE LA TABLA (Con capas Satélite y OpenStreetMap)
+    # MAPA UBICADO ARRIBA DE LA TABLA (Con Satélite, OpenStreetMap y Dark Mode)
     # ==========================================================================
     with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>🗺️ Mapa de Registros de Instalación (Filtrados)</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>🗺️ Mapa de Registros (Filtrados)</p>",
             unsafe_allow_html=True,
         )
 
+        lat_col_name = next((c for c in ["latitud", "lat"] if c in df_tabla_filtrada.columns), None)
+        lon_col_name = next((c for c in ["longitud", "lon", "lng"] if c in df_tabla_filtrada.columns), None)
+
         df_mapa_tabla = (
-            df_tabla_filtrada.dropna(subset=["latitud", "longitud"])
-            if not df_tabla_filtrada.empty and "latitud" in df_tabla_filtrada.columns
+            df_tabla_filtrada.dropna(subset=[lat_col_name, lon_col_name])
+            if not df_tabla_filtrada.empty and lat_col_name and lon_col_name
             else pd.DataFrame()
         )
+        
         if not df_mapa_tabla.empty:
-            m_lat_t = df_mapa_tabla["latitud"].mean()
-            m_lon_t = df_mapa_tabla["longitud"].mean()
+            m_lat_t = pd.to_numeric(df_mapa_tabla[lat_col_name], errors="coerce").mean()
+            m_lon_t = pd.to_numeric(df_mapa_tabla[lon_col_name], errors="coerce").mean()
         else:
             m_lat_t, m_lon_t = lat_centro, lon_centro
 
@@ -2633,10 +2656,16 @@ with tab_tabla:
         agregar_capas_base(mapa_tabla_tab)
 
         for _, row in df_mapa_tabla.iterrows():
-            nombre = str(row.get("nombreCliente", "N/A"))
+            try:
+                lat_val = float(row[lat_col_name])
+                lon_val = float(row[lon_col_name])
+            except:
+                continue
+
+            nombre = str(row.get("nombreCliente", row.get("nombre", "N/A")))
             predio_val = str(row.get("predio", row.get("numeroPredio", "N/A")))
             serie_val = str(row.get("serie", row.get("serieMedidor", "N/A")))
-            medidor_val = str(row.get("medidorId", "N/A"))
+            medidor_val = str(row.get("medidorId", row.get("medidor", "N/A")))
             colonia_val = str(row.get("colonia", "N/A"))
 
             popup_html = f"""
@@ -2649,7 +2678,7 @@ with tab_tabla:
             </div>
             """
             folium.CircleMarker(
-                location=[float(row["latitud"]), float(row["longitud"])],
+                location=[lat_val, lon_val],
                 radius=3,
                 color="#38bdf8",
                 fill=True,
@@ -2662,11 +2691,14 @@ with tab_tabla:
             mapa_tabla_tab,
             width=None,
             height=350,
-            key="mapa_tabla_completa_filtrada",
+            key="mapa_usuarios_miaa_conmedidor",
             returned_objects=[],
         )
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+    # Mostrar la tabla completa con los datos de usuarios_miaa_conmedidor
+    st.dataframe(df_tabla_filtrada, use_container_width=True, height=350)
 
     with st.container(border=True):
         st.markdown(
