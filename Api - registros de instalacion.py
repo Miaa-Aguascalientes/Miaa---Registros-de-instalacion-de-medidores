@@ -2634,7 +2634,7 @@ with tab_tabla:
                 key="filtro_tab_predio_miaa",
             )
 
-    # Aplicar filtros
+    # Aplicar filtros de texto
     df_tabla_filtrada = df_usuarios_miaa_medidor.copy()
     
     if not df_tabla_filtrada.empty:
@@ -2678,20 +2678,28 @@ with tab_tabla:
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
     # ==========================================================================
-    # MAPA CON REGLA DE COLORES: Etapa 1 (Amarillo) | Etapa 2 (Verde)
+    # MAPA CON FILTRO ESTRICTO DE ETAPA 1 Y 2
     # ==========================================================================
     with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>🗺️ Mapa de Registros — 🟡 Etapa 1 (Amarillo) | 🟢 Etapa 2 (Verde)</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>🗺️ Mapa de Registros (Solo Etapa 1 y 2) — 🟡 Etapa 1 | 🟢 Etapa 2</p>",
             unsafe_allow_html=True,
         )
 
-        df_mapa_tabla = (
-            df_tabla_filtrada.dropna(subset=["lat_calc", "lon_calc"])
-            if not df_tabla_filtrada.empty and "lat_calc" in df_tabla_filtrada.columns
-            else pd.DataFrame()
-        )
-        
+        if not df_tabla_filtrada.empty and "lat_calc" in df_tabla_filtrada.columns and "etapa" in df_tabla_filtrada.columns:
+            # FILTRO ESTRICTO: Quedarse únicamente con los registros cuya etapa sea exactamente 1 o 2
+            df_mapa_tabla = df_tabla_filtrada.dropna(subset=["lat_calc", "lon_calc"]).copy()
+            
+            # Normalizar campo etapa para evaluar correctamente (convirtiendo a string limpio)
+            df_mapa_tabla["etapa_limpia"] = df_mapa_tabla["etapa"].astype(str).str.strip().str.lower()
+            
+            # Filtrar solo los que sean '1', 'etapa 1', '2' o 'etapa 2'
+            df_mapa_tabla = df_mapa_tabla[
+                df_mapa_tabla["etapa_limpia"].isin(["1", "etapa 1", "2", "etapa 2"])
+            ]
+        else:
+            df_mapa_tabla = pd.DataFrame()
+
         if not df_mapa_tabla.empty:
             m_lat_t = pd.to_numeric(df_mapa_tabla["lat_calc"], errors="coerce").mean()
             m_lon_t = pd.to_numeric(df_mapa_tabla["lon_calc"], errors="coerce").mean()
@@ -2712,14 +2720,12 @@ with tab_tabla:
             except:
                 continue
 
-            # Regla de colores según la columna 'etapa'
-            etapa_val = str(row.get("etapa", "")).strip()
-            if etapa_val == "1" or etapa_val.lower() == "etapa 1":
+            # Colores estrictos para Etapa 1 y Etapa 2
+            etapa_val = str(row.get("etapa", "")).strip().lower()
+            if etapa_val in ["1", "etapa 1"]:
                 color_punto = "#eab308"  # Amarillo para Etapa 1
-            elif etapa_val == "2" or etapa_val.lower() == "etapa 2":
-                color_punto = "#22c55e"  # Verde para Etapa 2
             else:
-                color_punto = "#38bdf8"  # Azul por defecto
+                color_punto = "#22c55e"  # Verde para Etapa 2
 
             nombre = str(row.get("Nombre", "N/A"))
             predio_val = str(row.get("Predio_Viv", "N/A"))
@@ -2752,14 +2758,14 @@ with tab_tabla:
             mapa_tabla_tab,
             width=None,
             height=350,
-            key="mapa_usuarios_miaa_conmedidor_postgres",
+            key="mapa_usuarios_miaa_conmedidor_etapas",
             returned_objects=[],
         )
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
     # ==========================================================================
-    # DISTRIBUCIÓN POR NIVEL (Usando la columna 'Nivel' con mayúscula)
+    # DISTRIBUCIÓN POR NIVEL (Usando la columna 'Nivel')
     # ==========================================================================
     with st.container(border=True):
         st.markdown(
@@ -2799,7 +2805,7 @@ with tab_tabla:
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-    # Mostrar la tabla completa con los datos de PostgreSQL
+    # Mostrar la tabla completa
     st.dataframe(df_tabla_filtrada, use_container_width=True, height=350)
 # -------------------------------------------------------------------------------------------------------------------------------------------
     with st.container(border=True):
