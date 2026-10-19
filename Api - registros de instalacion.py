@@ -309,18 +309,27 @@ def cargar_google_sheets_interno():
 
 @st.cache_data(ttl=600)
 def cargar_usuarios_miaa_conmedidor_db():
-    """Consulta la base de datos MySQL para obtener los registros y extraer X, Y de la columna geom."""
+    """Consulta la base de datos PostgreSQL/PostGIS para obtener los registros y coordenadas UTM de geom."""
     try:
-        engine = create_engine(st.secrets["mysql"]["connection_string"])
-        query = "SELECT *, ST_X(geom) as utm_x, ST_Y(geom) as utm_y FROM usuarios_miaa_conmedidor"
+        # Nota: Asegúrate de tener configurada la conexión de postgres en tus st.secrets (ej. st.secrets["postgres"]["connection_string"])
+        # O si usas un engine general de postgres:
+        engine = create_engine(st.secrets["postgres"]["connection_string"])
+        query = """
+            SELECT *, 
+                   ST_X(geom) as utm_x, 
+                   ST_Y(geom) as utm_y 
+            FROM usuarios_miaa_conmedidor
+        """
         return pd.read_sql(query, con=engine)
     except Exception as e:
+        print(f"Error al conectar a PostgreSQL: {e}")
         try:
-            engine = create_engine(st.secrets["mysql"]["connection_string"])
-            df = pd.read_sql("SELECT * FROM usuarios_miaa_conmedidor", con=engine)
-            return df
+            # Plan B: Intentar leer sin las funciones ST_X/ST_Y si la tabla está en otro esquema (ej. Usuarios.usuarios_miaa_conmedidor)
+            engine = create_engine(st.secrets["postgres"]["connection_string"])
+            query = 'SELECT * FROM "Usuarios"."usuarios_miaa_conmedidor"'
+            return pd.read_sql(query, con=engine)
         except Exception as ex:
-            print(f"Error al cargar usuarios_miaa_conmedidor: {ex}")
+            print(f"Error en Plan B PostgreSQL: {ex}")
             return pd.DataFrame()
 
 
@@ -2546,49 +2555,50 @@ with tab_personal:
     st.dataframe(df_tabla_miaa, use_container_width=True)
 
 # ==============================================================================
-# SECCIÓN DE CARGA SEGURA DE LA TABLA usuarios_miaa_conmedidor
+# CARGAR DATOS DE POSTGRESQL
 # ==============================================================================
-@st.cache_data(ttl=600)
-def cargar_usuarios_miaa_conmedidor_db():
-    try:
-        engine = create_engine(st.secrets["mysql"]["connection_string"])
-        query = "SELECT * FROM usuarios_miaa_conmedidor"
-        df = pd.read_sql(query, con=engine)
-        return df
-    except Exception as e:
-        print(f"Error cargando usuarios_miaa_conmedidor: {e}")
-        return pd.DataFrame()
-
 df_usuarios_miaa_medidor = cargar_usuarios_miaa_conmedidor_db()
 
-# Procesar geometría 'geom' (FORMATO POINT X Y) a coordenadas Lat/Lon calculadas
-if not df_usuarios_miaa_medidor.empty and "geom" in df_usuarios_miaa_medidor.columns:
+# Procesamiento de coordenadas UTM (Metros) a Lat/Lon geográficas para Folium
+if not df_usuarios_miaa_medidor.empty:
     lats, lons = [], []
-    for val_geom in df_usuarios_miaa_medidor["geom"]:
-        lat_f, lon_f = np.nan, np.nan
+    has_utm = "utm_x" in df_usuarios_miaa_medidor.columns and "utm_y" in df_usuarios_miaa_medidor.columns
+    
+    for _, row in df_usuarios_miaa_medidor.iterrows():
+        x_val, y_val = None, None
         try:
-            if pd.notna(val_geom):
-                s_geom = str(val_geom)
-                if "POINT" in s_geom.upper():
-                    parts = s_geom.replace("POINT", "").replace("(", "").replace(")", "").strip().split()
+            if has_utm and pd.notna(row["utm_x"]) and pd.notna(row["utm_y"]):
+                x_val, y_val = float(row["utm_x"]), float(row["utm_y"])
+            elif "geom" in row and pd.notna(row["geom"]):
+                geom_str = str(row["geom"])
+                if "POINT" in geom_str.upper():
+                    parts = geom_str.replace("POINT", "").replace("(", "").replace(")", "").strip().split()
                     nums = [float(p) for p in parts if p.replace(".", "", 1).replace("-", "", 1).isdigit()]
                     if len(nums) >= 2:
                         x_val, y_val = nums[0], nums[1]
-                        # Conversión UTM Zona 13N a Lat/Lon para Aguascalientes
-                        if abs(x_val) > 360 or abs(y_val) > 90:
-                            lon_f = -102.2916 + (x_val - 780000) / 111000.0
-                            lat_f = 21.8853 + (y_val - 2420000) / 110500.0
-                        else:
-                            lat_f, lon_f = y_val, x_val
+            
+            # Conversión UTM Zona 13N (Aguascalientes) a Lat/Lon
+            if x_val is not None and y_val is not None:
+                if abs(x_val) > 360 or abs(y_val) > 90:
+                    lon_deg = -102.2916 + (x_val - 780000) / 111000.0
+                    lat_deg = 21.8853 + (y_val - 2420000) / 110500.0
+                    lats.append(lat_deg)
+                    lons.append(lon_deg)
+                else:
+                    lats.append(y_val)
+                    lons.append(x_val)
+            else:
+                lats.append(np.nan)
+                lons.append(np.nan)
         except:
-            pass
-        lats.append(lat_f)
-        lons.append(lon_f)
+            lats.append(np.nan)
+            lons.append(np.nan)
+            
     df_usuarios_miaa_medidor["lat_calc"] = lats
     df_usuarios_miaa_medidor["lon_calc"] = lons
 else:
-    df_usuarios_miaa_medidor["lat_calc"] = np.nan
-    df_usuarios_miaa_medidor["lon_calc"] = np.nan
+    df_usuarios_miaa_medidor["lat_calc"] = []
+    df_usuarios_miaa_medidor["lon_calc"] = []
 
 # ------------------------------------------------------------------------------
 # PESTAÑA: TABLA BASE DE DATOS COMPLETA (usuarios_miaa_conmedidor)
@@ -2627,30 +2637,24 @@ with tab_tabla:
                 key="filtro_tab_predio_miaa",
             )
 
-    # Aplicar filtros con nombres de columnas exactos de la tabla
+    # Aplicar filtros
     df_tabla_filtrada = df_usuarios_miaa_medidor.copy()
     
     if not df_tabla_filtrada.empty:
-        if filtro_serie:
-            col_s = next((c for c in ["_Serie", "serie", "serieMedidor"] if c in df_tabla_filtrada.columns), None)
-            if col_s:
-                df_tabla_filtrada = df_tabla_filtrada[
-                    df_tabla_filtrada[col_s].astype(str).str.contains(filtro_serie, case=False, na=False)
-                ]
+        if filtro_serie and "_Serie" in df_tabla_filtrada.columns:
+            df_tabla_filtrada = df_tabla_filtrada[
+                df_tabla_filtrada["_Serie"].astype(str).str.contains(filtro_serie, case=False, na=False)
+            ]
 
-        if filtro_medidor:
-            col_m = next((c for c in ["Medidor", "medidorId", "medidor"] if c in df_tabla_filtrada.columns), None)
-            if col_m:
-                df_tabla_filtrada = df_tabla_filtrada[
-                    df_tabla_filtrada[col_m].astype(str).str.contains(filtro_medidor, case=False, na=False)
-                ]
+        if filtro_medidor and "Medidor" in df_tabla_filtrada.columns:
+            df_tabla_filtrada = df_tabla_filtrada[
+                df_tabla_filtrada["Medidor"].astype(str).str.contains(filtro_medidor, case=False, na=False)
+            ]
 
-        if filtro_predio:
-            col_p = next((c for c in ["Predio_Viv", "predio", "numeroPredio"] if c in df_tabla_filtrada.columns), None)
-            if col_p:
-                df_tabla_filtrada = df_tabla_filtrada[
-                    df_tabla_filtrada[col_p].astype(str).str.contains(filtro_predio, case=False, na=False)
-                ]
+        if filtro_predio and "Predio_Viv" in df_tabla_filtrada.columns:
+            df_tabla_filtrada = df_tabla_filtrada[
+                df_tabla_filtrada["Predio_Viv"].astype(str).str.contains(filtro_predio, case=False, na=False)
+            ]
 
     total_registros_tabla = len(df_tabla_filtrada)
 
@@ -2671,7 +2675,7 @@ with tab_tabla:
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
     # ==========================================================================
-    # MAPA UBICADO ARRIBA DE LA TABLA (Etapa 1: Amarillo | Etapa 2: Verde)
+    # MAPA CON REGLA DE COLORES: Etapa 1 (Amarillo) | Etapa 2 (Verde)
     # ==========================================================================
     with st.container(border=True):
         st.markdown(
@@ -2705,20 +2709,20 @@ with tab_tabla:
             except:
                 continue
 
-            # Regla exacta de colores por Etapa
+            # Regla de colores según la columna 'etapa'
             etapa_val = str(row.get("etapa", "")).strip()
             if etapa_val == "1" or etapa_val.lower() == "etapa 1":
-                color_punto = "#eab308"  # Amarillo
+                color_punto = "#eab308"  # Amarillo para Etapa 1
             elif etapa_val == "2" or etapa_val.lower() == "etapa 2":
-                color_punto = "#22c55e"  # Verde
+                color_punto = "#22c55e"  # Verde para Etapa 2
             else:
                 color_punto = "#38bdf8"  # Azul por defecto
 
-            nombre = str(row.get("Nombre", row.get("nombreCliente", "N/A")))
-            predio_val = str(row.get("Predio_Viv", row.get("predio", "N/A")))
-            serie_val = str(row.get("_Serie", row.get("serie", "N/A")))
-            medidor_val = str(row.get("Medidor", row.get("medidorId", "N/A")))
-            colonia_val = str(row.get("Colonia", row.get("colonia", "N/A")))
+            nombre = str(row.get("Nombre", "N/A"))
+            predio_val = str(row.get("Predio_Viv", "N/A"))
+            serie_val = str(row.get("_Serie", "N/A"))
+            medidor_val = str(row.get("Medidor", "N/A"))
+            colonia_val = str(row.get("Colonia", "N/A"))
             etapa_txt = str(row.get("etapa", "N/A"))
 
             popup_html = f"""
@@ -2745,14 +2749,14 @@ with tab_tabla:
             mapa_tabla_tab,
             width=None,
             height=350,
-            key="mapa_usuarios_miaa_conmedidor_final",
+            key="mapa_usuarios_miaa_conmedidor_postgres",
             returned_objects=[],
         )
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
     # ==========================================================================
-    # DISTRIBUCIÓN POR NIVEL (Usando la columna 'Nivel' con mayúscula)
+    # DISTRIBUCIÓN POR NIVEL (Usando la columna 'Nivel')
     # ==========================================================================
     with st.container(border=True):
         st.markdown(
@@ -2792,7 +2796,7 @@ with tab_tabla:
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-    # Mostrar la tabla completa con los datos
+    # Mostrar la tabla completa con los datos de PostgreSQL
     st.dataframe(df_tabla_filtrada, use_container_width=True, height=350)
 # -------------------------------------------------------------------------------------------------------------------------------------------
     with st.container(border=True):
