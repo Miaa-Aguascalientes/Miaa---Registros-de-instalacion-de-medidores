@@ -2546,50 +2546,49 @@ with tab_personal:
     st.dataframe(df_tabla_miaa, use_container_width=True)
 
 # ==============================================================================
-# Cargar datos y procesar la geometría UTM de 'geom' a Lat/Lon
+# SECCIÓN DE CARGA SEGURA DE LA TABLA usuarios_miaa_conmedidor
 # ==============================================================================
+@st.cache_data(ttl=600)
+def cargar_usuarios_miaa_conmedidor_db():
+    try:
+        engine = create_engine(st.secrets["mysql"]["connection_string"])
+        query = "SELECT * FROM usuarios_miaa_conmedidor"
+        df = pd.read_sql(query, con=engine)
+        return df
+    except Exception as e:
+        print(f"Error cargando usuarios_miaa_conmedidor: {e}")
+        return pd.DataFrame()
+
 df_usuarios_miaa_medidor = cargar_usuarios_miaa_conmedidor_db()
 
-if not df_usuarios_miaa_medidor.empty:
+# Procesar geometría 'geom' (FORMATO POINT X Y) a coordenadas Lat/Lon calculadas
+if not df_usuarios_miaa_medidor.empty and "geom" in df_usuarios_miaa_medidor.columns:
     lats, lons = [], []
-    
-    # Si no vinieron utm_x / utm_y por SQL, los sacamos directo de la columna geom
-    has_utm_cols = "utm_x" in df_usuarios_miaa_medidor.columns and "utm_y" in df_usuarios_miaa_medidor.columns
-    
-    for idx, row in df_usuarios_miaa_medidor.iterrows():
-        x_val, y_val = None, None
+    for val_geom in df_usuarios_miaa_medidor["geom"]:
+        lat_f, lon_f = np.nan, np.nan
         try:
-            if has_utm_cols and pd.notna(row["utm_x"]) and pd.notna(row["utm_y"]):
-                x_val, y_val = float(row["utm_x"]), float(row["utm_y"])
-            else:
-                geom_str = str(row.get("geom", ""))
-                if "POINT" in geom_str.upper():
-                    parts = geom_str.replace("POINT", "").replace("(", "").replace(")", "").strip().split()
+            if pd.notna(val_geom):
+                s_geom = str(val_geom)
+                if "POINT" in s_geom.upper():
+                    parts = s_geom.replace("POINT", "").replace("(", "").replace(")", "").strip().split()
                     nums = [float(p) for p in parts if p.replace(".", "", 1).replace("-", "", 1).isdigit()]
                     if len(nums) >= 2:
                         x_val, y_val = nums[0], nums[1]
-            
-            # Conversión aproximada de UTM Zona 13N (Aguascalientes) a Lat/Lon si está en metros (> 1000)
-            if x_val and y_val:
-                if abs(x_val) > 360 or abs(y_val) > 90:
-                    # Usamos pyproj o una aproximación estándar para EPSG:32613 (UTM 13N) a EPSG:4326
-                    # Formula inversa rápida para Aguascalientes Zona 13N:
-                    lon_deg = -102.2916 + (x_val - 780000) / 111000.0  # Ajuste local preciso para Aguascalientes
-                    lat_deg = 21.8853 + (y_val - 2420000) / 110500.0
-                    lats.append(lat_deg)
-                    lons.append(lon_deg)
-                else:
-                    lats.append(y_val)
-                    lons.append(x_val)
-            else:
-                lats.append(np.nan)
-                lons.append(np.nan)
+                        # Conversión UTM Zona 13N a Lat/Lon para Aguascalientes
+                        if abs(x_val) > 360 or abs(y_val) > 90:
+                            lon_f = -102.2916 + (x_val - 780000) / 111000.0
+                            lat_f = 21.8853 + (y_val - 2420000) / 110500.0
+                        else:
+                            lat_f, lon_f = y_val, x_val
         except:
-            lats.append(np.nan)
-            lons.append(np.nan)
-            
+            pass
+        lats.append(lat_f)
+        lons.append(lon_f)
     df_usuarios_miaa_medidor["lat_calc"] = lats
     df_usuarios_miaa_medidor["lon_calc"] = lons
+else:
+    df_usuarios_miaa_medidor["lat_calc"] = np.nan
+    df_usuarios_miaa_medidor["lon_calc"] = np.nan
 
 # ------------------------------------------------------------------------------
 # PESTAÑA: TABLA BASE DE DATOS COMPLETA (usuarios_miaa_conmedidor)
@@ -2628,28 +2627,34 @@ with tab_tabla:
                 key="filtro_tab_predio_miaa",
             )
 
-    # Aplicar filtros
+    # Aplicar filtros con nombres de columnas exactos de la tabla
     df_tabla_filtrada = df_usuarios_miaa_medidor.copy()
     
     if not df_tabla_filtrada.empty:
-        if filtro_serie and "_Serie" in df_tabla_filtrada.columns:
-            df_tabla_filtrada = df_tabla_filtrada[
-                df_tabla_filtrada["_Serie"].astype(str).str.contains(filtro_serie, case=False, na=False)
-            ]
+        if filtro_serie:
+            col_s = next((c for c in ["_Serie", "serie", "serieMedidor"] if c in df_tabla_filtrada.columns), None)
+            if col_s:
+                df_tabla_filtrada = df_tabla_filtrada[
+                    df_tabla_filtrada[col_s].astype(str).str.contains(filtro_serie, case=False, na=False)
+                ]
 
-        if filtro_medidor and "Medidor" in df_tabla_filtrada.columns:
-            df_tabla_filtrada = df_tabla_filtrada[
-                df_tabla_filtrada["Medidor"].astype(str).str.contains(filtro_medidor, case=False, na=False)
-            ]
+        if filtro_medidor:
+            col_m = next((c for c in ["Medidor", "medidorId", "medidor"] if c in df_tabla_filtrada.columns), None)
+            if col_m:
+                df_tabla_filtrada = df_tabla_filtrada[
+                    df_tabla_filtrada[col_m].astype(str).str.contains(filtro_medidor, case=False, na=False)
+                ]
 
-        if filtro_predio and "Predio_Viv" in df_tabla_filtrada.columns:
-            df_tabla_filtrada = df_tabla_filtrada[
-                df_tabla_filtrada["Predio_Viv"].astype(str).str.contains(filtro_predio, case=False, na=False)
-            ]
+        if filtro_predio:
+            col_p = next((c for c in ["Predio_Viv", "predio", "numeroPredio"] if c in df_tabla_filtrada.columns), None)
+            if col_p:
+                df_tabla_filtrada = df_tabla_filtrada[
+                    df_tabla_filtrada[col_p].astype(str).str.contains(filtro_predio, case=False, na=False)
+                ]
 
     total_registros_tabla = len(df_tabla_filtrada)
 
-    # Indicador de Total de Registros
+    # Indicador de Total de Registros (Ancho completo)
     st.markdown(
         f"""
         <div class="metric-card" style="width: 100%;">
@@ -2666,7 +2671,7 @@ with tab_tabla:
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
     # ==========================================================================
-    # MAPA CON REGLA DE COLORES: Etapa 1 (Amarillo) | Etapa 2 (Verde)
+    # MAPA UBICADO ARRIBA DE LA TABLA (Etapa 1: Amarillo | Etapa 2: Verde)
     # ==========================================================================
     with st.container(border=True):
         st.markdown(
@@ -2700,20 +2705,20 @@ with tab_tabla:
             except:
                 continue
 
-            # Regla exacta de colores solicitada para la etapa
+            # Regla exacta de colores por Etapa
             etapa_val = str(row.get("etapa", "")).strip()
             if etapa_val == "1" or etapa_val.lower() == "etapa 1":
                 color_punto = "#eab308"  # Amarillo
             elif etapa_val == "2" or etapa_val.lower() == "etapa 2":
                 color_punto = "#22c55e"  # Verde
             else:
-                color_punto = "#38bdf8"  # Azul por defecto si no especifica
+                color_punto = "#38bdf8"  # Azul por defecto
 
-            nombre = str(row.get("Nombre", "N/A"))
-            predio_val = str(row.get("Predio_Viv", "N/A"))
-            serie_val = str(row.get("_Serie", "N/A"))
-            medidor_val = str(row.get("Medidor", "N/A"))
-            colonia_val = str(row.get("Colonia", "N/A"))
+            nombre = str(row.get("Nombre", row.get("nombreCliente", "N/A")))
+            predio_val = str(row.get("Predio_Viv", row.get("predio", "N/A")))
+            serie_val = str(row.get("_Serie", row.get("serie", "N/A")))
+            medidor_val = str(row.get("Medidor", row.get("medidorId", "N/A")))
+            colonia_val = str(row.get("Colonia", row.get("colonia", "N/A")))
             etapa_txt = str(row.get("etapa", "N/A"))
 
             popup_html = f"""
@@ -2746,9 +2751,49 @@ with tab_tabla:
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-    # Mostrar la tabla completa
+    # ==========================================================================
+    # DISTRIBUCIÓN POR NIVEL (Usando la columna 'Nivel' con mayúscula)
+    # ==========================================================================
+    with st.container(border=True):
+        st.markdown(
+            "<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>Distribución por Nivel (Comercial / Doméstico)</p>",
+            unsafe_allow_html=True,
+        )
+        col_nivel_name = next((c for c in ["Nivel", "nivel"] if c in df_tabla_filtrada.columns), None)
+        
+        if not df_tabla_filtrada.empty and col_nivel_name:
+            df_nivel = df_tabla_filtrada[col_nivel_name].fillna("SIN NIVEL").value_counts().reset_index()
+            df_nivel.columns = ["Nivel", "Cantidad"]
+
+            fig_nivel = px.bar(
+                df_nivel,
+                x="Nivel",
+                y="Cantidad",
+                text="Cantidad",
+                color="Nivel",
+                color_discrete_sequence=px.colors.qualitative.Prism,
+            )
+            fig_nivel.update_traces(textposition="outside", textfont_size=11)
+            fig_nivel.update_layout(
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                font_color="#ffffff",
+                margin=dict(t=30, b=5, l=5, r=5),
+                height=220,
+                xaxis_title=None,
+                yaxis_title=None,
+                showlegend=False,
+            )
+            st.plotly_chart(
+                fig_nivel, use_container_width=True, key="tabla_completa_nivel_bar"
+            )
+        else:
+            st.info("La columna 'Nivel' no se encuentra disponible en los registros.")
+
+    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+    # Mostrar la tabla completa con los datos
     st.dataframe(df_tabla_filtrada, use_container_width=True, height=350)
-    
 # -------------------------------------------------------------------------------------------------------------------------------------------
     with st.container(border=True):
         st.markdown(
