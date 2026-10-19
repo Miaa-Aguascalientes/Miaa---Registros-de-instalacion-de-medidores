@@ -309,27 +309,31 @@ def cargar_google_sheets_interno():
 
 @st.cache_data(ttl=600)
 def cargar_usuarios_miaa_conmedidor_db():
-    """Consulta la base de datos PostgreSQL/PostGIS para obtener los registros y coordenadas UTM de geom."""
+    """Consulta la base de datos PostgreSQL usando los secretos configurados."""
     try:
-        # Nota: Asegúrate de tener configurada la conexión de postgres en tus st.secrets (ej. st.secrets["postgres"]["connection_string"])
-        # O si usas un engine general de postgres:
-        engine = create_engine(st.secrets["postgres"]["connection_string"])
+        cfg = st.secrets["postgres"]
+        # Construir la URL de conexión para SQLAlchemy con PostgreSQL
+        conn_str = f"postgresql+psycopg2://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/{cfg['database']}"
+        engine = create_engine(conn_str)
+        
+        # Consultar la tabla especificando el esquema 'Usuarios' y extrayendo X, Y de la geometría espacial geom
         query = """
             SELECT *, 
                    ST_X(geom) as utm_x, 
                    ST_Y(geom) as utm_y 
-            FROM usuarios_miaa_conmedidor
+            FROM "Usuarios"."usuarios_miaa_conmedidor"
         """
         return pd.read_sql(query, con=engine)
     except Exception as e:
         print(f"Error al conectar a PostgreSQL: {e}")
         try:
-            # Plan B: Intentar leer sin las funciones ST_X/ST_Y si la tabla está en otro esquema (ej. Usuarios.usuarios_miaa_conmedidor)
-            engine = create_engine(st.secrets["postgres"]["connection_string"])
-            query = 'SELECT * FROM "Usuarios"."usuarios_miaa_conmedidor"'
-            return pd.read_sql(query, con=engine)
+            # Intento secundario sin esquema explícito por si acaso
+            cfg = st.secrets["postgres"]
+            conn_str = f"postgresql+psycopg2://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/{cfg['database']}"
+            engine = create_engine(conn_str)
+            return pd.read_sql("SELECT *, ST_X(geom) as utm_x, ST_Y(geom) as utm_y FROM usuarios_miaa_conmedidor", con=engine)
         except Exception as ex:
-            print(f"Error en Plan B PostgreSQL: {ex}")
+            print(f"Error en respaldo de conexión: {ex}")
             return pd.DataFrame()
 
 
@@ -2555,11 +2559,11 @@ with tab_personal:
     st.dataframe(df_tabla_miaa, use_container_width=True)
 
 # ==============================================================================
-# CARGAR DATOS DE POSTGRESQL
+# CARGAR DATOS DE POSTGRESQL Y PROCESAR GEOMETRÍA
 # ==============================================================================
 df_usuarios_miaa_medidor = cargar_usuarios_miaa_conmedidor_db()
 
-# Procesamiento de coordenadas UTM (Metros) a Lat/Lon geográficas para Folium
+# Procesar coordenadas UTM a Lat/Lon geográficas
 if not df_usuarios_miaa_medidor.empty:
     lats, lons = [], []
     has_utm = "utm_x" in df_usuarios_miaa_medidor.columns and "utm_y" in df_usuarios_miaa_medidor.columns
@@ -2569,15 +2573,8 @@ if not df_usuarios_miaa_medidor.empty:
         try:
             if has_utm and pd.notna(row["utm_x"]) and pd.notna(row["utm_y"]):
                 x_val, y_val = float(row["utm_x"]), float(row["utm_y"])
-            elif "geom" in row and pd.notna(row["geom"]):
-                geom_str = str(row["geom"])
-                if "POINT" in geom_str.upper():
-                    parts = geom_str.replace("POINT", "").replace("(", "").replace(")", "").strip().split()
-                    nums = [float(p) for p in parts if p.replace(".", "", 1).replace("-", "", 1).isdigit()]
-                    if len(nums) >= 2:
-                        x_val, y_val = nums[0], nums[1]
             
-            # Conversión UTM Zona 13N (Aguascalientes) a Lat/Lon
+            # Conversión de UTM Zona 13N (Aguascalientes) a Lat/Lon
             if x_val is not None and y_val is not None:
                 if abs(x_val) > 360 or abs(y_val) > 90:
                     lon_deg = -102.2916 + (x_val - 780000) / 111000.0
@@ -2641,24 +2638,30 @@ with tab_tabla:
     df_tabla_filtrada = df_usuarios_miaa_medidor.copy()
     
     if not df_tabla_filtrada.empty:
-        if filtro_serie and "_Serie" in df_tabla_filtrada.columns:
-            df_tabla_filtrada = df_tabla_filtrada[
-                df_tabla_filtrada["_Serie"].astype(str).str.contains(filtro_serie, case=False, na=False)
-            ]
+        if filtro_serie:
+            col_s = next((c for c in ["_Serie", "serie", "serieMedidor"] if c in df_tabla_filtrada.columns), None)
+            if col_s:
+                df_tabla_filtrada = df_tabla_filtrada[
+                    df_tabla_filtrada[col_s].astype(str).str.contains(filtro_serie, case=False, na=False)
+                ]
 
-        if filtro_medidor and "Medidor" in df_tabla_filtrada.columns:
-            df_tabla_filtrada = df_tabla_filtrada[
-                df_tabla_filtrada["Medidor"].astype(str).str.contains(filtro_medidor, case=False, na=False)
-            ]
+        if filtro_medidor:
+            col_m = next((c for c in ["Medidor", "medidorId", "medidor"] if c in df_tabla_filtrada.columns), None)
+            if col_m:
+                df_tabla_filtrada = df_tabla_filtrada[
+                    df_tabla_filtrada[col_m].astype(str).str.contains(filtro_medidor, case=False, na=False)
+                ]
 
-        if filtro_predio and "Predio_Viv" in df_tabla_filtrada.columns:
-            df_tabla_filtrada = df_tabla_filtrada[
-                df_tabla_filtrada["Predio_Viv"].astype(str).str.contains(filtro_predio, case=False, na=False)
-            ]
+        if filtro_predio:
+            col_p = next((c for c in ["Predio_Viv", "predio", "numeroPredio"] if c in df_tabla_filtrada.columns), None)
+            if col_p:
+                df_tabla_filtrada = df_tabla_filtrada[
+                    df_tabla_filtrada[col_p].astype(str).str.contains(filtro_predio, case=False, na=False)
+                ]
 
     total_registros_tabla = len(df_tabla_filtrada)
 
-    # Indicador de Total de Registros (Ancho completo)
+    # Indicador de Total de Registros
     st.markdown(
         f"""
         <div class="metric-card" style="width: 100%;">
@@ -2756,7 +2759,7 @@ with tab_tabla:
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
     # ==========================================================================
-    # DISTRIBUCIÓN POR NIVEL (Usando la columna 'Nivel')
+    # DISTRIBUCIÓN POR NIVEL (Usando la columna 'Nivel' con mayúscula)
     # ==========================================================================
     with st.container(border=True):
         st.markdown(
