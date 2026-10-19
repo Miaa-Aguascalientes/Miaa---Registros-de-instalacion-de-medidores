@@ -2633,7 +2633,7 @@ with tab_tabla:
                 key="filtro_tab_predio_miaa",
             )
 
-    # Aplicar filtros de texto sobre los datos ya filtrados por etapa
+    # Aplicar filtros de texto sobre los datos
     df_tabla_filtrada = df_usuarios_miaa_medidor.copy()
     
     if not df_tabla_filtrada.empty:
@@ -2660,19 +2660,61 @@ with tab_tabla:
 
     total_registros_tabla = len(df_tabla_filtrada)
 
-    # Indicador de Total de Registros
-    st.markdown(
-        f"""
-        <div class="metric-card" style="width: 100%;">
-            <div class="icon-box" style="color: #38bdf8;"><i class="fa-solid fa-table-list"></i></div>
-            <div class="metric-content">
-                <div class="metric-title">Total de Registros (Etapa 1 y 2)</div>
-                <div class="metric-value">{total_registros_tabla:,}</div>
+    # Calcular conteos específicos para Etapa 1 y Etapa 2 basados en los datos filtrados
+    if not df_tabla_filtrada.empty and "etapa" in df_tabla_filtrada.columns:
+        etapa_serie_limpia = df_tabla_filtrada["etapa"].astype(str).str.strip().str.lower()
+        total_etapa_1 = int(etapa_serie_limpia.isin(["1", "etapa 1"]).sum())
+        total_etapa_2 = int(etapa_serie_limpia.isin(["2", "etapa 2"]).sum())
+    else:
+        total_etapa_1 = 0
+        total_etapa_2 = 0
+
+    # ==========================================================================
+    # INDICADORES / TARJETAS KPI (Total, Etapa 1 y Etapa 2)
+    # ==========================================================================
+    k_col1, k_col2, k_col3 = st.columns(3)
+
+    with k_col1:
+        st.markdown(
+            f"""
+            <div class="metric-card">
+                <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-table-list"></i></div>
+                <div class="metric-content">
+                    <div class="metric-title">Total Registros (1 y 2)</div>
+                    <div class="metric-value">{total_registros_tabla:,}</div>
+                </div>
             </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with k_col2:
+        st.markdown(
+            f"""
+            <div class="metric-card">
+                <div class="metric-icon-box" style="color: #eab308;"><i class="fa-solid fa-circle-dot"></i></div>
+                <div class="metric-content">
+                    <div class="metric-title">Etapa 1</div>
+                    <div class="metric-value">{total_etapa_1:,}</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with k_col3:
+        st.markdown(
+            f"""
+            <div class="metric-card">
+                <div class="metric-icon-box" style="color: #22c55e;"><i class="fa-solid fa-circle-dot"></i></div>
+                <div class="metric-content">
+                    <div class="metric-title">Etapa 2</div>
+                    <div class="metric-value">{total_etapa_2:,}</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
@@ -2712,7 +2754,7 @@ with tab_tabla:
                 continue
 
             # Asignación estricta de color por etapa
-            etapa_val = str(row.get("etapa", "")).strip()
+            etapa_val = str(row.get("etapa", "")).strip().lower()
             if etapa_val in ["1", "etapa 1"]:
                 color_punto = "#eab308"  # Amarillo para Etapa 1
             else:
@@ -2755,48 +2797,7 @@ with tab_tabla:
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-    # ==========================================================================
-    # DISTRIBUCIÓN POR NIVEL
-    # ==========================================================================
-    with st.container(border=True):
-        st.markdown(
-            "<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>Distribución por Nivel (Comercial / Doméstico)</p>",
-            unsafe_allow_html=True,
-        )
-        col_nivel_name = next((c for c in ["Nivel", "nivel"] if c in df_tabla_filtrada.columns), None)
-        
-        if not df_tabla_filtrada.empty and col_nivel_name:
-            df_nivel = df_tabla_filtrada[col_nivel_name].fillna("SIN NIVEL").value_counts().reset_index()
-            df_nivel.columns = ["Nivel", "Cantidad"]
-
-            fig_nivel = px.bar(
-                df_nivel,
-                x="Nivel",
-                y="Cantidad",
-                text="Cantidad",
-                color="Nivel",
-                color_discrete_sequence=px.colors.qualitative.Prism,
-            )
-            fig_nivel.update_traces(textposition="outside", textfont_size=11)
-            fig_nivel.update_layout(
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                font_color="#ffffff",
-                margin=dict(t=30, b=5, l=5, r=5),
-                height=220,
-                xaxis_title=None,
-                yaxis_title=None,
-                showlegend=False,
-            )
-            st.plotly_chart(
-                fig_nivel, use_container_width=True, key="tabla_completa_nivel_bar"
-            )
-        else:
-            st.info("La columna 'Nivel' no se encuentra disponible en los registros.")
-
-    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
-
-    # Mostrar la tabla completa
+    # Mostrar la tabla única limpia al final
     st.dataframe(df_tabla_filtrada, use_container_width=True, height=350)
 # -------------------------------------------------------------------------------------------------------------------------------------------
     with st.container(border=True):
