@@ -309,29 +309,35 @@ def cargar_google_sheets_interno():
 
 @st.cache_data(ttl=600)
 def cargar_usuarios_miaa_conmedidor_db():
-    """Consulta la base de datos PostgreSQL usando los secretos configurados."""
+    """Consulta la tabla en PostgreSQL extrayendo X e Y nativamente desde geom y filtrando etapas 1 y 2."""
     try:
         cfg = st.secrets["postgres"]
-        # Construir la URL de conexión para SQLAlchemy con PostgreSQL
         conn_str = f"postgresql+psycopg2://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/{cfg['database']}"
         engine = create_engine(conn_str)
         
-        # Consultar la tabla especificando el esquema 'Usuarios' y extrayendo X, Y de la geometría espacial geom
+        # Extraer coordenadas nativamente con ST_X y ST_Y y filtrar solo etapa 1 y 2
         query = """
             SELECT *, 
                    ST_X(geom) as utm_x, 
                    ST_Y(geom) as utm_y 
             FROM "Usuarios"."usuarios_miaa_conmedidor"
+            WHERE etapa::text IN ('1', '2', 'etapa 1', 'etapa 2')
         """
         return pd.read_sql(query, con=engine)
     except Exception as e:
         print(f"Error al conectar a PostgreSQL: {e}")
         try:
-            # Intento secundario sin esquema explícito por si acaso
             cfg = st.secrets["postgres"]
             conn_str = f"postgresql+psycopg2://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/{cfg['database']}"
             engine = create_engine(conn_str)
-            return pd.read_sql("SELECT *, ST_X(geom) as utm_x, ST_Y(geom) as utm_y FROM usuarios_miaa_conmedidor", con=engine)
+            query = """
+                SELECT *, 
+                       ST_X(geom) as utm_x, 
+                       ST_Y(geom) as utm_y 
+                FROM usuarios_miaa_conmedidor
+                WHERE etapa::text IN ('1', '2', 'etapa 1', 'etapa 2')
+            """
+            return pd.read_sql(query, con=engine)
         except Exception as ex:
             print(f"Error en respaldo de conexión: {ex}")
             return pd.DataFrame()
@@ -2559,34 +2565,27 @@ with tab_personal:
     st.dataframe(df_tabla_miaa, use_container_width=True)
 
 # ==============================================================================
-# CARGAR DATOS DE POSTGRESQL Y PROCESAR GEOMETRÍA
+# CARGAR DATOS DESDE POSTGRESQL USANDO GEOM Y ETAPA
 # ==============================================================================
 df_usuarios_miaa_medidor = cargar_usuarios_miaa_conmedidor_db()
 
-# Procesar coordenadas UTM a Lat/Lon geográficas
+# Convertir coordenadas UTM (metros) a Lat/Lon geográficas para Folium
 if not df_usuarios_miaa_medidor.empty:
     lats, lons = [], []
-    has_utm = "utm_x" in df_usuarios_miaa_medidor.columns and "utm_y" in df_usuarios_miaa_medidor.columns
-    
     for _, row in df_usuarios_miaa_medidor.iterrows():
-        x_val, y_val = None, None
         try:
-            if has_utm and pd.notna(row["utm_x"]) and pd.notna(row["utm_y"]):
-                x_val, y_val = float(row["utm_x"]), float(row["utm_y"])
+            x_val = float(row["utm_x"])
+            y_val = float(row["utm_y"])
             
-            # Conversión de UTM Zona 13N (Aguascalientes) a Lat/Lon
-            if x_val is not None and y_val is not None:
-                if abs(x_val) > 360 or abs(y_val) > 90:
-                    lon_deg = -102.2916 + (x_val - 780000) / 111000.0
-                    lat_deg = 21.8853 + (y_val - 2420000) / 110500.0
-                    lats.append(lat_deg)
-                    lons.append(lon_deg)
-                else:
-                    lats.append(y_val)
-                    lons.append(x_val)
+            # Transformación de UTM Zona 13N (Aguascalientes) a Lat/Lon
+            if abs(x_val) > 360 or abs(y_val) > 90:
+                lon_deg = -102.2916 + (x_val - 780000) / 111000.0
+                lat_deg = 21.8853 + (y_val - 2420000) / 110500.0
+                lats.append(lat_deg)
+                lons.append(lon_deg)
             else:
-                lats.append(np.nan)
-                lons.append(np.nan)
+                lats.append(y_val)
+                lons.append(x_val)
         except:
             lats.append(np.nan)
             lons.append(np.nan)
@@ -2634,7 +2633,7 @@ with tab_tabla:
                 key="filtro_tab_predio_miaa",
             )
 
-    # Aplicar filtros de texto
+    # Aplicar filtros de texto sobre los datos ya filtrados por etapa
     df_tabla_filtrada = df_usuarios_miaa_medidor.copy()
     
     if not df_tabla_filtrada.empty:
@@ -2667,7 +2666,7 @@ with tab_tabla:
         <div class="metric-card" style="width: 100%;">
             <div class="icon-box" style="color: #38bdf8;"><i class="fa-solid fa-table-list"></i></div>
             <div class="metric-content">
-                <div class="metric-title">Total de Registros (usuarios_miaa_conmedidor)</div>
+                <div class="metric-title">Total de Registros (Etapa 1 y 2)</div>
                 <div class="metric-value">{total_registros_tabla:,}</div>
             </div>
         </div>
@@ -2678,28 +2677,20 @@ with tab_tabla:
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
     # ==========================================================================
-    # MAPA CON FILTRO ESTRICTO DE ETAPA 1 Y 2
+    # MAPA CON GEOMETRÍA REAL Y COLORES (🟡 Etapa 1 | 🟢 Etapa 2)
     # ==========================================================================
     with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>🗺️ Mapa de Registros (Solo Etapa 1 y 2) — 🟡 Etapa 1 | 🟢 Etapa 2</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>🗺️ Mapa de Registros — 🟡 Etapa 1 (Amarillo) | 🟢 Etapa 2 (Verde)</p>",
             unsafe_allow_html=True,
         )
 
-        if not df_tabla_filtrada.empty and "lat_calc" in df_tabla_filtrada.columns and "etapa" in df_tabla_filtrada.columns:
-            # FILTRO ESTRICTO: Quedarse únicamente con los registros cuya etapa sea exactamente 1 o 2
-            df_mapa_tabla = df_tabla_filtrada.dropna(subset=["lat_calc", "lon_calc"]).copy()
-            
-            # Normalizar campo etapa para evaluar correctamente (convirtiendo a string limpio)
-            df_mapa_tabla["etapa_limpia"] = df_mapa_tabla["etapa"].astype(str).str.strip().str.lower()
-            
-            # Filtrar solo los que sean '1', 'etapa 1', '2' o 'etapa 2'
-            df_mapa_tabla = df_mapa_tabla[
-                df_mapa_tabla["etapa_limpia"].isin(["1", "etapa 1", "2", "etapa 2"])
-            ]
-        else:
-            df_mapa_tabla = pd.DataFrame()
-
+        df_mapa_tabla = (
+            df_tabla_filtrada.dropna(subset=["lat_calc", "lon_calc"])
+            if not df_tabla_filtrada.empty and "lat_calc" in df_tabla_filtrada.columns
+            else pd.DataFrame()
+        )
+        
         if not df_mapa_tabla.empty:
             m_lat_t = pd.to_numeric(df_mapa_tabla["lat_calc"], errors="coerce").mean()
             m_lon_t = pd.to_numeric(df_mapa_tabla["lon_calc"], errors="coerce").mean()
@@ -2720,8 +2711,8 @@ with tab_tabla:
             except:
                 continue
 
-            # Colores estrictos para Etapa 1 y Etapa 2
-            etapa_val = str(row.get("etapa", "")).strip().lower()
+            # Asignación estricta de color por etapa
+            etapa_val = str(row.get("etapa", "")).strip()
             if etapa_val in ["1", "etapa 1"]:
                 color_punto = "#eab308"  # Amarillo para Etapa 1
             else:
@@ -2758,14 +2749,14 @@ with tab_tabla:
             mapa_tabla_tab,
             width=None,
             height=350,
-            key="mapa_usuarios_miaa_conmedidor_etapas",
+            key="mapa_usuarios_miaa_conmedidor_geom_final",
             returned_objects=[],
         )
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
     # ==========================================================================
-    # DISTRIBUCIÓN POR NIVEL (Usando la columna 'Nivel')
+    # DISTRIBUCIÓN POR NIVEL
     # ==========================================================================
     with st.container(border=True):
         st.markdown(
