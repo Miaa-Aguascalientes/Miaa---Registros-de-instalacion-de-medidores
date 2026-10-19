@@ -2805,7 +2805,7 @@ with tab_tabla:
             "<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>Distribución por Nivel (Comercial / Doméstico)</p>",
             unsafe_allow_html=True,
         )
-        if not df_tabla_filtrada.empty and "nivel" in df_tabla_filtrada.columns:
+        if not df_tabla_filtrada.empty and "Nivel" in df_tabla_filtrada.columns:
             df_nivel = df_tabla_filtrada["nivel"].fillna("SIN NIVEL").value_counts().reset_index()
             df_nivel.columns = ["Nivel", "Cantidad"]
 
