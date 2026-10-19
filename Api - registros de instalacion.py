@@ -16,7 +16,6 @@ from streamlit_folium import st_folium
 # ==============================================================================
 # SECCIÓN 1: CONFIGURACIÓN GENERAL DE LA PÁGINA Y ESTILOS CSS
 # ==============================================================================
-
 st.set_page_config(
     page_title="Dashboard Instalación Medidores Inteligentes",
     page_icon="https://www.miaa.mx/favicon.ico",
@@ -2515,23 +2514,76 @@ with tab_personal:
 # PESTAÑA: TABLA BASE DE DATOS COMPLETA
 # ------------------------------------------------------------------------------
 with tab_tabla:
-  st.markdown(
-      "<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📋"
-      " Tabla Completa de Registros de la API</p>",
-      unsafe_allow_html=True,
-  )
-
-  total_registros_tabla = len(df_filtrado)
-  total_colonias_tabla = (
-      df_filtrado["colonia"].nunique()
-      if not df_filtrado.empty and "colonia" in df_filtrado.columns
-      else 0
-  )
-
-  t_col1, t_col2 = st.columns(2)
-  with t_col1:
     st.markdown(
-        f"""
+        "<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📋 Tabla Completa de Registros de la API</p>",
+        unsafe_allow_html=True,
+    )
+
+    # ==========================================================================
+    # NUEVA SECCIÓN: FILTROS INTERACTIVOS (Serie, Medidor, Predio)
+    # ==========================================================================
+    with st.container(border=True):
+        st.markdown(
+            "<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>🔍 Filtros de Búsqueda y Filtrado</p>",
+            unsafe_allow_html=True,
+        )
+        col_f1, col_f2, col_f3 = st.columns(3)
+        with col_f1:
+            filtro_serie = st.text_input(
+                "Filtrar por Número de Serie",
+                placeholder="Ej. serie...",
+                key="filtro_tab_serie",
+            )
+        with col_f2:
+            filtro_medidor = st.text_input(
+                "Filtrar por Número de Medidor",
+                placeholder="Ej. medidorId...",
+                key="filtro_tab_medidor",
+            )
+        with col_f3:
+            filtro_predio = st.text_input(
+                "Filtrar por Predio",
+                placeholder="Ej. predio...",
+                key="filtro_tab_predio",
+            )
+
+    # Aplicar filtros sobre el DataFrame principal filtrado
+    df_tabla_filtrada = df_filtrado.copy()
+    if filtro_serie:
+        col_s_cand = [c for c in ["serie", "serieMedidor"] if c in df_tabla_filtrada.columns]
+        if col_s_cand:
+            mask = df_tabla_filtrada[col_s_cand].astype(str).apply(
+                lambda x: x.str.contains(filtro_serie, case=False, na=False)
+            ).any(axis=1)
+            df_tabla_filtrada = df_tabla_filtrada[mask]
+
+    if filtro_medidor:
+        col_m_cand = [c for c in ["medidorId", "medidor"] if c in df_tabla_filtrada.columns]
+        if col_m_cand:
+            mask = df_tabla_filtrada[col_m_cand].astype(str).apply(
+                lambda x: x.str.contains(filtro_medidor, case=False, na=False)
+            ).any(axis=1)
+            df_tabla_filtrada = df_tabla_filtrada[mask]
+
+    if filtro_predio:
+        col_p_cand = [c for c in ["predio", "numeroPredio"] if c in df_tabla_filtrada.columns]
+        if col_p_cand:
+            mask = df_tabla_filtrada[col_p_cand].astype(str).apply(
+                lambda x: x.str.contains(filtro_predio, case=False, na=False)
+            ).any(axis=1)
+            df_tabla_filtrada = df_tabla_filtrada[mask]
+
+    total_registros_tabla = len(df_tabla_filtrada)
+    total_colonias_tabla = (
+        df_tabla_filtrada["colonia"].nunique()
+        if not df_tabla_filtrada.empty and "colonia" in df_tabla_filtrada.columns
+        else 0
+    )
+
+    t_col1, t_col2 = st.columns(2)
+    with t_col1:
+        st.markdown(
+            f"""
             <div class="metric-card">
                 <div class="icon-box" style="color: #38bdf8;"><i class="fa-solid fa-table-list"></i></div>
                 <div class="metric-content">
@@ -2539,12 +2591,12 @@ with tab_tabla:
                     <div class="metric-value">{total_registros_tabla:,}</div>
                 </div>
             </div>
-        """,
-        unsafe_allow_html=True,
-    )
-  with t_col2:
-    st.markdown(
-        f"""
+            """,
+            unsafe_allow_html=True,
+        )
+    with t_col2:
+        st.markdown(
+            f"""
             <div class="metric-card">
                 <div class="metric-icon-box" style="color: #4ade80;"><i class="fa-solid fa-map-pin"></i></div>
                 <div class="metric-content">
@@ -2552,124 +2604,182 @@ with tab_tabla:
                     <div class="metric-value">{total_colonias_tabla:,}</div>
                 </div>
             </div>
-        """,
-        unsafe_allow_html=True,
-    )
+            """,
+            unsafe_allow_html=True,
+        )
 
-  st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-  with st.container(border=True):
-    st.markdown(
-        "<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>Distribución"
-        " por Nivel (Comercial / Doméstico)</p>",
-        unsafe_allow_html=True,
-    )
-    if not df_filtrado.empty and "nivel" in df_filtrado.columns:
-      df_nivel = df_filtrado["nivel"].fillna("SIN NIVEL").value_counts().reset_index()
-      df_nivel.columns = ["Nivel", "Cantidad"]
+    # ==========================================================================
+    # NUEVA SECCIÓN: MAPA UBICADO ARRIBA DE LA TABLA
+    # ==========================================================================
+    with st.container(border=True):
+        st.markdown(
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>🗺️ Mapa de Registros de Instalación (Filtrados)</p>",
+            unsafe_allow_html=True,
+        )
 
-      fig_nivel = px.bar(
-          df_nivel,
-          x="Nivel",
-          y="Cantidad",
-          text="Cantidad",
-          color="Nivel",
-          color_discrete_sequence=px.colors.qualitative.Prism,
-      )
-      fig_nivel.update_traces(textposition="outside", textfont_size=11)
-      fig_nivel.update_layout(
-          plot_bgcolor="rgba(0,0,0,0)",
-          paper_bgcolor="rgba(0,0,0,0)",
-          font_color="#ffffff",
-          margin=dict(t=30, b=5, l=5, r=5),
-          height=220,
-          xaxis_title=None,
-          yaxis_title=None,
-          showlegend=False,
-      )
-      st.plotly_chart(
-          fig_nivel, use_container_width=True, key="tabla_completa_nivel_bar"
-      )
+        df_mapa_tabla = (
+            df_tabla_filtrada.dropna(subset=["latitud", "longitud"])
+            if not df_tabla_filtrada.empty and "latitud" in df_tabla_filtrada.columns
+            else pd.DataFrame()
+        )
+        if not df_mapa_tabla.empty:
+            m_lat_t = df_mapa_tabla["latitud"].mean()
+            m_lon_t = df_mapa_tabla["longitud"].mean()
+        else:
+            m_lat_t, m_lon_t = lat_centro, lon_centro
+
+        mapa_tabla_tab = folium.Map(location=[m_lat_t, m_lon_t], zoom_start=12, tiles=None)
+        agregar_capas_base(mapa_tabla_tab)
+
+        for _, row in df_mapa_tabla.iterrows():
+            nombre = str(row.get("nombreCliente", "N/A"))
+            predio_val = str(row.get("predio", row.get("numeroPredio", "N/A")))
+            serie_val = str(row.get("serie", row.get("serieMedidor", "N/A")))
+            medidor_val = str(row.get("medidorId", "N/A"))
+            colonia_val = str(row.get("colonia", "N/A"))
+
+            popup_html = f"""
+            <div style="font-size: 11px; line-height: 1.4; color: #000000;">
+                <b>Cliente:</b> {nombre}<br>
+                <b>Predio:</b> {predio_val}<br>
+                <b>Serie:</b> {serie_val}<br>
+                <b>Medidor ID:</b> {medidor_val}<br>
+                <b>Colonia:</b> {colonia_val}
+            </div>
+            """
+            folium.CircleMarker(
+                location=[float(row["latitud"]), float(row["longitud"])],
+                radius=3,
+                color="#38bdf8",
+                fill=True,
+                fill_color="#38bdf8",
+                fill_opacity=0.8,
+                popup=folium.Popup(popup_html, max_width=250),
+            ).add_to(mapa_tabla_tab)
+
+        st_folium(
+            mapa_tabla_tab,
+            width=None,
+            height=350,
+            key="mapa_tabla_completa_filtrada",
+            returned_objects=[],
+        )
+
+    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+    with st.container(border=True):
+        st.markdown(
+            "<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>Distribución por Nivel (Comercial / Doméstico)</p>",
+            unsafe_allow_html=True,
+        )
+        if not df_tabla_filtrada.empty and "nivel" in df_tabla_filtrada.columns:
+            df_nivel = df_tabla_filtrada["nivel"].fillna("SIN NIVEL").value_counts().reset_index()
+            df_nivel.columns = ["Nivel", "Cantidad"]
+
+            fig_nivel = px.bar(
+                df_nivel,
+                x="Nivel",
+                y="Cantidad",
+                text="Cantidad",
+                color="Nivel",
+                color_discrete_sequence=px.colors.qualitative.Prism,
+            )
+            fig_nivel.update_traces(textposition="outside", textfont_size=11)
+            fig_nivel.update_layout(
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                font_color="#ffffff",
+                margin=dict(t=30, b=5, l=5, r=5),
+                height=220,
+                xaxis_title=None,
+                yaxis_title=None,
+                showlegend=False,
+            )
+            st.plotly_chart(
+                fig_nivel, use_container_width=True, key="tabla_completa_nivel_bar"
+            )
+        else:
+            st.info("La columna 'nivel' no se encuentra disponible en los registros.")
+
+    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+    df_tabla_limpia = df_tabla_filtrada.copy()
+
+    terminos_excluidos = [
+        "foto",
+        "modoIdentificacion",
+        "giro",
+        "fecharegistro",
+        "fechamodificacion",
+        "uuid",
+        "horafin",
+        "lecturaanterior",
+        "lecturaactual",
+        "folio",
+    ]
+    columnas_a_excluir = [
+        c
+        for c in df_tabla_limpia.columns
+        if any(term in c.lower() for term in terminos_excluidos)
+    ]
+    df_tabla_limpia = df_tabla_limpia.drop(columns=columnas_a_excluir, errors="ignore")
+
+    poligonos_asignados = []
+    if (
+        shapely_polygons
+        and not df_tabla_limpia.empty
+        and "latitud" in df_tabla_limpia.columns
+    ):
+        for _, row_m in df_tabla_limpia.iterrows():
+            lat, lon = row_m.get("latitud"), row_m.get("longitud")
+            assigned_fid = "SIN POLÍGONO"
+            if pd.notna(lat) and pd.notna(lon):
+                pt = Point(lat, lon)
+                for bi_label, poly in shapely_polygons.items():
+                    if poly.contains(pt):
+                        assigned_fid = str(bi_label)
+                        break
+            poligonos_asignados.append(assigned_fid)
     else:
-      st.info("La columna 'nivel' no se encuentra disponible en los registros.")
+        poligonos_asignados = ["SIN POLÍGONO"] * len(df_tabla_limpia)
 
-  st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+    df_tabla_limpia["poligono"] = poligonos_asignados
 
-  df_tabla_limpia = df_filtrado.copy()
+    campos_a_quitar = [
+        "anomaliaId",
+        "modoIdentificacion",
+        "giro",
+        "lugarInstalacionId",
+        "usuarioId",
+        "lugarInstalacion_id_str",
+        "anomalia_id_str",
+    ]
+    df_tabla_limpia = df_tabla_limpia.drop(columns=campos_a_quitar, errors="ignore")
 
-  terminos_excluidos = [
-      "foto",
-      "modoIdentificacion",
-      "giro",
-      "fecharegistro",
-      "fechamodificacion",
-      "uuid",
-      "horafin",
-      "lecturaanterior",
-      "lecturaactual",
-      "folio",
-  ]
-  columnas_a_excluir = [
-      c
-      for c in df_tabla_limpia.columns
-      if any(term in c.lower() for term in terminos_excluidos)
-  ]
-  df_tabla_limpia = df_tabla_limpia.drop(columns=columnas_a_excluir, errors="ignore")
+    if "fechaInstalacion" in df_tabla_limpia.columns:
+        df_tabla_limpia["fechaInstalacion"] = pd.to_datetime(
+            df_tabla_limpia["fechaInstalacion"], errors="coerce"
+        ).dt.strftime("%d/%m/%Y %H:%M:%S")
 
-  poligonos_asignados = []
-  if (
-      shapely_polygons
-      and not df_tabla_limpia.empty
-      and "latitud" in df_tabla_limpia.columns
-  ):
-    for _, row_m in df_tabla_limpia.iterrows():
-      lat, lon = row_m.get("latitud"), row_m.get("longitud")
-      assigned_fid = "SIN POLÍGONO"
-      if pd.notna(lat) and pd.notna(lon):
-        pt = Point(lat, lon)
-        for bi_label, poly in shapely_polygons.items():
-          if poly.contains(pt):
-            assigned_fid = str(bi_label)
-            break
-      poligonos_asignados.append(assigned_fid)
-  else:
-    poligonos_asignados = ["SIN POLÍGONO"] * len(df_tabla_limpia)
+    if "horaInicio" in df_tabla_limpia.columns:
+        df_tabla_limpia["horaInicio"] = pd.to_datetime(
+            df_tabla_limpia["horaInicio"], errors="coerce"
+        ).dt.strftime("%H:%M")
 
-  df_tabla_limpia["poligono"] = poligonos_asignados
+    df_tabla_limpia = df_tabla_limpia.drop(
+        columns=["fecha_dt", "Semana", "fecha_dia", "anio_mes", "periodo_mes"],
+        errors="ignore",
+    )
 
-  campos_a_quitar = [
-      "anomaliaId",
-      "modoIdentificacion",
-      "giro",
-      "lugarInstalacionId",
-      "usuarioId",
-      "lugarInstalacion_id_str",
-      "anomalia_id_str",
-  ]
-  df_tabla_limpia = df_tabla_limpia.drop(columns=campos_a_quitar, errors="ignore")
+    for col in df_tabla_limpia.columns:
+        if df_tabla_limpia[col].dtype == "object":
+            df_tabla_limpia[col] = df_tabla_limpia[col].astype(str).replace(
+                {"nan": None, "None": None}
+            )
 
-  if "fechaInstalacion" in df_tabla_limpia.columns:
-    df_tabla_limpia["fechaInstalacion"] = pd.to_datetime(
-        df_tabla_limpia["fechaInstalacion"], errors="coerce"
-    ).dt.strftime("%d/%m/%Y %H:%M:%S")
-
-  if "horaInicio" in df_tabla_limpia.columns:
-    df_tabla_limpia["horaInicio"] = pd.to_datetime(
-        df_tabla_limpia["horaInicio"], errors="coerce"
-    ).dt.strftime("%H:%M")
-
-  df_tabla_limpia = df_tabla_limpia.drop(
-      columns=["fecha_dt", "Semana", "fecha_dia", "anio_mes", "periodo_mes"],
-      errors="ignore",
-  )
-
-  for col in df_tabla_limpia.columns:
-    if df_tabla_limpia[col].dtype == "object":
-      df_tabla_limpia[col] = df_tabla_limpia[col].astype(str).replace(
-          {"nan": None, "None": None}
-      )
-
-  st.dataframe(df_tabla_limpia, use_container_width=True)
+    st.dataframe(df_tabla_limpia, use_container_width=True)
 
 # ------------------------------------------------------------------------------
 # PESTAÑA: REGISTRO DE INSTALACIONES INTERNO (Google Sheets)
