@@ -2541,7 +2541,7 @@ with tab_personal:
     st.dataframe(df_tabla_miaa, use_container_width=True)
 
 # ==============================================================================
-# Cargar el DataFrame de la tabla solicitada
+# Cargar el DataFrame de la tabla usuarios_miaa_conmedidor desde MySQL
 # ==============================================================================
 df_usuarios_miaa_medidor = cargar_usuarios_miaa_conmedidor_db()
 
@@ -2555,7 +2555,7 @@ with tab_tabla:
     )
 
     # ==========================================================================
-    # FILTROS INTERACTIVOS (Serie, Medidor, Predio)
+    # FILTROS INTERACTIVOS (_Serie, Medidor, Predio_Viv)
     # ==========================================================================
     with st.container(border=True):
         st.markdown(
@@ -2566,53 +2566,44 @@ with tab_tabla:
         with col_f1:
             filtro_serie = st.text_input(
                 "Filtrar por Número de Serie",
-                placeholder="Ej. serie...",
+                placeholder="Ej. _Serie...",
                 key="filtro_tab_serie_miaa",
             )
         with col_f2:
             filtro_medidor = st.text_input(
                 "Filtrar por Número de Medidor",
-                placeholder="Ej. medidor...",
+                placeholder="Ej. Medidor...",
                 key="filtro_tab_medidor_miaa",
             )
         with col_f3:
             filtro_predio = st.text_input(
                 "Filtrar por Predio",
-                placeholder="Ej. predio...",
+                placeholder="Ej. Predio_Viv...",
                 key="filtro_tab_predio_miaa",
             )
 
-    # Aplicar filtros sobre el DataFrame de usuarios_miaa_conmedidor
+    # Aplicar filtros sobre el DataFrame usando los nombres exactos de los campos de la imagen
     df_tabla_filtrada = df_usuarios_miaa_medidor.copy()
     
     if not df_tabla_filtrada.empty:
-        if filtro_serie:
-            col_s_cand = [c for c in ["serie", "serieMedidor", "numero_serie"] if c in df_tabla_filtrada.columns]
-            if col_s_cand:
-                mask = df_tabla_filtrada[col_s_cand].astype(str).apply(
-                    lambda x: x.str.contains(filtro_serie, case=False, na=False)
-                ).any(axis=1)
-                df_tabla_filtrada = df_tabla_filtrada[mask]
+        if filtro_serie and "_Serie" in df_tabla_filtrada.columns:
+            df_tabla_filtrada = df_tabla_filtrada[
+                df_tabla_filtrada["_Serie"].astype(str).str.contains(filtro_serie, case=False, na=False)
+            ]
 
-        if filtro_medidor:
-            col_m_cand = [c for c in ["medidorId", "medidor", "numero_medidor"] if c in df_tabla_filtrada.columns]
-            if col_m_cand:
-                mask = df_tabla_filtrada[col_m_cand].astype(str).apply(
-                    lambda x: x.str.contains(filtro_medidor, case=False, na=False)
-                ).any(axis=1)
-                df_tabla_filtrada = df_tabla_filtrada[mask]
+        if filtro_medidor and "Medidor" in df_tabla_filtrada.columns:
+            df_tabla_filtrada = df_tabla_filtrada[
+                df_tabla_filtrada["Medidor"].astype(str).str.contains(filtro_medidor, case=False, na=False)
+            ]
 
-        if filtro_predio:
-            col_p_cand = [c for c in ["predio", "numeroPredio", "cuenta", "predioId"] if c in df_tabla_filtrada.columns]
-            if col_p_cand:
-                mask = df_tabla_filtrada[col_p_cand].astype(str).apply(
-                    lambda x: x.str.contains(filtro_predio, case=False, na=False)
-                ).any(axis=1)
-                df_tabla_filtrada = df_tabla_filtrada[mask]
+        if filtro_predio and "Predio_Viv" in df_tabla_filtrada.columns:
+            df_tabla_filtrada = df_tabla_filtrada[
+                df_tabla_filtrada["Predio_Viv"].astype(str).str.contains(filtro_predio, case=False, na=False)
+            ]
 
     total_registros_tabla = len(df_tabla_filtrada)
 
-    # Indicador de Total de Registros (Sin la tarjeta de colonias)
+    # Indicador de Total de Registros (Ancho completo, sin colonias)
     st.markdown(
         f"""
         <div class="metric-card" style="width: 100%;">
@@ -2637,18 +2628,15 @@ with tab_tabla:
             unsafe_allow_html=True,
         )
 
-        lat_col_name = next((c for c in ["latitud", "lat"] if c in df_tabla_filtrada.columns), None)
-        lon_col_name = next((c for c in ["longitud", "lon", "lng"] if c in df_tabla_filtrada.columns), None)
-
         df_mapa_tabla = (
-            df_tabla_filtrada.dropna(subset=[lat_col_name, lon_col_name])
-            if not df_tabla_filtrada.empty and lat_col_name and lon_col_name
+            df_tabla_filtrada.dropna(subset=["Latitud", "Longitud"])
+            if not df_tabla_filtrada.empty and "Latitud" in df_tabla_filtrada.columns and "Longitud" in df_tabla_filtrada.columns
             else pd.DataFrame()
         )
         
         if not df_mapa_tabla.empty:
-            m_lat_t = pd.to_numeric(df_mapa_tabla[lat_col_name], errors="coerce").mean()
-            m_lon_t = pd.to_numeric(df_mapa_tabla[lon_col_name], errors="coerce").mean()
+            m_lat_t = pd.to_numeric(df_mapa_tabla["Latitud"], errors="coerce").mean()
+            m_lon_t = pd.to_numeric(df_mapa_tabla["Longitud"], errors="coerce").mean()
         else:
             m_lat_t, m_lon_t = lat_centro, lon_centro
 
@@ -2657,23 +2645,23 @@ with tab_tabla:
 
         for _, row in df_mapa_tabla.iterrows():
             try:
-                lat_val = float(row[lat_col_name])
-                lon_val = float(row[lon_col_name])
+                lat_val = float(row["Latitud"])
+                lon_val = float(row["Longitud"])
             except:
                 continue
 
-            nombre = str(row.get("nombreCliente", row.get("nombre", "N/A")))
-            predio_val = str(row.get("predio", row.get("numeroPredio", "N/A")))
-            serie_val = str(row.get("serie", row.get("serieMedidor", "N/A")))
-            medidor_val = str(row.get("medidorId", row.get("medidor", "N/A")))
-            colonia_val = str(row.get("colonia", "N/A"))
+            nombre = str(row.get("Nombre", "N/A"))
+            predio_val = str(row.get("Predio_Viv", "N/A"))
+            serie_val = str(row.get("_Serie", "N/A"))
+            medidor_val = str(row.get("Medidor", "N/A"))
+            colonia_val = str(row.get("Colonia", "N/A"))
 
             popup_html = f"""
             <div style="font-size: 11px; line-height: 1.4; color: #000000;">
                 <b>Cliente:</b> {nombre}<br>
                 <b>Predio:</b> {predio_val}<br>
                 <b>Serie:</b> {serie_val}<br>
-                <b>Medidor ID:</b> {medidor_val}<br>
+                <b>Medidor:</b> {medidor_val}<br>
                 <b>Colonia:</b> {colonia_val}
             </div>
             """
