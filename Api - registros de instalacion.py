@@ -596,7 +596,6 @@ with tab_hoy_inst:
         df_hoy_inst = df[df["fecha_dt"].dt.date == dia_actual_ref].copy()
         total_hoy_cant = len(df_hoy_inst)
         
-        # Métricas exclusivas de hoy
         h_k1, h_k2, h_k3 = st.columns(3)
         h_k1.markdown(f'<div class="metric-card"><div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-calendar-day"></i></div><div class="metric-content"><div class="metric-title">Instalados Hoy ({dia_actual_ref.strftime("%d/%m/%Y")})</div><div class="metric-value">{total_hoy_cant:,}</div></div></div>', unsafe_allow_html=True)
         colonias_hoy = df_hoy_inst["colonia"].nunique() if "colonia" in df_hoy_inst.columns else 0
@@ -607,7 +606,6 @@ with tab_hoy_inst:
         st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
         
         if not df_hoy_inst.empty:
-            # Mapa de seguimiento con ruta cronológica (AntPath)
             with st.container(border=True):
                 st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:6px;'>🗺️ Mapa y Ruta de Instalación (Orden Horario)</p>", unsafe_allow_html=True)
                 
@@ -645,7 +643,6 @@ with tab_hoy_inst:
                         popup=folium.Popup(popup_html, max_width=250),
                     ).add_to(mapa_hoy)
                 
-                # Trazar línea de ruta de instalación ordenada por horario
                 if len(puntos_ruta) > 1:
                     AntPath(
                         locations=puntos_ruta,
@@ -659,7 +656,6 @@ with tab_hoy_inst:
                 
                 st_folium(mapa_hoy, width=None, height=400, key="mapa_ruta_hoy", returned_objects=[])
 
-            # Tabla de registros de hoy
             with st.container(border=True):
                 st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:6px;'>📋 Listado de Medidores Instalados Hoy</p>", unsafe_allow_html=True)
                 busqueda_hoy = st.text_input("Buscar por Predio, Cliente o Serie (Hoy)", placeholder="Escribe para filtrar...", key="txt_busq_hoy")
@@ -689,7 +685,6 @@ with tab_anomalias:
 # ------------------------------------------------------------------------------
 with tab_poligonos:
     st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>🗺️ Mapa de Polígonos y Avance</p>", unsafe_allow_html=True)
-    # (Bloque de polígonos conservado de tu estructura original)
 
 # ------------------------------------------------------------------------------
 # PESTAÑA: PERSONAL (EXTERNO Y MIAA)
@@ -708,6 +703,8 @@ with tab_personal:
 with tab_tabla:
     st.markdown("<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📋 Registros de la Tabla: usuarios_miaa_conmedidor</p>", unsafe_allow_html=True)
     df_usuarios_miaa_medidor = cargar_usuarios_miaa_conmedidor_db()
+    if not df_usuarios_miaa_medidor.empty:
+        df_usuarios_miaa_medidor = df_usuarios_miaa_medidor.loc[:, ~df_usuarios_miaa_medidor.columns.duplicated()]
     st.dataframe(df_usuarios_miaa_medidor, use_container_width=True, height=400)
 
 # ------------------------------------------------------------------------------
