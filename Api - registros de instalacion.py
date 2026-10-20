@@ -1118,9 +1118,11 @@ with tab_principal:
             unsafe_allow_html=True,
         )
 
+        # Usar el DataFrame filtrado por la búsqueda global si existe, de lo contrario el filtrado general
+        df_fuente_mapa = df_filtrado_global if 'df_filtrado_global' in locals() and not df_filtrado_global.empty else df_filtrado
         df_mapa_valido = (
-            df_filtrado.dropna(subset=["latitud", "longitud"])
-            if not df_filtrado.empty
+            df_fuente_mapa.dropna(subset=["latitud", "longitud"])
+            if not df_fuente_mapa.empty
             else pd.DataFrame()
         )
         if not df_mapa_valido.empty:
