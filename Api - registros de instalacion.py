@@ -1380,7 +1380,6 @@ with tab_principal:
         val_p = val_p.split(".")[0] if val_p.endswith(".0") else val_p
         if val_p in ["nan", "None", "", "nat"]: val_p = "0"
         
-        # Obtener la unidad si existe
         if col_u_orig and col_u_orig in row and pd.notna(row[col_u_orig]):
             val_u = str(row[col_u_orig]).strip()
             val_u = val_u.split(".")[0] if val_u.endswith(".0") else val_u
@@ -1389,7 +1388,6 @@ with tab_principal:
         else:
             val_u = "0"
         
-        # Si la unidad es distinta de 0 (ej. 77), respetamos predio-unidad. Si es 0 o vacía, forzamos obligatoriamente el -0 (ej. 601655-0)
         if val_u != "0" and val_u != "":
             return f"{val_p}-{val_u}"
         else:
@@ -1397,6 +1395,14 @@ with tab_principal:
 
       if col_p_orig:
         df_todos_inst["predio_viv"] = df_todos_inst.apply(formatear_predio_tabla, axis=1)
+
+      # Mapear numeroCliente a Num_Cliente para que aparezca correctamente
+      col_cli_orig = next((c for c in ["numeroCliente", "cliente"] if c in df_todos_inst.columns), None)
+      if col_cli_orig:
+        df_todos_inst["Num_Cliente"] = df_todos_inst[col_cli_orig].astype(str).str.replace(r"\.0$", "", regex=True)
+        df_todos_inst["Num_Cliente"] = df_todos_inst["Num_Cliente"].replace(["nan", "None", "", "nat"], "0")
+      else:
+        df_todos_inst["Num_Cliente"] = "0"
 
       busqueda_global_inst = st.text_input(
           "Buscar en cualquier registro (Predio, Cliente, Serie, Domicilio, etc.)",
@@ -1442,10 +1448,12 @@ with tab_principal:
         else:
           df_pagina_actual["Instalador"] = "MIAA"
 
+        # Orden estricto de columnas solicitadas
         cols_mostrar = []
         candidatos_cols = [
             "nombreCliente",
             "predio_viv",
+            "Num_Cliente",
             "domicilio",
             "colonia",
             "serie",
