@@ -1116,7 +1116,6 @@ with tab_principal:
             unsafe_allow_html=True,
         )
 
-        # Usamos el DataFrame filtrado global que se genera abajo en la sección de la tabla
         df_fuente_mapa = df_filtrado_global if 'df_filtrado_global' in locals() and not df_filtrado_global.empty else df_filtrado
 
         df_mapa_valido = (
@@ -1413,7 +1412,6 @@ with tab_principal:
       else:
         df_todos_inst["Num_Cliente"] = "0"
 
-      # BARRA DE BÚSQUEDA UBICADA EN LA PARTE INFERIOR (SOBRE LA TABLA)
       busqueda_global_inst = st.text_input(
           "Buscar en cualquier registro (Predio, Cliente, Serie, Domicilio, etc.)",
           placeholder="Ej. 502934-1, VAZQUEZ, 222608...",
@@ -2101,7 +2099,7 @@ with tab_poligonos:
     )
 
 # ------------------------------------------------------------------------------
-# SECCIÓN 12 PESTAÑA: PERSONAL (EXTERNO Y MIAA)
+# SECCIÓN 12 PESTAÑA: PERSONAL (EXTERNO Y MIAA) -> CON PAGINACIÓN DE 50
 # ------------------------------------------------------------------------------
 with tab_personal:
   st.markdown(
@@ -2338,7 +2336,31 @@ with tab_personal:
           ],
           errors="ignore",
       )
-    st.dataframe(df_tabla_ext, use_container_width=True)
+
+      # Buscador global y paginación de 50 para Externo
+      busqueda_ext = st.text_input("Buscar en Personal Externo...", placeholder="Ej. Predio, Nombre, Serie...", key="filtro_ext_global")
+      if busqueda_ext:
+        b_ext_txt = busqueda_ext.lower()
+        mask_ext = df_tabla_ext.astype(str).apply(lambda row: row.str.lower().str.contains(b_ext_txt).any(), axis=1)
+        df_tabla_ext = df_tabla_ext[mask_ext]
+
+      total_reg_ext = len(df_tabla_ext)
+      if total_reg_ext > 0:
+        tam_pag_ext = 50
+        tot_pag_ext = math.ceil(total_reg_ext / tam_pag_ext)
+        col_p1, col_p2 = st.columns([2, 1])
+        with col_p1:
+          pag_ext_act = st.selectbox("Hoja / Página (Externo)", options=list(range(1, tot_pag_ext + 1)), format_func=lambda x: f"Hoja {x} de {tot_pag_ext} (Registros {(x-1)*tam_pag_ext + 1} al {min(x*tam_pag_ext, total_reg_ext)})", key="pag_ext_sel")
+        with col_p2:
+          st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 50 por hoja</div>", unsafe_allow_html=True)
+
+        i_ini = (pag_ext_act - 1) * tam_pag_ext
+        i_fin = i_ini + tam_pag_ext
+        st.dataframe(df_tabla_ext.iloc[i_ini:i_fin], use_container_width=True, hide_index=True)
+      else:
+        st.info("No se encontraron registros en Personal Externo.")
+    else:
+      st.info("No hay registros disponibles para Personal Externo.")
 
   with sub_miaa_int:
     miaa_total = len(df_miaa_pers)
@@ -2568,7 +2590,31 @@ with tab_personal:
           ],
           errors="ignore",
       )
-    st.dataframe(df_tabla_miaa, use_container_width=True)
+
+      # Buscador global y paginación de 50 para MIAA
+      busqueda_miaa_p = st.text_input("Buscar en Personal MIAA...", placeholder="Ej. Predio, Nombre, Serie...", key="filtro_miaa_global")
+      if busqueda_miaa_p:
+        b_miaa_txt = busqueda_miaa_p.lower()
+        mask_miaa = df_tabla_miaa.astype(str).apply(lambda row: row.str.lower().str.contains(b_miaa_txt).any(), axis=1)
+        df_tabla_miaa = df_tabla_miaa[mask_miaa]
+
+      total_reg_miaa = len(df_tabla_miaa)
+      if total_reg_miaa > 0:
+        tam_pag_miaa = 50
+        tot_pag_miaa = math.ceil(total_reg_miaa / tam_pag_miaa)
+        col_m1, col_m2 = st.columns([2, 1])
+        with col_m1:
+          pag_miaa_act = st.selectbox("Hoja / Página (MIAA)", options=list(range(1, tot_pag_miaa + 1)), format_func=lambda x: f"Hoja {x} de {tot_pag_miaa} (Registros {(x-1)*tam_pag_miaa + 1} al {min(x*tam_pag_miaa, total_reg_miaa)})", key="pag_miaa_sel")
+        with col_m2:
+          st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 50 por hoja</div>", unsafe_allow_html=True)
+
+        i_ini_m = (pag_miaa_act - 1) * tam_pag_miaa
+        i_fin_m = i_ini_m + tam_pag_miaa
+        st.dataframe(df_tabla_miaa.iloc[i_ini_m:i_fin_m], use_container_width=True, hide_index=True)
+      else:
+        st.info("No se encontraron registros en Personal MIAA.")
+    else:
+      st.info("No hay registros disponibles para Personal MIAA.")
 
 # ==============================================================================
 # SECCIÓN 13 CARGAR DATOS DESDE POSTGRESQL USANDO GEOM Y ETAPA
@@ -2601,7 +2647,7 @@ else:
     df_usuarios_miaa_medidor["lon_calc"] = []
 
 # ------------------------------------------------------------------------------
-# SECCIÓN 14 PESTAÑA: TABLA BASE DE DATOS COMPLETA (usuarios_miaa_conmedidor)
+# SECCIÓN 14 PESTAÑA: TABLA BASE DE DATOS COMPLETA (Paginada a 50 y con búsqueda global)
 # ------------------------------------------------------------------------------
 with tab_tabla:
     st.markdown(
@@ -2611,7 +2657,7 @@ with tab_tabla:
 
     with st.container(border=True):
         st.markdown(
-            "<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>🔍 Filtros de Búsqueda y Filtrado</p>",
+            "<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>🔍 Filtros de Búsqueda Global en toda la Base de Datos</p>",
             unsafe_allow_html=True,
         )
         col_f1, col_f2, col_f3 = st.columns(3)
@@ -2789,8 +2835,31 @@ with tab_tabla:
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-    df_tabla_filtrada = df_tabla_filtrada.loc[:, ~df_tabla_filtrada.columns.duplicated()]
-    st.dataframe(df_tabla_filtrada, use_container_width=True, height=350)
+    # Paginación de 50 para la tabla completa de PostgreSQL
+    if total_registros_tabla > 0:
+        TAMANO_PAGINA_BD = 50
+        total_paginas_bd = math.ceil(total_registros_tabla / TAMANO_PAGINA_BD)
+
+        col_p_bd1, col_p_bd2 = st.columns([2, 1])
+        with col_p_bd1:
+            pagina_actual_bd = st.selectbox(
+                f"Seleccionar Hoja / Página (Total registros filtrados: {total_registros_tabla:,})",
+                options=list(range(1, total_paginas_bd + 1)),
+                format_func=lambda x: f"Hoja {x} de {total_paginas_bd} (Registros {(x-1)*TAMANO_PAGINA_BD + 1} al {min(x*TAMANO_PAGINA_BD, total_registros_tabla)})",
+                key="select_pagina_bd_completa",
+            )
+        with col_p_bd2:
+            st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 50 por hoja</div>", unsafe_allow_html=True)
+
+        inicio_idx_bd = (pagina_actual_bd - 1) * TAMANO_PAGINA_BD
+        fin_idx_bd = inicio_idx_bd + TAMANO_PAGINA_BD
+        
+        df_tabla_filtrada = df_tabla_filtrada.loc[:, ~df_tabla_filtrada.columns.duplicated()]
+        df_pagina_bd_final = df_tabla_filtrada.iloc[inicio_idx_bd:fin_idx_bd].copy()
+
+        st.dataframe(df_pagina_bd_final, use_container_width=True, height=350, hide_index=True)
+    else:
+        st.info("No se encontraron registros en la base de datos con los filtros aplicados.")
 
 # ------------------------------------------------------------------------------
 # SECCIÓN 15 PESTAÑA: REGISTRO DE INSTALACIONES INTERNO (Google Sheets)
@@ -3075,9 +3144,9 @@ with tab_sheets_interno:
                 col_sin_sheets,
             ]
             cols_existentes = [c for c in columnas_deseadas if c and c in df_sheets_interno.columns]
-            df_tabla_filtrada = df_sheets_interno[cols_existentes].copy()
+            df_tabla_filtrada_sheets = df_sheets_interno[cols_existentes].copy()
 
-            st.dataframe(df_tabla_filtrada, use_container_width=True, height=320)
+            st.dataframe(df_tabla_filtrada_sheets, use_container_width=True, height=320)
     else:
         st.warning(
             "No se pudo cargar la información de la hoja 'Instalaciones' del archivo de Google Sheets."
