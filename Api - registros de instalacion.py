@@ -197,7 +197,6 @@ URL_INSTALACIONES = "https://prelec.miaa.mx/msvc-tecnica/medidores/instalaciones
 
 @st.cache_data(ttl=300)
 def cargar_datos_api():
-    """Conecta con la API externa de MIAA usando credenciales de st.secrets para obtener registros de instalaciones."""
     try:
         usuario = st.secrets["api"]["usuario"]
         password = st.secrets["api"]["password"]
@@ -1344,14 +1343,12 @@ with tab_principal:
     if not df.empty:
       df_todos_inst = df.copy()
 
-      # Crear el campo combinado 'predio' uniendo 'predio'/'numeroPredio' y 'unidad'
       col_p_orig = next((c for c in ["predio", "numeroPredio"] if c in df_todos_inst.columns), None)
       col_u_orig = next((c for c in ["unidad", "numeroUnidad"] if c in df_todos_inst.columns), None)
 
       def formatear_predio(row):
         val_p = str(row[col_p_orig]).strip() if col_p_orig and pd.notna(row[col_p_orig]) else ""
         val_u = str(row[col_u_orig]).strip() if col_u_orig and pd.notna(row[col_u_orig]) else ""
-        # Limpiar extensiones decimales si existen
         val_p = val_p.split(".")[0] if val_p.endswith(".0") else val_p
         val_u = val_u.split(".")[0] if val_u.endswith(".0") else val_u
         
@@ -1362,7 +1359,6 @@ with tab_principal:
       if col_p_orig:
         df_todos_inst["predio"] = df_todos_inst.apply(formatear_predio, axis=1)
 
-      # Campo de búsqueda global capaz de buscar en toda la base de datos
       busqueda_global_inst = st.text_input(
           "Buscar en cualquier registro (Predio, Cliente, Serie, Domicilio, etc.)",
           placeholder="Ej. 502934-1, VAZQUEZ, 222608...",
@@ -1383,7 +1379,6 @@ with tab_principal:
         TAMANO_PAGINA = 50
         total_paginas = math.ceil(total_registros_filtrados / TAMANO_PAGINA)
 
-        # Controles de paginación
         col_pag1, col_pag2 = st.columns([2, 1])
         with col_pag1:
           pagina_actual = st.selectbox(
@@ -1395,12 +1390,10 @@ with tab_principal:
         with col_pag2:
           st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 50 por hoja</div>", unsafe_allow_html=True)
 
-        # Obtener el subconjunto correspondiente a la página seleccionada
         inicio_idx = (pagina_actual - 1) * TAMANO_PAGINA
         fin_idx = inicio_idx + TAMANO_PAGINA
         df_pagina_actual = df_filtrado_global.iloc[inicio_idx:fin_idx].copy()
 
-        # Crear columna de Instalador (Externo / MIAA)
         if "usuarioExterno" in df_pagina_actual.columns:
           df_pagina_actual["Instalador"] = np.where(
               df_pagina_actual["usuarioExterno"].fillna(False).astype(bool),
@@ -1410,7 +1403,6 @@ with tab_principal:
         else:
           df_pagina_actual["Instalador"] = "MIAA"
 
-        # Seleccionar y renombrar columnas clave
         cols_mostrar = []
         candidatos_cols = [
             "nombreCliente",
@@ -1998,7 +1990,7 @@ with tab_poligonos:
 
   with st.container(border=True):
     st.markdown(
-        "<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Detalle de Polígonos de Instalación y Conteo de Medidores</p>",
+        "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Detalle de Polígonos de Instalación y Conteo de Medidores</p>",
         unsafe_allow_html=True,
     )
 
@@ -2959,4 +2951,77 @@ with tab_sheets_interno:
                         values="Cantidad",
                         hole=0.5,
                         color="Tipo",
-                        color_discrete_map={"Cuadro": "#0
+                        color_discrete_map={"Cuadro": "#0066cc", "Registro": "#e83e8c"},
+                    )
+                    fig_pie_cr.update_traces(textinfo="value+percent", textfont=dict(size=11))
+                    fig_pie_cr.update_layout(
+                        plot_bgcolor="rgba(0,0,0,0)",
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        font_color="#ffffff",
+                        margin=dict(t=20, b=5, l=5, r=5),
+                        height=280,
+                        legend=dict(orientation="h", y=-0.1, x=0),
+                    )
+                    st.plotly_chart(
+                        fig_pie_cr, use_container_width=True, key="sheets_pie_cuadro_reg"
+                    )
+
+        with g_col3:
+            with st.container(border=True):
+                st.markdown(
+                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Evolución de Retirados y Sin Medidor</p>",
+                    unsafe_allow_html=True,
+                )
+                if col_fecha_sheets and col_ret_sheets and col_sin_sheets:
+                    fig_ret_sin = px.bar(
+                        df_sheets_interno,
+                        x=col_fecha_sheets,
+                        y=[col_ret_sheets, col_sin_sheets],
+                        barmode="group",
+                        color_discrete_map={
+                            col_ret_sheets: "#f59e0b",
+                            col_sin_sheets: "#f43f5e",
+                        },
+                    )
+                    fig_ret_sin.for_each_trace(lambda t: t.update(name="Retirados" if t.name == col_ret_sheets else "Sin Medidor"))
+                    
+                    fig_ret_sin.update_layout(
+                        plot_bgcolor="rgba(0,0,0,0)",
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        font_color="#ffffff",
+                        margin=dict(t=20, b=5, l=5, r=5),
+                        height=280,
+                        xaxis_title=None,
+                        yaxis_title=None,
+                        legend=dict(orientation="h", y=1.1, x=0),
+                    )
+                    st.plotly_chart(
+                        fig_ret_sin, use_container_width=True, key="sheets_retirados_sin"
+                    )
+                else:
+                    st.info("No se encontraron las columnas 'Retirados' o 'sin medidor' en el archivo.")
+
+        st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+        with st.container(border=True):
+            st.markdown(
+                "<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>📋 Tabla de Datos - Google Sheets (Instalaciones)</p>",
+                unsafe_allow_html=True,
+            )
+
+            columnas_deseadas = [
+                col_fecha_sheets,
+                col_inst_sheets,
+                col_cuadro_sheets,
+                col_reg_sheets,
+                col_ret_sheets,
+                col_sin_sheets,
+            ]
+            cols_existentes = [c for c in columnas_deseadas if c and c in df_sheets_interno.columns]
+            df_tabla_filtrada = df_sheets_interno[cols_existentes].copy()
+
+            st.dataframe(df_tabla_filtrada, use_container_width=True, height=320)
+    else:
+        st.warning(
+            "No se pudo cargar la información de la hoja 'Instalaciones' del archivo de Google Sheets."
+        )
