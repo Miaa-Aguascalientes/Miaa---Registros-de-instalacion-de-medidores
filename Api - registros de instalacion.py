@@ -1357,7 +1357,7 @@ with tab_principal:
         return val_p if val_p else "N/A"
 
       if col_p_orig:
-        df_todos_inst["predio"] = df_todos_inst.apply(formatear_predio, axis=1)
+        df_todos_inst["predio_viv"] = df_todos_inst.apply(formatear_predio, axis=1)
 
       busqueda_global_inst = st.text_input(
           "Buscar en cualquier registro (Predio, Cliente, Serie, Domicilio, etc.)",
@@ -1406,7 +1406,7 @@ with tab_principal:
         cols_mostrar = []
         candidatos_cols = [
             "nombreCliente",
-            "predio",
+            "predio_viv",
             "cliente",
             "domicilio",
             "colonia",
@@ -1990,7 +1990,7 @@ with tab_poligonos:
 
   with st.container(border=True):
     st.markdown(
-        "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Detalle de Polígonos de Instalación y Conteo de Medidores</p>",
+        "<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Detalle de Polígonos de Instalación y Conteo de Medidores</p>",
         unsafe_allow_html=True,
     )
 
