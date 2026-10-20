@@ -302,21 +302,6 @@ def cargar_google_sheets_interno():
     return pd.read_csv(url_csv)
   except Exception:
     return pd.DataFrame()
-            
-    # Si falla por pandas directo, intentamos con requests por si hay restricciones de headers
-    headers_req = {"User-Agent": "Mozilla/5.0"}
-    for url in urls_a_probar:
-        try:
-            res = requests.get(url, headers=headers_req, timeout=10)
-            if res.status_code == 200 and len(res.text) > 100:
-                import io
-                df = pd.read_csv(io.StringIO(res.text))
-                if not df.empty:
-                    return df
-        except Exception as e:
-            pass
-            
-    return pd.DataFrame()
 
 
 @st.cache_data(ttl=600)
@@ -327,6 +312,7 @@ def cargar_usuarios_miaa_conmedidor_db():
         conn_str = f"postgresql+psycopg2://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/{cfg['database']}"
         engine = create_engine(conn_str)
         
+        # ST_AsText(geom) convierte el binario 01010000... en 'POINT (X Y)'
         query = """
             SELECT *, 
                    ST_AsText(geom) as geom,
@@ -354,7 +340,6 @@ def cargar_usuarios_miaa_conmedidor_db():
         except Exception as ex:
             print(f"Error en respaldo de conexión: {ex}")
             return pd.DataFrame()
-
 
 # ==============================================================================
 # SECCIÓN 3: FUNCIONES AUXILIARES PARA MAPAS
