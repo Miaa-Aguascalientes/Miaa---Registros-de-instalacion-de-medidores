@@ -420,7 +420,7 @@ df["longitud"] = (
 )
 
 # ==============================================================================
-# CREACIÓN Y FORMATEO DE LA COLUMNA PREDIO_VIV (PREDIO + UNIDAD)
+# SECCION 4.1 CREACIÓN Y FORMATEO DE LA COLUMNA PREDIO_VIV (PREDIO + UNIDAD)
 # ==============================================================================
 col_p_orig = next((c for c in ["predio", "numeroPredio"] if c in df.columns), None)
 col_u_orig = next((c for c in ["unidad", "numeroUnidad"] if c in df.columns), None)
@@ -1162,8 +1162,19 @@ with tab_principal:
             return default
 
           nombre = get_clean("nombreCliente")
-          predio = get_clean(["numeroPredio", "predio"])
-          cliente = get_clean(["cliente", "numeroCliente"])
+          
+          # ---> MODIFICACIÓN 1: Usar predio_viv para que incluya la unidad (ej. 744350-0)
+          predio = row.get("predio_viv", get_clean(["numeroPredio", "predio"]))
+          if pd.isna(predio) or str(predio).strip() in ["nan", "None", "", "nat"]:
+              predio = get_clean(["numeroPredio", "predio"])
+
+          # ---> MODIFICACIÓN 2: Limpiar el Cliente para quitar el punto decimal y el cero (ej. 768685.0 -> 768685)
+          raw_cliente = get_clean(["cliente", "numeroCliente"])
+          if pd.notna(raw_cliente) and str(raw_cliente).strip() not in ["nan", "None", "", "nat"]:
+              cliente = str(raw_cliente).split(".")[0]
+          else:
+              cliente = "N/A"
+
           domicilio = get_clean("domicilio")
           colonia = get_clean("colonia")
           nivel = get_clean("nivel")
