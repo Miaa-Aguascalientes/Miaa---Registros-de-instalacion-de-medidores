@@ -1430,7 +1430,7 @@ with tab_principal:
     total_registros_filtrados = len(df_filtrado_global)
 
     if total_registros_filtrados > 0:
-      TAMANO_PAGINA = 50
+      TAMANO_PAGINA = 10
       total_paginas = math.ceil(total_registros_filtrados / TAMANO_PAGINA)
 
       col_pag1, col_pag2 = st.columns([2, 1])
@@ -1442,7 +1442,7 @@ with tab_principal:
             key="select_pagina_registros",
         )
       with col_pag2:
-        st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 50 por hoja</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 10 por hoja</div>", unsafe_allow_html=True)
 
       inicio_idx = (pagina_actual - 1) * TAMANO_PAGINA
       fin_idx = inicio_idx + TAMANO_PAGINA
