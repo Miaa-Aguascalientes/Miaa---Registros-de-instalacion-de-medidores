@@ -1,5 +1,6 @@
 import datetime
 import json
+import math
 import folium
 from folium.plugins import Fullscreen
 import numpy as np
@@ -201,11 +202,8 @@ def cargar_datos_api():
         usuario = st.secrets["api"]["usuario"]
         password = st.secrets["api"]["password"]
 
-        # Payload limpio
         payload = {"username": usuario, "password": password}
         headers = {"Content-Type": "application/json"}
-
-        # CORREGIDO: Se define la URL de login usando las constantes
         url_login = BASE_URL + URL_LOGIN_CORRECTA
 
         res_login = requests.post(
@@ -229,14 +227,12 @@ def cargar_datos_api():
                     return res_inst.json()
         return None
     except Exception as e:
-        # Imprimir o registrar el error ayuda a depurar si falla de nuevo
         print(f"Error en cargar_datos_api: {e}")
         return None
 
 
 @st.cache_data(ttl=600)
 def cargar_metas_db():
-  """Consulta la base de datos MySQL para obtener el diccionario de metas e instalaciones por colonia."""
   try:
     engine = create_engine(st.secrets["mysql"]["connection_string"])
     query = """
@@ -255,7 +251,6 @@ def cargar_metas_db():
 
 @st.cache_data(ttl=600)
 def cargar_poligonos_db():
-  """Consulta la base de datos MySQL para extraer los vértices y metadatos de los polígonos geográficos."""
   try:
     engine = create_engine(st.secrets["mysql"]["connection_string"])
     query = """
@@ -276,7 +271,6 @@ def cargar_poligonos_db():
 
 @st.cache_data(ttl=600)
 def cargar_tipos_instalacion_db():
-  """Consulta la base de datos MySQL para obtener el catálogo de tipos de instalación."""
   try:
     engine = create_engine(st.secrets["mysql"]["connection_string"])
     query = "SELECT ID, tipo_instalacion FROM Diccionario_tipo_instalacion"
@@ -287,7 +281,6 @@ def cargar_tipos_instalacion_db():
 
 @st.cache_data(ttl=600)
 def cargar_anomalias_db():
-  """Consulta la base de datos MySQL para obtener el diccionario de anomalías."""
   try:
     engine = create_engine(st.secrets["mysql"]["connection_string"])
     query = "SELECT ID, anomalia FROM Diccionario_anomalias"
@@ -298,7 +291,6 @@ def cargar_anomalias_db():
 
 @st.cache_data(ttl=600)
 def cargar_google_sheets_interno():
-  """Carga los datos de Google Sheets (pestaña Instalaciones)."""
   try:
     sheet_id = "1Ovj2DZ19Y8H4BtamnVwB71c2dyHC3dyVmau-tMbWre8"
     url_csv = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet=Instalaciones"
@@ -309,13 +301,11 @@ def cargar_google_sheets_interno():
 
 @st.cache_data(ttl=600)
 def cargar_usuarios_miaa_conmedidor_db():
-    """Consulta PostgreSQL convirtiendo la geometría a texto WKT (POINT X Y) legible."""
     try:
         cfg = st.secrets["postgres"]
         conn_str = f"postgresql+psycopg2://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/{cfg['database']}"
         engine = create_engine(conn_str)
         
-        # ST_AsText(geom) convierte el binario 01010000... en 'POINT (X Y)'
         query = """
             SELECT *, 
                    ST_AsText(geom) as geom,
@@ -351,17 +341,14 @@ def cargar_usuarios_miaa_conmedidor_db():
 
 
 def agregar_capas_base(m):
-    """Agrega las capas base de mapa (OpenStreetMap, Satélite con Calles, Vista Nocturna) y controles de pantalla completa."""
     api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
 
-    # 1. OpenStreetMap
     folium.TileLayer(
         tiles="OpenStreetMap",
         name="OpenStreetMap",
         max_zoom=19,
     ).add_to(m)
 
-    # 2. Satélite con nombres de calles (Esri World Imagery + Labels / Google Hybrid)
     folium.TileLayer(
         tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
         attr="Google Satellite",
@@ -369,7 +356,6 @@ def agregar_capas_base(m):
         max_zoom=20,
     ).add_to(m)
 
-    # 3. Vista Nocturna (CartoDB Dark Matter)
     folium.TileLayer(
         tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
         name="Vista Nocturna",
@@ -378,7 +364,6 @@ def agregar_capas_base(m):
         max_zoom=20,
     ).add_to(m)
 
-    # Control de capas interactivo
     folium.LayerControl(position="topleft").add_to(m)
 
     Fullscreen(
@@ -440,7 +425,6 @@ df_poligonos = cargar_poligonos_db()
 df_anomalias_db = cargar_anomalias_db()
 df_sheets_interno = cargar_google_sheets_interno()
 
-# Mapeo del Diccionario de Tipos de Instalación
 df_tipos_db = cargar_tipos_instalacion_db()
 if not df_tipos_db.empty:
   dict_tipos_map = dict(
@@ -470,7 +454,6 @@ else:
   if not df.empty:
     df["tipo_instalacion_nombre"] = "SIN ESPECIFICAR"
 
-# Mapeo del Diccionario de Anomalías
 if not df_anomalias_db.empty:
   dict_anomalias_map = dict(
       zip(df_anomalias_db["ID"].astype(str), df_anomalias_db["anomalia"])
@@ -510,7 +493,7 @@ else:
   df_metas_valido = pd.DataFrame()
 
 # ==============================================================================
-# SECCIÓN 5: CABECERA SUPERIOR DEL TÍTULO DE LA PÁGINA (DATOS YA DISPONIBLES)
+# SECCIÓN 5: CABECERA SUPERIOR DEL TÍTULO DE LA PÁGINA
 # ==============================================================================
 
 try:
@@ -553,12 +536,8 @@ logo_url = "https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978
 st.sidebar.image(logo_url, use_container_width=True)
 st.sidebar.markdown("---")
 
-# ------------------------------------------------------------------------------
-# INDICADOR DE ESTADO DE LA API Y BOTÓN DE RECONEXIÓN
-# ------------------------------------------------------------------------------
 st.sidebar.subheader("Estado de Conexión API")
 
-# Botón para forzar la reconexión (limpia la caché y recarga los datos)
 if st.sidebar.button("🔄 Reconectar API", use_container_width=True):
   st.cache_data.clear()
   if "datos_instalaciones" in st.session_state:
@@ -568,7 +547,6 @@ if st.sidebar.button("🔄 Reconectar API", use_container_width=True):
     st.session_state["datos_instalaciones"] = res
   st.rerun()
 
-# Comprobación del estado actual de los datos en la sesión
 api_conectada = (
     "datos_instalaciones" in st.session_state
     and st.session_state["datos_instalaciones"] is not None
@@ -701,7 +679,6 @@ else:
   )
   df_miaa_pers = df_filtrado.copy()
 
-# CONSTRUCCIÓN DE LA TABLA DE EFICIENCIA
 if not df_metas_filtrado.empty:
   df_tabla_eficiencia = df_metas_filtrado.copy()
 
@@ -768,7 +745,7 @@ else:
   )
 
 # ==============================================================================
-# SECCIÓN 7: ESTRUCTURA DE PESTAÑAS PRINCIPALES (Con la pestaña solicitada)
+# SECCIÓN 7: ESTRUCTURA DE PESTAÑAS PRINCIPALES
 # ==============================================================================
 
 (
@@ -889,8 +866,7 @@ with tab_principal:
   with col_g1:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones"
-          " por Día</p>",
+          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día</p>",
           unsafe_allow_html=True,
       )
       if (
@@ -936,8 +912,7 @@ with tab_principal:
   with col_g2:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:12px; margin-bottom:4px;"
-          " font-weight:bold;'>Distribución por Tipo de Instalación</p>",
+          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Tipo de Instalación</p>",
           unsafe_allow_html=True,
       )
       if not df_filtrado.empty and "tipo_instalacion_nombre" in df_filtrado.columns:
@@ -1000,8 +975,7 @@ with tab_principal:
   with col_g3:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Cuadro"
-          " vs Registro</p>",
+          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Cuadro vs Registro</p>",
           unsafe_allow_html=True,
       )
       if not df_filtrado.empty and "tipo_instalacion_nombre" in df_filtrado.columns:
@@ -1096,8 +1070,7 @@ with tab_principal:
   with col_inf1:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:12px; margin-bottom:4px;"
-          " font-weight:bold;'>Eficiencia por Colonia y Polígono</p>",
+          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Eficiencia por Colonia y Polígono</p>",
           unsafe_allow_html=True,
       )
       if not df_eficiencia.empty:
@@ -1113,8 +1086,7 @@ with tab_principal:
     with col_map_h:
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa"
-            " de Instalaciones (Externo vs MIAA)</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones (Externo vs MIAA)</p>",
             unsafe_allow_html=True,
         )
 
@@ -1255,8 +1227,7 @@ with tab_principal:
     with col_graf_h:
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones"
-            " por Mes</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Mes</p>",
             unsafe_allow_html=True,
         )
 
@@ -1337,8 +1308,7 @@ with tab_principal:
 
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:8px; font-weight:bold;'>Total"
-            " de Anomalías</p>",
+            "<p style='font-size:12px; margin-bottom:8px; font-weight:bold;'>Total de Anomalías</p>",
             unsafe_allow_html=True,
         )
         total_anomalias_actual = (
@@ -1361,74 +1331,90 @@ with tab_principal:
             unsafe_allow_html=True,
         )
 
-# ==============================================================================
-  # NUEVA SECCIÓN: LISTADO INTERACTIVO DE INSTALACIONES DEL DÍA EN CURSO
+  # ==============================================================================
+  # SECCIÓN MODIFICADA: LISTADO GENERAL DE INSTALACIONES (PAGINADO EN HOJAS DE 50)
   # ==============================================================================
   st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
   with st.container(border=True):
     st.markdown(
-        "<p style='font-size:14px; font-weight:bold; margin-bottom:6px;'>📍"
-        " Instalacion de Medidores del Día en Curso</p>",
+        "<p style='font-size:14px; font-weight:bold; margin-bottom:6px;'>📍 Listado General de Instalaciones de Medidores</p>",
         unsafe_allow_html=True,
     )
 
-    if not df.empty and col_fecha_ref:
-      # Determinar la fecha más reciente (día en curso con registros)
-      max_fecha_reg = df["fecha_dt"].max()
-      if pd.notna(max_fecha_reg):
-        dia_actual_ref = pd.to_datetime(max_fecha_reg).date()
-      else:
-        dia_actual_ref = datetime.date.today()
+    if not df.empty:
+      df_todos_inst = df.copy()
 
-      df_hoy_inst = df[df["fecha_dt"].dt.date == dia_actual_ref].copy()
-      total_hoy_cant = len(df_hoy_inst)
+      # Crear el campo combinado 'predio' uniendo 'predio'/'numeroPredio' y 'unidad'
+      col_p_orig = next((c for c in ["predio", "numeroPredio"] if c in df_todos_inst.columns), None)
+      col_u_orig = next((c for c in ["unidad", "numeroUnidad"] if c in df_todos_inst.columns), None)
 
-      # Indicador KPI exclusivo para esta tabla del día en curso
-      st.markdown(
-          f"""
-                <div style="display: flex; align-items: center; gap: 12px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); padding: 8px 12px; border-radius: 6px; margin-bottom: 10px;">
-                    <div style="font-size: 20px; color: #38bdf8;"><i class="fa-solid fa-calendar-day"></i></div>
-                    <div>
-                        <div style="font-size: 11px; color: #94a3b8; font-weight: bold; text-transform: uppercase;">Medidores Instalados Hoy ({dia_actual_ref.strftime('%d/%m/%Y')})</div>
-                        <div style="font-size: 16px; color: #ffffff; font-weight: bold;">{total_hoy_cant:,} unidades</div>
-                    </div>
-                </div>
-            """,
-          unsafe_allow_html=True,
+      def formatear_predio(row):
+        val_p = str(row[col_p_orig]).strip() if col_p_orig and pd.notna(row[col_p_orig]) else ""
+        val_u = str(row[col_u_orig]).strip() if col_u_orig and pd.notna(row[col_u_orig]) else ""
+        # Limpiar extensiones decimales si existen
+        val_p = val_p.split(".")[0] if val_p.endswith(".0") else val_p
+        val_u = val_u.split(".")[0] if val_u.endswith(".0") else val_u
+        
+        if val_p and val_u and val_u not in ["", "nan", "None", "0"]:
+            return f"{val_p}-{val_u}"
+        return val_p if val_p else "N/A"
+
+      if col_p_orig:
+        df_todos_inst["predio"] = df_todos_inst.apply(formatear_predio, axis=1)
+
+      # Campo de búsqueda global capaz de buscar en toda la base de datos
+      busqueda_global_inst = st.text_input(
+          "Buscar en cualquier registro (Predio, Cliente, Serie, Domicilio, etc.)",
+          placeholder="Ej. 502934-1, VAZQUEZ, 222608...",
+          key="filtro_texto_global_inst",
       )
 
-      if not df_hoy_inst.empty:
-        # Campo exclusivo de búsqueda por texto (sin el filtro de colonias)
-        busqueda_texto_hoy = st.text_input(
-            "Buscar por Predio, Cliente o Serie",
-            placeholder="Ej. Predio, Nombre o Serie...",
-            key="filtro_texto_hoy",
+      df_filtrado_global = df_todos_inst.copy()
+      if busqueda_global_inst:
+        b_txt = busqueda_global_inst.lower()
+        mask_txt = df_filtrado_global.astype(str).apply(
+            lambda row: row.str.lower().str.contains(b_txt).any(), axis=1
         )
+        df_filtrado_global = df_filtrado_global[mask_txt]
 
-        df_hoy_filtrado = df_hoy_inst.copy()
-        if busqueda_texto_hoy:
-          b_txt = busqueda_texto_hoy.lower()
-          mask_txt = df_hoy_filtrado.astype(str).apply(
-              lambda row: row.str.lower().str.contains(b_txt).any(), axis=1
+      total_registros_filtrados = len(df_filtrado_global)
+
+      if total_registros_filtrados > 0:
+        TAMANO_PAGINA = 50
+        total_paginas = math.ceil(total_registros_filtrados / TAMANO_PAGINA)
+
+        # Controles de paginación
+        col_pag1, col_pag2 = st.columns([2, 1])
+        with col_pag1:
+          pagina_actual = st.selectbox(
+              f"Seleccionar Hoja / Página (Total registros: {total_registros_filtrados:,})",
+              options=list(range(1, total_paginas + 1)),
+              format_func=lambda x: f"Hoja {x} de {total_paginas} (Registros {(x-1)*TAMANO_PAGINA + 1} al {min(x*TAMANO_PAGINA, total_registros_filtrados)})",
+              key="select_pagina_registros",
           )
-          df_hoy_filtrado = df_hoy_filtrado[mask_txt]
+        with col_pag2:
+          st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 50 por hoja</div>", unsafe_allow_html=True)
+
+        # Obtener el subconjunto correspondiente a la página seleccionada
+        inicio_idx = (pagina_actual - 1) * TAMANO_PAGINA
+        fin_idx = inicio_idx + TAMANO_PAGINA
+        df_pagina_actual = df_filtrado_global.iloc[inicio_idx:fin_idx].copy()
 
         # Crear columna de Instalador (Externo / MIAA)
-        if "usuarioExterno" in df_hoy_filtrado.columns:
-          df_hoy_filtrado["Instalador"] = np.where(
-              df_hoy_filtrado["usuarioExterno"].fillna(False).astype(bool),
+        if "usuarioExterno" in df_pagina_actual.columns:
+          df_pagina_actual["Instalador"] = np.where(
+              df_pagina_actual["usuarioExterno"].fillna(False).astype(bool),
               "Externo",
               "MIAA",
           )
         else:
-          df_hoy_filtrado["Instalador"] = "MIAA"
+          df_pagina_actual["Instalador"] = "MIAA"
 
         # Seleccionar y renombrar columnas clave
         cols_mostrar = []
         candidatos_cols = [
             "nombreCliente",
             "predio",
-            "numeroPredio",
             "cliente",
             "domicilio",
             "colonia",
@@ -1440,40 +1426,30 @@ with tab_principal:
             "fechaRegistro",
         ]
         for c in candidatos_cols:
-          if c in df_hoy_filtrado.columns:
+          if c in df_pagina_actual.columns:
             cols_mostrar.append(c)
 
-        df_tabla_hoy_final = df_hoy_filtrado[cols_mostrar].copy()
+        df_tabla_final_hoja = df_pagina_actual[cols_mostrar].copy()
 
-        # Ordenar de la hora más actual a la más antigua
-        if "fechaRegistro" in df_tabla_hoy_final.columns:
-          df_tabla_hoy_final["_temp_dt"] = pd.to_datetime(
-              df_tabla_hoy_final["fechaRegistro"], errors="coerce"
-          )
-          df_tabla_hoy_final = df_tabla_hoy_final.sort_values(
-              by="_temp_dt", ascending=False
-          ).drop(columns=["_temp_dt"])
-          df_tabla_hoy_final["fechaRegistro"] = pd.to_datetime(
-              df_tabla_hoy_final["fechaRegistro"], errors="coerce"
-          ).dt.strftime("%H:%M:%S")
+        if "fechaRegistro" in df_tabla_final_hoja.columns:
+          df_tabla_final_hoja["fechaRegistro"] = pd.to_datetime(
+              df_tabla_final_hoja["fechaRegistro"], errors="coerce"
+          ).dt.strftime("%d/%m/%Y %H:%M:%S")
 
         st.dataframe(
-            df_tabla_hoy_final, use_container_width=True, hide_index=True
+            df_tabla_final_hoja, use_container_width=True, hide_index=True
         )
       else:
-        st.info(
-            "No se encontraron instalaciones registradas para el día en curso."
-        )
+        st.info("No se encontraron registros que coincidan con la búsqueda.")
     else:
-      st.info("No hay datos de fechas disponibles para el día en curso.")
+      st.info("No hay datos de instalaciones disponibles.")
 
 # ------------------------------------------------------------------------------
 # PESTAÑA: ANÁLISIS DE ANOMALÍAS
 # ------------------------------------------------------------------------------
 with tab_anomalias:
   st.markdown(
-      "<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>⚠️"
-      " Análisis Completo de Anomalías en Instalaciones</p>",
+      "<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>⚠️ Análisis Completo de Anomalías en Instalaciones</p>",
       unsafe_allow_html=True,
   )
 
@@ -1559,8 +1535,7 @@ with tab_anomalias:
   with col_anom_g1:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución"
-          " por Tipo de Anomalía</p>",
+          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Tipo de Anomalía</p>",
           unsafe_allow_html=True,
       )
       if not df_con_anomalia.empty:
@@ -1600,8 +1575,7 @@ with tab_anomalias:
   with col_anom_g2:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Proporción:"
-          " Con Anomalía vs Regular</p>",
+          "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Proporción: Con Anomalía vs Regular</p>",
           unsafe_allow_html=True,
       )
       if total_registros_filtrados > 0:
@@ -1641,8 +1615,7 @@ with tab_anomalias:
         st.info("Sin datos para mostrar proporción.")
 
   st.markdown(
-      "<p style='font-size:14px; font-weight:bold; margin-top:20px;"
-      " margin-bottom:8px;'>📋 Detalle de Registros con Anomalías Detectadas</p>",
+      "<p style='font-size:14px; font-weight:bold; margin-top:20px; margin-bottom:8px;'>📋 Detalle de Registros con Anomalías Detectadas</p>",
       unsafe_allow_html=True,
   )
   if not df_con_anomalia.empty:
@@ -1680,8 +1653,7 @@ with tab_anomalias:
     st.dataframe(df_tabla_anom, use_container_width=True)
   else:
     st.success(
-        "¡Excelente! No hay registros con anomalías reportadas para los filtros"
-        " seleccionados."
+        "¡Excelente! No hay registros con anomalías reportadas para los filtros seleccionados."
     )
 
 # ------------------------------------------------------------------------------
@@ -1806,8 +1778,7 @@ with tab_poligonos:
   with col_c_izq:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Seleccionar"
-          " Polígonos (FID)</p>",
+          "<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Seleccionar Polígonos (FID)</p>",
           unsafe_allow_html=True,
       )
 
@@ -1845,8 +1816,7 @@ with tab_poligonos:
   with col_c_centro:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:12px; font-weight:bold; margin-bottom:2px;'>Mapa"
-          " de Polígonos de Instalación</p>",
+          "<p style='font-size:12px; font-weight:bold; margin-bottom:2px;'>Mapa de Polígonos de Instalación</p>",
           unsafe_allow_html=True,
       )
 
@@ -1928,8 +1898,7 @@ with tab_poligonos:
   with col_c_der:
     with st.container(border=True):
       st.markdown(
-          "<p style='font-size:14px; font-weight:bold; margin-bottom:8px;'>Resumen"
-          " por Sector</p>",
+          "<p style='font-size:14px; font-weight:bold; margin-bottom:8px;'>Resumen por Sector</p>",
           unsafe_allow_html=True,
       )
 
@@ -2029,8 +1998,7 @@ with tab_poligonos:
 
   with st.container(border=True):
     st.markdown(
-        "<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Detalle"
-        " de Polígonos de Instalación y Conteo de Medidores</p>",
+        "<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Detalle de Polígonos de Instalación y Conteo de Medidores</p>",
         unsafe_allow_html=True,
     )
 
@@ -2088,14 +2056,11 @@ with tab_poligonos:
 # ------------------------------------------------------------------------------
 with tab_personal:
   st.markdown(
-      "<p style='font-size:16px; font-weight:bold; margin-bottom:5px;'>👥"
-      " Resumen General de Instalaciones por Tipo de Personal</p>",
+      "<p style='font-size:16px; font-weight:bold; margin-bottom:5px;'>👥 Resumen General de Instalaciones por Tipo de Personal</p>",
       unsafe_allow_html=True,
   )
   st.markdown(
-      "<p style='font-size:13px; color: #94a3b8; margin-bottom:15px;'>Comparativa"
-      " y desglose operacional entre Personal Externo y Personal Interno"
-      " MIAA.</p>",
+      "<p style='font-size:13px; color: #94a3b8; margin-bottom:15px;'>Comparativa y desglose operacional entre Personal Externo y Personal Interno MIAA.</p>",
       unsafe_allow_html=True,
   )
 
@@ -2161,8 +2126,7 @@ with tab_personal:
     with col_ex_left:
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px;"
-            " font-weight:bold;'>Instalaciones por Día (Externo)</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día (Externo)</p>",
             unsafe_allow_html=True,
         )
         if (
@@ -2207,9 +2171,7 @@ with tab_personal:
 
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px;"
-            " font-weight:bold;'>Distribución por Nivel Tarifario"
-            " (Externo)</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Nivel Tarifario (Externo)</p>",
             unsafe_allow_html=True,
         )
         if not df_externo.empty and "nivel" in df_externo.columns:
@@ -2251,8 +2213,7 @@ with tab_personal:
     with col_ex_right:
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa"
-            " de Instalaciones - Personal Externo</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones - Personal Externo</p>",
             unsafe_allow_html=True,
         )
         df_ext_map = (
@@ -2293,8 +2254,7 @@ with tab_personal:
         )
 
     st.markdown(
-        "<p style='font-size:14px; font-weight:bold; margin-top:15px;"
-        " margin-bottom:5px;'>Tabla de Registros - Personal Externo</p>",
+        "<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal Externo</p>",
         unsafe_allow_html=True,
     )
     df_tabla_ext = df_externo.copy()
@@ -2391,8 +2351,7 @@ with tab_personal:
     with col_mi_left:
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px;"
-            " font-weight:bold;'>Instalaciones por Día (MIAA)</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día (MIAA)</p>",
             unsafe_allow_html=True,
         )
         if (
@@ -2437,9 +2396,7 @@ with tab_personal:
 
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px;"
-            " font-weight:bold;'>Distribución por Nivel Tarifario"
-            " (MIAA)</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Nivel Tarifario (MIAA)</p>",
             unsafe_allow_html=True,
         )
         if not df_miaa_pers.empty and "nivel" in df_miaa_pers.columns:
@@ -2484,8 +2441,7 @@ with tab_personal:
     with col_mi_right:
       with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa"
-            " de Instalaciones - Personal MIAA</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones - Personal MIAA</p>",
             unsafe_allow_html=True,
         )
         df_miaa_map = (
@@ -2528,8 +2484,7 @@ with tab_personal:
         )
 
     st.markdown(
-        "<p style='font-size:14px; font-weight:bold; margin-top:15px;"
-        " margin-bottom:5px;'>Tabla de Registros - Personal MIAA</p>",
+        "<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal MIAA</p>",
         unsafe_allow_html=True,
     )
     df_tabla_miaa = df_miaa_pers.copy()
@@ -2571,7 +2526,6 @@ with tab_personal:
 # ==============================================================================
 df_usuarios_miaa_medidor = cargar_usuarios_miaa_conmedidor_db()
 
-# Convertir coordenadas UTM (metros) a Lat/Lon geográficas para Folium
 if not df_usuarios_miaa_medidor.empty:
     lats, lons = [], []
     for _, row in df_usuarios_miaa_medidor.iterrows():
@@ -2579,7 +2533,6 @@ if not df_usuarios_miaa_medidor.empty:
             x_val = float(row["utm_x"])
             y_val = float(row["utm_y"])
             
-            # Transformación de UTM Zona 13N (Aguascalientes) a Lat/Lon
             if abs(x_val) > 360 or abs(y_val) > 90:
                 lon_deg = -102.2916 + (x_val - 780000) / 111000.0
                 lat_deg = 21.8853 + (y_val - 2420000) / 110500.0
@@ -2607,9 +2560,6 @@ with tab_tabla:
         unsafe_allow_html=True,
     )
 
-    # ==========================================================================
-    # FILTROS INTERACTIVOS (_Serie, Medidor, Predio_Viv)
-    # ==========================================================================
     with st.container(border=True):
         st.markdown(
             "<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>🔍 Filtros de Búsqueda y Filtrado</p>",
@@ -2635,7 +2585,6 @@ with tab_tabla:
                 key="filtro_tab_predio_miaa",
             )
 
-    # Aplicar filtros de texto sobre los datos
     df_tabla_filtrada = df_usuarios_miaa_medidor.copy()
     
     if not df_tabla_filtrada.empty:
@@ -2662,7 +2611,6 @@ with tab_tabla:
 
     total_registros_tabla = len(df_tabla_filtrada)
 
-    # Calcular conteos específicos para Etapa 1 y Etapa 2 basados en los datos filtrados
     if not df_tabla_filtrada.empty and "etapa" in df_tabla_filtrada.columns:
         etapa_serie_limpia = df_tabla_filtrada["etapa"].astype(str).str.strip().str.lower()
         total_etapa_1 = int(etapa_serie_limpia.isin(["1", "etapa 1"]).sum())
@@ -2671,9 +2619,6 @@ with tab_tabla:
         total_etapa_1 = 0
         total_etapa_2 = 0
 
-    # ==========================================================================
-    # INDICADORES / TARJETAS KPI (Total, Etapa 1 y Etapa 2)
-    # ==========================================================================
     k_col1, k_col2, k_col3 = st.columns(3)
 
     with k_col1:
@@ -2720,9 +2665,6 @@ with tab_tabla:
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-    # ==========================================================================
-    # MAPA CON GEOMETRÍA REAL Y COLORES (🟡 Etapa 1 | 🟢 Etapa 2)
-    # ==========================================================================
     with st.container(border=True):
         st.markdown(
             "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>🗺️ Mapa de Registros — 🟡 Etapa 1 (Amarillo) | 🟢 Etapa 2 (Verde)</p>",
@@ -2755,12 +2697,11 @@ with tab_tabla:
             except:
                 continue
 
-            # Asignación estricta de color por etapa
             etapa_val = str(row.get("etapa", "")).strip().lower()
             if etapa_val in ["1", "etapa 1"]:
-                color_punto = "#eab308"  # Amarillo para Etapa 1
+                color_punto = "#eab308"
             else:
-                color_punto = "#22c55e"  # Verde para Etapa 2
+                color_punto = "#22c55e"
 
             nombre = str(row.get("Nombre", "N/A"))
             predio_val = str(row.get("Predio_Viv", "N/A"))
@@ -2799,13 +2740,8 @@ with tab_tabla:
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-    # Eliminar columnas duplicadas por nombre antes de renderizar
     df_tabla_filtrada = df_tabla_filtrada.loc[:, ~df_tabla_filtrada.columns.duplicated()]
-
-    # Mostrar la tabla completa con los datos de PostgreSQL sin errores
     st.dataframe(df_tabla_filtrada, use_container_width=True, height=350)
-# -------------------------------------------------------------------------------------------------------------------------------------------
-
 
 # ------------------------------------------------------------------------------
 # PESTAÑA: REGISTRO DE INSTALACIONES INTERNO (Google Sheets)
@@ -2817,10 +2753,8 @@ with tab_sheets_interno:
     )
 
     if not df_sheets_interno.empty:
-        # Limpiar nombres de columnas para evitar errores por espacios o mayúsculas
         df_sheets_interno.columns = [str(c).strip() for c in df_sheets_interno.columns]
         
-        # Diccionario para buscar nombres de columnas flexibles
         cols_lower = {c.lower(): c for c in df_sheets_interno.columns}
         
         col_fecha_sheets = cols_lower.get("fecha de instalacion", cols_lower.get("fecha", None))
@@ -2830,7 +2764,6 @@ with tab_sheets_interno:
         col_ret_sheets = cols_lower.get("retirados", None)
         col_sin_sheets = cols_lower.get("sin medidor", cols_lower.get("sin_medidor", None))
 
-        # CORREGIDO: Forzar conversión de fecha interpretando primero el día (dayfirst=True)
         if col_fecha_sheets and col_fecha_sheets in df_sheets_interno.columns:
             df_sheets_interno["_fecha_dt_sheets"] = pd.to_datetime(
                 df_sheets_interno[col_fecha_sheets], dayfirst=True, errors="coerce"
@@ -2838,7 +2771,6 @@ with tab_sheets_interno:
         else:
             df_sheets_interno["_fecha_dt_sheets"] = pd.NaT
 
-        # Limpiar y convertir a numéricos las columnas clave si existen
         for col_name in [col_inst_sheets, col_cuadro_sheets, col_reg_sheets, col_ret_sheets, col_sin_sheets]:
             if col_name and col_name in df_sheets_interno.columns:
                 df_sheets_interno[col_name] = pd.to_numeric(
@@ -2846,9 +2778,6 @@ with tab_sheets_interno:
                     errors="coerce",
                 ).fillna(0)
 
-        # ======================================================================
-        # CÁLCULO DE INDICADORES (KPIs) DE INSTALACIÓN
-        # ======================================================================
         if col_inst_sheets and col_inst_sheets in df_sheets_interno.columns:
             total_medidores_sheets = int(df_sheets_interno[col_inst_sheets].sum())
             df_con_instalacion = df_sheets_interno[df_sheets_interno[col_inst_sheets] > 0]
@@ -2867,7 +2796,6 @@ with tab_sheets_interno:
             max_diario = 0
             min_diario = 0
 
-        # Renderizado de Tarjetas KPI en 4 columnas
         k_s1, k_s2, k_s3, k_s4 = st.columns(4)
 
         with k_s1:
@@ -2928,7 +2856,6 @@ with tab_sheets_interno:
 
         st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
-        # 1. Gráfico de barras superior: Instalaciones por día
         with st.container(border=True):
             st.markdown(
                 "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día</p>",
@@ -2958,10 +2885,8 @@ with tab_sheets_interno:
 
         st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-        # Distribución en 3 columnas para los gráficos inferiores
         g_col1, g_col2, g_col3 = st.columns(3)
 
-        # 2. Gráfico Izquierda: Instalaciones por Mes (Barras Horizontales - Filtrando meses vacíos o con 0)
         with g_col1:
             with st.container(border=True):
                 st.markdown(
@@ -2975,7 +2900,6 @@ with tab_sheets_interno:
                     df_mes_group = df_mes_sheets.groupby("periodo_mes", as_index=False)[col_inst_sheets].sum()
                     df_mes_group.columns = ["Periodo", "Cantidad"]
                     
-                    # Filtrar estrictamente meses con más de 0 instalaciones reales
                     df_mes_group = df_mes_group[df_mes_group["Cantidad"] > 0]
 
                     meses_es = {
@@ -3015,7 +2939,6 @@ with tab_sheets_interno:
                 else:
                     st.info("No hay datos de fechas válidos para agrupar por mes.")
 
-        # 3. Gráfico Centro: Medidores en Cuadro vs Registro
         with g_col2:
             with st.container(border=True):
                 st.markdown(
@@ -3036,78 +2959,4 @@ with tab_sheets_interno:
                         values="Cantidad",
                         hole=0.5,
                         color="Tipo",
-                        color_discrete_map={"Cuadro": "#0066cc", "Registro": "#e83e8c"},
-                    )
-                    fig_pie_cr.update_traces(textinfo="value+percent", textfont=dict(size=11))
-                    fig_pie_cr.update_layout(
-                        plot_bgcolor="rgba(0,0,0,0)",
-                        paper_bgcolor="rgba(0,0,0,0)",
-                        font_color="#ffffff",
-                        margin=dict(t=20, b=5, l=5, r=5),
-                        height=280,
-                        legend=dict(orientation="h", y=-0.1, x=0),
-                    )
-                    st.plotly_chart(
-                        fig_pie_cr, use_container_width=True, key="sheets_pie_cuadro_reg"
-                    )
-
-        # 4. Gráfico Derecha: Evolución de Retirados y Sin Medidor
-        with g_col3:
-            with st.container(border=True):
-                st.markdown(
-                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Evolución de Retirados y Sin Medidor</p>",
-                    unsafe_allow_html=True,
-                )
-                if col_fecha_sheets and col_ret_sheets and col_sin_sheets:
-                    fig_ret_sin = px.bar(
-                        df_sheets_interno,
-                        x=col_fecha_sheets,
-                        y=[col_ret_sheets, col_sin_sheets],
-                        barmode="group",
-                        color_discrete_map={
-                            col_ret_sheets: "#f59e0b",
-                            col_sin_sheets: "#f43f5e",
-                        },
-                    )
-                    fig_ret_sin.for_each_trace(lambda t: t.update(name="Retirados" if t.name == col_ret_sheets else "Sin Medidor"))
-                    
-                    fig_ret_sin.update_layout(
-                        plot_bgcolor="rgba(0,0,0,0)",
-                        paper_bgcolor="rgba(0,0,0,0)",
-                        font_color="#ffffff",
-                        margin=dict(t=20, b=5, l=5, r=5),
-                        height=280,
-                        xaxis_title=None,
-                        yaxis_title=None,
-                        legend=dict(orientation="h", y=1.1, x=0),
-                    )
-                    st.plotly_chart(
-                        fig_ret_sin, use_container_width=True, key="sheets_retirados_sin"
-                    )
-                else:
-                    st.info("No se encontraron las columnas 'Retirados' o 'sin medidor' en el archivo.")
-
-        st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
-
-        with st.container(border=True):
-            st.markdown(
-                "<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>📋 Tabla de Datos - Google Sheets (Instalaciones)</p>",
-                unsafe_allow_html=True,
-            )
-
-            columnas_deseadas = [
-                col_fecha_sheets,
-                col_inst_sheets,
-                col_cuadro_sheets,
-                col_reg_sheets,
-                col_ret_sheets,
-                col_sin_sheets,
-            ]
-            cols_existentes = [c for c in columnas_deseadas if c and c in df_sheets_interno.columns]
-            df_tabla_filtrada = df_sheets_interno[cols_existentes].copy()
-
-            st.dataframe(df_tabla_filtrada, use_container_width=True, height=320)
-    else:
-        st.warning(
-            "No se pudo cargar la información de la hoja 'Instalaciones' del archivo de Google Sheets."
-        )
+                        color_discrete_map={"Cuadro": "#0
