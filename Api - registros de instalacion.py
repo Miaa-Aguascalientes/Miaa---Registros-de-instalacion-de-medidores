@@ -295,13 +295,28 @@ def cargar_anomalias_db():
 
 @st.cache_data(ttl=600)
 def cargar_google_sheets_interno():
-    """Carga los datos de Google Sheets (pestaña Instalaciones)."""
-    try:
-        sheet_id = "1Ovj2DZ19Y8H4BtamnVwB71c2dyHC3dyVmau-tMbWre8"
-        url_csv = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet=Instalaciones"
-        return pd.read_csv(url_csv)
-    except Exception:
-        return pd.DataFrame()
+  """Carga los datos de Google Sheets (pestaña Instalaciones)."""
+  try:
+    sheet_id = "1Ovj2DZ19Y8H4BtamnVwB71c2dyHC3dyVmau-tMbWre8"
+    url_csv = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet=Instalaciones"
+    return pd.read_csv(url_csv)
+  except Exception:
+    return pd.DataFrame()
+            
+    # Si falla por pandas directo, intentamos con requests por si hay restricciones de headers
+    headers_req = {"User-Agent": "Mozilla/5.0"}
+    for url in urls_a_probar:
+        try:
+            res = requests.get(url, headers=headers_req, timeout=10)
+            if res.status_code == 200 and len(res.text) > 100:
+                import io
+                df = pd.read_csv(io.StringIO(res.text))
+                if not df.empty:
+                    return df
+        except Exception as e:
+            pass
+            
+    return pd.DataFrame()
 
 
 @st.cache_data(ttl=600)
