@@ -377,28 +377,28 @@ def agregar_capas_base(m):
 # ==============================================================================
 
 if "datos_instalaciones" not in st.session_state:
-  res = cargar_datos_api()
-  if res:
-    st.session_state["datos_instalaciones"] = res
+    res = cargar_datos_api()
+    if res:
+        st.session_state["datos_instalaciones"] = res
 
 if "datos_instalaciones" in st.session_state:
-  data = st.session_state["datos_instalaciones"]
-  lista_registros = []
-  if isinstance(data, dict):
-    for k, v in data.items():
-      if isinstance(v, list):
-        lista_registros.extend(v)
-      elif isinstance(v, dict):
-        lista_registros.append(v)
-    df = (
-        pd.DataFrame(lista_registros)
-        if lista_registros
-        else pd.DataFrame([data])
-    )
-  else:
-    df = pd.DataFrame(data if isinstance(data, list) else [data])
+    data = st.session_state["datos_instalaciones"]
+    lista_registros = []
+    if isinstance(data, dict):
+        for k, v in data.items():
+            if isinstance(v, list):
+                lista_registros.extend(v)
+            elif isinstance(v, dict):
+                lista_registros.append(v)
+        df = (
+            pd.DataFrame(lista_registros)
+            if lista_registros
+            else pd.DataFrame([data])
+        )
+    else:
+        df = pd.DataFrame(data if isinstance(data, list) else [data])
 else:
-  df = pd.DataFrame()
+    df = pd.DataFrame()
 
 col_fecha_ref = "fechaRegistro" if "fechaRegistro" in df.columns else None
 df["fecha_dt"] = (
@@ -419,6 +419,30 @@ df["longitud"] = (
     else np.nan
 )
 
+# ==============================================================================
+# CREACIÓN Y FORMATEO DE LA COLUMNA PREDIO_VIV (PREDIO + UNIDAD)
+# ==============================================================================
+col_p_orig = next((c for c in ["predio", "numeroPredio"] if c in df.columns), None)
+col_u_orig = next((c for c in ["unidad", "numeroUnidad"] if c in df.columns), None)
+
+def formatear_predio(row):
+    val_p = str(row[col_p_orig]).strip() if col_p_orig and pd.notna(row[col_p_orig]) else "0"
+    val_u = str(row[col_u_orig]).strip() if col_u_orig and pd.notna(row[col_u_orig]) else "0"
+    
+    # Limpiar decimales si pandas los lee como float (ej. 736359.0 -> 736359)
+    val_p = val_p.split(".")[0] if val_p.endswith(".0") else val_p
+    val_u = val_u.split(".")[0] if val_u.endswith(".0") else val_u
+    
+    if val_p in ["nan", "None", ""]: val_p = "0"
+    if val_u in ["nan", "None", ""]: val_u = "0"
+    
+    return f"{val_p}-{val_u}"
+
+if not df.empty and col_p_orig:
+    df["predio_viv"] = df.apply(formatear_predio, axis=1)
+elif not df.empty:
+    df["predio_viv"] = "0-0"
+
 df_metas = cargar_metas_db()
 df_poligonos = cargar_poligonos_db()
 df_anomalias_db = cargar_anomalias_db()
@@ -426,70 +450,70 @@ df_sheets_interno = cargar_google_sheets_interno()
 
 df_tipos_db = cargar_tipos_instalacion_db()
 if not df_tipos_db.empty:
-  dict_tipos_map = dict(
-      zip(df_tipos_db["ID"].astype(str), df_tipos_db["tipo_instalacion"])
-  )
+    dict_tipos_map = dict(
+        zip(df_tipos_db["ID"].astype(str), df_tipos_db["tipo_instalacion"])
+    )
 else:
-  dict_tipos_map = {
-      "1": "CAJA DE VALVULAS",
-      "2": "CUADRO DENTRO",
-      "3": "CUADRO FUERA",
-      "4": "REGISTRO",
-      "5": "EMPOTRADO DENTRO",
-      "6": "EMPOTRADO FUERA",
-  }
+    dict_tipos_map = {
+        "1": "CAJA DE VALVULAS",
+        "2": "CUADRO DENTRO",
+        "3": "CUADRO FUERA",
+        "4": "REGISTRO",
+        "5": "EMPOTRADO DENTRO",
+        "6": "EMPOTRADO FUERA",
+    }
 
 if not df.empty and "lugarInstalacionId" in df.columns:
-  df["lugarInstalacion_id_str"] = (
-      df["lugarInstalacionId"]
-      .fillna("")
-      .astype(str)
-      .str.replace(r"\.0$", "", regex=True)
-  )
-  df["tipo_instalacion_nombre"] = df["lugarInstalacion_id_str"].map(
-      dict_tipos_map
-  ).fillna("SIN ESPECIFICAR")
+    df["lugarInstalacion_id_str"] = (
+        df["lugarInstalacionId"]
+        .fillna("")
+        .astype(str)
+        .str.replace(r"\.0$", "", regex=True)
+    )
+    df["tipo_instalacion_nombre"] = df["lugarInstalacion_id_str"].map(
+        dict_tipos_map
+    ).fillna("SIN ESPECIFICAR")
 else:
-  if not df.empty:
-    df["tipo_instalacion_nombre"] = "SIN ESPECIFICAR"
+    if not df.empty:
+        df["tipo_instalacion_nombre"] = "SIN ESPECIFICAR"
 
 if not df_anomalias_db.empty:
-  dict_anomalias_map = dict(
-      zip(df_anomalias_db["ID"].astype(str), df_anomalias_db["anomalia"])
-  )
+    dict_anomalias_map = dict(
+        zip(df_anomalias_db["ID"].astype(str), df_anomalias_db["anomalia"])
+    )
 else:
-  dict_anomalias_map = {}
+    dict_anomalias_map = {}
 
 if not df.empty and "anomaliaId" in df.columns:
-  df["anomalia_id_str"] = (
-      df["anomaliaId"]
-      .fillna("")
-      .astype(str)
-      .str.replace(r"\.0$", "", regex=True)
-  )
-  df["anomalia_nombre"] = df["anomalia_id_str"].map(dict_anomalias_map).fillna(
-      "SIN ANOMALÍA / REGULAR"
-  )
+    df["anomalia_id_str"] = (
+        df["anomaliaId"]
+        .fillna("")
+        .astype(str)
+        .str.replace(r"\.0$", "", regex=True)
+    )
+    df["anomalia_nombre"] = df["anomalia_id_str"].map(dict_anomalias_map).fillna(
+        "SIN ANOMALÍA / REGULAR"
+    )
 else:
-  if not df.empty:
-    df["anomalia_nombre"] = "SIN ANOMALÍA / REGULAR"
+    if not df.empty:
+        df["anomalia_nombre"] = "SIN ANOMALÍA / REGULAR"
 
 if not df_metas.empty:
-  for col_num in [
-      "Usuarios_Reales",
-      "Usuarios_con_medidor_inteligente",
-      "Usuarios_nueva_instalacion",
-  ]:
-    if col_num in df_metas.columns:
-      df_metas[col_num] = pd.to_numeric(
-          df_metas[col_num].astype(str).str.replace(",", ""), errors="coerce"
-      ).fillna(0)
+    for col_num in [
+        "Usuarios_Reales",
+        "Usuarios_con_medidor_inteligente",
+        "Usuarios_nueva_instalacion",
+    ]:
+        if col_num in df_metas.columns:
+            df_metas[col_num] = pd.to_numeric(
+                df_metas[col_num].astype(str).str.replace(",", ""), errors="coerce"
+            ).fillna(0)
 
-  df_metas_valido = df_metas[
-      df_metas["Usuarios_con_medidor_inteligente"] > 0
-  ].copy()
+    df_metas_valido = df_metas[
+        df_metas["Usuarios_con_medidor_inteligente"] > 0
+    ].copy()
 else:
-  df_metas_valido = pd.DataFrame()
+    df_metas_valido = pd.DataFrame()
 
 # ==============================================================================
 # SECCIÓN 5: CABECERA SUPERIOR DEL TÍTULO DE LA PÁGINA
