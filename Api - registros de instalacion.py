@@ -500,6 +500,40 @@ df_miaa_pers = (
     else df_filtrado.copy()
 )
 
+# CONSTRUCCIÓN DE LA TABLA DE EFICIENCIA
+if not df_metas_filtrado.empty:
+    df_tabla_eficiencia = df_metas_filtrado.copy()
+    df_eficiencia = df_tabla_eficiencia.groupby(
+        ["Colonia_ATL", "Poligono_de_instalacion"], as_index=False
+    ).agg({"Usuarios_nueva_instalacion": "sum"})
+    df_eficiencia["colonia_key"] = df_eficiencia["Colonia_ATL"].astype(str).str.strip().str.upper()
+
+    if not df_filtrado.empty and "colonia" in df_filtrado.columns:
+        df_api_colonia = df_filtrado.copy()
+        df_api_colonia["colonia_key"] = df_api_colonia["colonia"].astype(str).str.strip().str.upper()
+        conteo_api_colonia = df_api_colonia.groupby("colonia_key", as_index=False).size().rename(columns={"size": "Med_Instalados_API"})
+    else:
+        conteo_api_colonia = pd.DataFrame(columns=["colonia_key", "Med_Instalados_API"])
+
+    df_eficiencia = pd.merge(df_eficiencia, conteo_api_colonia, on="colonia_key", how="left")
+    df_eficiencia["Med_Instalados_API"] = df_eficiencia["Med_Instalados_API"].fillna(0).astype(int)
+    df_eficiencia["pct_sort"] = np.where(
+        df_eficiencia["Usuarios_nueva_instalacion"] > 0,
+        (df_eficiencia["Med_Instalados_API"] / df_eficiencia["Usuarios_nueva_instalacion"]) * 100,
+        0.0,
+    )
+    df_eficiencia = df_eficiencia.sort_values(by="pct_sort", ascending=False).reset_index(drop=True)
+    df_eficiencia["%"] = df_eficiencia["pct_sort"].round(2).astype(str) + "%"
+    df_eficiencia = df_eficiencia.rename(columns={
+        "Colonia_ATL": "Colonia",
+        "Usuarios_nueva_instalacion": "Med. a instalar",
+        "Med_Instalados_API": "Med. instalados",
+        "Poligono_de_instalacion": "Polígono",
+    })
+    df_eficiencia = df_eficiencia[["Colonia", "Med. a instalar", "Med. instalados", "%", "Polígono"]]
+else:
+    df_eficiencia = pd.DataFrame(columns=["Colonia", "Med. a instalar", "Med. instalados", "%", "Polígono"])
+
 # ==============================================================================
 # SECCIÓN 7: ESTRUCTURA DE PESTAÑAS (INCLUYENDO LA NUEVA PESTAÑA)
 # ==============================================================================
@@ -583,6 +617,69 @@ with tab_principal:
                 fig_cr = go.Figure(go.Pie(labels=["Sin Datos"], values=[0], hole=0.6))
             st.plotly_chart(fig_cr, use_container_width=True, key="dash_prin_cuadro_vs_reg")
 
+    col_inf1, col_inf2 = st.columns([1, 1.6])
+
+    with col_inf1:
+        with st.container(border=True):
+            st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Eficiencia por Colonia y Polígono</p>", unsafe_allow_html=True)
+            if not df_eficiencia.empty:
+                st.dataframe(df_eficiencia, use_container_width=True, hide_index=True, height=330)
+            else:
+                st.info("No se encontraron datos para los polígonos seleccionados.")
+
+    with col_inf2:
+        col_map_h, col_graf_h = st.columns([2.2, 1])
+
+        with col_map_h:
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones (Externo vs MIAA)</p>", unsafe_allow_html=True)
+                df_mapa_valido = df_filtrado.dropna(subset=["latitud", "longitud"]) if not df_filtrado.empty else pd.DataFrame()
+                map_lat = df_mapa_valido["latitud"].mean() if not df_mapa_valido.empty else lat_centro
+                map_lon = df_mapa_valido["longitud"].mean() if not df_mapa_valido.empty else lon_centro
+
+                mapa_miaa = folium.Map(location=[map_lat, map_lon], zoom_start=12, tiles=None)
+                agregar_capas_base(mapa_miaa)
+
+                for _, row in df_mapa_valido.iterrows():
+                    es_externo = bool(row["usuarioExterno"]) if "usuarioExterno" in df_mapa_valido.columns else False
+                    color_punto = "#f59e0b" if es_externo else "#a855f7"
+                    folium.CircleMarker(
+                        location=[float(row["latitud"]), float(row["longitud"])],
+                        radius=2.5,
+                        color=color_punto,
+                        fill=True,
+                        fill_color=color_punto,
+                        fill_opacity=0.7,
+                    ).add_to(mapa_miaa)
+
+                st_folium(mapa_miaa, width=None, height=320, key="mapa_estatico_instalaciones", returned_objects=[])
+
+        with col_graf_h:
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Mes</p>", unsafe_allow_html=True)
+                if col_fecha_ref and not df.empty and not df["fecha_dt"].isna().all():
+                    df_mes_total = df.copy()
+                    df_mes_total["periodo_mes"] = df_mes_total["fecha_dt"].dt.to_period("M")
+                    df_mes = df_mes_total.groupby("periodo_mes", as_index=False).size()
+                    df_mes.columns = ["Periodo", "Cantidad"]
+                    meses_es = {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"}
+                    df_mes["Mes"] = df_mes["Periodo"].apply(lambda x: f"{meses_es[x.month]} {x.year}")
+                    df_mes = df_mes.sort_values(by="Periodo", ascending=True)
+                else:
+                    df_mes = pd.DataFrame({"Mes": ["Sin datos"], "Cantidad": [0]})
+
+                colores_barras = ["#1e3a8a", "#3b82f6"] * ((len(df_mes) // 2) + 1)
+                max_cant = df_mes["Cantidad"].max() if not df_mes.empty else 10
+                fig_mes_h = px.bar(df_mes, x="Cantidad", y="Mes", orientation="h", text="Cantidad", color="Mes", color_discrete_sequence=colores_barras)
+                fig_mes_h.update_traces(textposition="outside", textfont_size=10)
+                fig_mes_h.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="#ffffff", margin=dict(t=2, b=2, l=5, r=40), height=130, xaxis=dict(showgrid=False, showticklabels=False, title=None, range=[0, max_cant * 1.25]), yaxis=dict(showgrid=False, title=None, tickfont=dict(size=10), categoryorder="array", categoryarray=df_mes["Mes"].tolist()), showlegend=False)
+                st.plotly_chart(fig_mes_h, use_container_width=True, key="dash_prin_instalaciones_mes")
+
+            with st.container(border=True):
+                st.markdown("<p style='font-size:12px; margin-bottom:8px; font-weight:bold;'>Total de Anomalías</p>", unsafe_allow_html=True)
+                total_anomalias_actual = len(df_filtrado[df_filtrado["anomalia_nombre"] != "SIN ANOMALÍA / REGULAR"]) if not df_filtrado.empty and "anomalia_nombre" in df_filtrado.columns else 0
+                st.markdown(f'<div style="display: flex; align-items: center; justify-content: center; gap: 20px; padding: 32px 0;"><div style="font-size: 38px; color: #f43f5e;"><i class="fa-solid fa-triangle-exclamation"></i></div><div style="font-size: 36px; font-weight: bold; color: #ffffff;">{total_anomalias_actual:,}</div></div>', unsafe_allow_html=True)
+
 # ------------------------------------------------------------------------------
 # NUEVA PESTAÑA: INSTALACIONES DEL DÍA EN CURSO CON RUTA Y MAPA
 # ------------------------------------------------------------------------------
@@ -613,7 +710,6 @@ with tab_hoy_inst:
                 if not df_hoy_map.empty:
                     df_hoy_map["_sort_dt"] = pd.to_datetime(df_hoy_map[col_fecha_ref], errors="coerce")
                     df_hoy_map = df_hoy_map.sort_values(by="_sort_dt", ascending=True)
-                    
                     m_lat_h = df_hoy_map["latitud"].mean()
                     m_lon_h = df_hoy_map["longitud"].mean()
                 else:
