@@ -426,7 +426,7 @@ col_p_orig = next((c for c in ["predio", "numeroPredio"] if c in df.columns), No
 col_u_orig = next((c for c in ["unidad", "numeroUnidad"] if c in df.columns), None)
 
 def formatear_predio(row):
-    # Obtener valores limpios de predio y unidad
+    # Obtener valores limpios de predio y unidad asegurando que los ceros no se descarten
     val_p = str(row[col_p_orig]).strip() if col_p_orig and pd.notna(row[col_p_orig]) else "0"
     val_u = str(row[col_u_orig]).strip() if col_u_orig and pd.notna(row[col_u_orig]) else "0"
     
@@ -517,7 +517,6 @@ if not df_metas.empty:
     ].copy()
 else:
     df_metas_valido = pd.DataFrame()
-
 # ==============================================================================
 # SECCIÓN 5: CABECERA SUPERIOR DEL TÍTULO DE LA PÁGINA
 # ==============================================================================
