@@ -792,8 +792,132 @@ else:
     "📑 Registro de instalaciones interno",
 ])
 
+  # ==============================================================================
+  # SECCIÓN 8  MODIFICADA: LISTADO GENERAL DE INSTALACIONES (PAGINADO EN HOJAS DE 50)
+  # ==============================================================================
+  st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+  with st.container(border=True):
+    st.markdown(
+        "<p style='font-size:14px; font-weight:bold; margin-bottom:6px;'>📍 Listado General de Instalaciones de Medidores</p>",
+        unsafe_allow_html=True,
+    )
+
+    if not df.empty:
+      df_todos_inst = df.copy()
+
+      col_p_orig = next((c for c in ["predio", "numeroPredio"] if c in df_todos_inst.columns), None)
+      col_u_orig = next((c for c in ["unidad", "numeroUnidad"] if c in df_todos_inst.columns), None)
+
+      def formatear_predio_tabla(row):
+        val_p = str(row[col_p_orig]).strip() if col_p_orig and pd.notna(row[col_p_orig]) else "0"
+        val_p = val_p.split(".")[0] if val_p.endswith(".0") else val_p
+        if val_p in ["nan", "None", "", "nat"]: val_p = "0"
+        
+        if col_u_orig and col_u_orig in row and pd.notna(row[col_u_orig]):
+            val_u = str(row[col_u_orig]).strip()
+            val_u = val_u.split(".")[0] if val_u.endswith(".0") else val_u
+            if val_u in ["nan", "None", "", "nat"]: 
+                val_u = "0"
+        else:
+            val_u = "0"
+        
+        if val_u != "0" and val_u != "":
+            return f"{val_p}-{val_u}"
+        else:
+            return f"{val_p}-0"
+
+      if col_p_orig:
+        df_todos_inst["predio_viv"] = df_todos_inst.apply(formatear_predio_tabla, axis=1)
+
+      # Mapear numeroCliente a Num_Cliente para que aparezca correctamente
+      col_cli_orig = next((c for c in ["numeroCliente", "cliente"] if c in df_todos_inst.columns), None)
+      if col_cli_orig:
+        df_todos_inst["Num_Cliente"] = df_todos_inst[col_cli_orig].astype(str).str.replace(r"\.0$", "", regex=True)
+        df_todos_inst["Num_Cliente"] = df_todos_inst["Num_Cliente"].replace(["nan", "None", "", "nat"], "0")
+      else:
+        df_todos_inst["Num_Cliente"] = "0"
+
+      busqueda_global_inst = st.text_input(
+          "Buscar en cualquier registro (Predio, Cliente, Serie, Domicilio, etc.)",
+          placeholder="Ej. 502934-1, VAZQUEZ, 222608...",
+          key="filtro_texto_global_inst",
+      )
+
+      df_filtrado_global = df_todos_inst.copy()
+      if busqueda_global_inst:
+        b_txt = busqueda_global_inst.lower()
+        mask_txt = df_filtrado_global.astype(str).apply(
+            lambda row: row.str.lower().str.contains(b_txt).any(), axis=1
+        )
+        df_filtrado_global = df_filtrado_global[mask_txt]
+
+      total_registros_filtrados = len(df_filtrado_global)
+
+      if total_registros_filtrados > 0:
+        TAMANO_PAGINA = 50
+        total_paginas = math.ceil(total_registros_filtrados / TAMANO_PAGINA)
+
+        col_pag1, col_pag2 = st.columns([2, 1])
+        with col_pag1:
+          pagina_actual = st.selectbox(
+              f"Seleccionar Hoja / Página (Total registros: {total_registros_filtrados:,})",
+              options=list(range(1, total_paginas + 1)),
+              format_func=lambda x: f"Hoja {x} de {total_paginas} (Registros {(x-1)*TAMANO_PAGINA + 1} al {min(x*TAMANO_PAGINA, total_registros_filtrados)})",
+              key="select_pagina_registros",
+          )
+        with col_pag2:
+          st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 50 por hoja</div>", unsafe_allow_html=True)
+
+        inicio_idx = (pagina_actual - 1) * TAMANO_PAGINA
+        fin_idx = inicio_idx + TAMANO_PAGINA
+        df_pagina_actual = df_filtrado_global.iloc[inicio_idx:fin_idx].copy()
+
+        if "usuarioExterno" in df_pagina_actual.columns:
+          df_pagina_actual["Instalador"] = np.where(
+              df_pagina_actual["usuarioExterno"].fillna(False).astype(bool),
+              "Externo",
+              "MIAA",
+          )
+        else:
+          df_pagina_actual["Instalador"] = "MIAA"
+
+        # Orden estricto de columnas solicitadas
+        cols_mostrar = []
+        candidatos_cols = [
+            "nombreCliente",
+            "predio_viv",
+            "Num_Cliente",
+            "domicilio",
+            "colonia",
+            "serie",
+            "serieMedidor",
+            "tipo_instalacion_nombre",
+            "Instalador",
+            "anomalia_nombre",
+            "fechaRegistro",
+        ]
+        for c in candidatos_cols:
+          if c in df_pagina_actual.columns and c not in cols_mostrar:
+            cols_mostrar.append(c)
+
+        df_tabla_final_hoja = df_pagina_actual[cols_mostrar].copy()
+
+        if "fechaRegistro" in df_tabla_final_hoja.columns:
+          df_tabla_final_hoja["fechaRegistro"] = pd.to_datetime(
+              df_tabla_final_hoja["fechaRegistro"], errors="coerce"
+          ).dt.strftime("%d/%m/%Y %H:%M:%S")
+
+        st.dataframe(
+            df_tabla_final_hoja, use_container_width=True, hide_index=True
+        )
+      else:
+        st.info("No se encontraron registros que coincidan con la búsqueda.")
+    else:
+      st.info("No hay datos de instalaciones disponibles.")
+
+
 # ------------------------------------------------------------------------------
-# SECCIÓN 8 PESTAÑA: DASHBOARD PRINCIPAL
+# SECCIÓN 9 PESTAÑA: DASHBOARD PRINCIPAL
 # ------------------------------------------------------------------------------
 with tab_principal:
   k1, k2, k3, k4, k5, k6 = st.columns(6)
@@ -1372,128 +1496,6 @@ with tab_principal:
             unsafe_allow_html=True,
         )
 
-  # ==============================================================================
-  # SECCIÓN 9  MODIFICADA: LISTADO GENERAL DE INSTALACIONES (PAGINADO EN HOJAS DE 50)
-  # ==============================================================================
-  st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-  with st.container(border=True):
-    st.markdown(
-        "<p style='font-size:14px; font-weight:bold; margin-bottom:6px;'>📍 Listado General de Instalaciones de Medidores</p>",
-        unsafe_allow_html=True,
-    )
-
-    if not df.empty:
-      df_todos_inst = df.copy()
-
-      col_p_orig = next((c for c in ["predio", "numeroPredio"] if c in df_todos_inst.columns), None)
-      col_u_orig = next((c for c in ["unidad", "numeroUnidad"] if c in df_todos_inst.columns), None)
-
-      def formatear_predio_tabla(row):
-        val_p = str(row[col_p_orig]).strip() if col_p_orig and pd.notna(row[col_p_orig]) else "0"
-        val_p = val_p.split(".")[0] if val_p.endswith(".0") else val_p
-        if val_p in ["nan", "None", "", "nat"]: val_p = "0"
-        
-        if col_u_orig and col_u_orig in row and pd.notna(row[col_u_orig]):
-            val_u = str(row[col_u_orig]).strip()
-            val_u = val_u.split(".")[0] if val_u.endswith(".0") else val_u
-            if val_u in ["nan", "None", "", "nat"]: 
-                val_u = "0"
-        else:
-            val_u = "0"
-        
-        if val_u != "0" and val_u != "":
-            return f"{val_p}-{val_u}"
-        else:
-            return f"{val_p}-0"
-
-      if col_p_orig:
-        df_todos_inst["predio_viv"] = df_todos_inst.apply(formatear_predio_tabla, axis=1)
-
-      # Mapear numeroCliente a Num_Cliente para que aparezca correctamente
-      col_cli_orig = next((c for c in ["numeroCliente", "cliente"] if c in df_todos_inst.columns), None)
-      if col_cli_orig:
-        df_todos_inst["Num_Cliente"] = df_todos_inst[col_cli_orig].astype(str).str.replace(r"\.0$", "", regex=True)
-        df_todos_inst["Num_Cliente"] = df_todos_inst["Num_Cliente"].replace(["nan", "None", "", "nat"], "0")
-      else:
-        df_todos_inst["Num_Cliente"] = "0"
-
-      busqueda_global_inst = st.text_input(
-          "Buscar en cualquier registro (Predio, Cliente, Serie, Domicilio, etc.)",
-          placeholder="Ej. 502934-1, VAZQUEZ, 222608...",
-          key="filtro_texto_global_inst",
-      )
-
-      df_filtrado_global = df_todos_inst.copy()
-      if busqueda_global_inst:
-        b_txt = busqueda_global_inst.lower()
-        mask_txt = df_filtrado_global.astype(str).apply(
-            lambda row: row.str.lower().str.contains(b_txt).any(), axis=1
-        )
-        df_filtrado_global = df_filtrado_global[mask_txt]
-
-      total_registros_filtrados = len(df_filtrado_global)
-
-      if total_registros_filtrados > 0:
-        TAMANO_PAGINA = 50
-        total_paginas = math.ceil(total_registros_filtrados / TAMANO_PAGINA)
-
-        col_pag1, col_pag2 = st.columns([2, 1])
-        with col_pag1:
-          pagina_actual = st.selectbox(
-              f"Seleccionar Hoja / Página (Total registros: {total_registros_filtrados:,})",
-              options=list(range(1, total_paginas + 1)),
-              format_func=lambda x: f"Hoja {x} de {total_paginas} (Registros {(x-1)*TAMANO_PAGINA + 1} al {min(x*TAMANO_PAGINA, total_registros_filtrados)})",
-              key="select_pagina_registros",
-          )
-        with col_pag2:
-          st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 50 por hoja</div>", unsafe_allow_html=True)
-
-        inicio_idx = (pagina_actual - 1) * TAMANO_PAGINA
-        fin_idx = inicio_idx + TAMANO_PAGINA
-        df_pagina_actual = df_filtrado_global.iloc[inicio_idx:fin_idx].copy()
-
-        if "usuarioExterno" in df_pagina_actual.columns:
-          df_pagina_actual["Instalador"] = np.where(
-              df_pagina_actual["usuarioExterno"].fillna(False).astype(bool),
-              "Externo",
-              "MIAA",
-          )
-        else:
-          df_pagina_actual["Instalador"] = "MIAA"
-
-        # Orden estricto de columnas solicitadas
-        cols_mostrar = []
-        candidatos_cols = [
-            "nombreCliente",
-            "predio_viv",
-            "Num_Cliente",
-            "domicilio",
-            "colonia",
-            "serie",
-            "serieMedidor",
-            "tipo_instalacion_nombre",
-            "Instalador",
-            "anomalia_nombre",
-            "fechaRegistro",
-        ]
-        for c in candidatos_cols:
-          if c in df_pagina_actual.columns and c not in cols_mostrar:
-            cols_mostrar.append(c)
-
-        df_tabla_final_hoja = df_pagina_actual[cols_mostrar].copy()
-
-        if "fechaRegistro" in df_tabla_final_hoja.columns:
-          df_tabla_final_hoja["fechaRegistro"] = pd.to_datetime(
-              df_tabla_final_hoja["fechaRegistro"], errors="coerce"
-          ).dt.strftime("%d/%m/%Y %H:%M:%S")
-
-        st.dataframe(
-            df_tabla_final_hoja, use_container_width=True, hide_index=True
-        )
-      else:
-        st.info("No se encontraron registros que coincidan con la búsqueda.")
-    else:
-      st.info("No hay datos de instalaciones disponibles.")
 
 # ------------------------------------------------------------------------------
 # SECCIÓN 10 PESTAÑA: ANÁLISIS DE ANOMALÍAS
