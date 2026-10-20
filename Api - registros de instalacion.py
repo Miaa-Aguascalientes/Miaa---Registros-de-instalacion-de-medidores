@@ -737,16 +737,17 @@ if not df_metas_filtrado.empty:
 
     df_eficiencia = df_eficiencia.rename(
         columns={
-            "Colonia": "Colonia",
+            "Colonia_ATL": "Colonia",
             "Usuarios_nueva_instalacion": "Med. a instalar",
             "Med_Instalados_API": "Med. instalados",
             "Poligono_de_instalacion": "Polígono",
         }
     )
 
-    df_eficiencia = df_eficiencia[
-        ["Colonia", "Med. a instalar", "Med. instalados", "%", "Polígono"]
-    ]
+    # SELECCIÓN SEGURA DE COLUMNAS PARA EVITAR KEYERROR
+    columnas_deseadas_ef = ["Colonia", "Med. a instalar", "Med. instalados", "%", "Polígono"]
+    cols_existentes_ef = [c for c in columnas_deseadas_ef if c in df_eficiencia.columns]
+    df_eficiencia = df_eficiencia[cols_existentes_ef]
 else:
     df_eficiencia = pd.DataFrame(
         columns=["Colonia", "Med. a instalar", "Med. instalados", "%", "Polígono"]
