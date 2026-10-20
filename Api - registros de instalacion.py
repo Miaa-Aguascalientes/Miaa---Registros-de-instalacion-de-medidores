@@ -2342,13 +2342,13 @@ with tab_personal:
 
       total_reg_ext = len(df_tabla_ext)
       if total_reg_ext > 0:
-        tam_pag_ext = 50
+        tam_pag_ext = 10
         tot_pag_ext = math.ceil(total_reg_ext / tam_pag_ext)
         col_p1, col_p2 = st.columns([2, 1])
         with col_p1:
           pag_ext_act = st.selectbox("Hoja / Página (Externo)", options=list(range(1, tot_pag_ext + 1)), format_func=lambda x: f"Hoja {x} de {tot_pag_ext} (Registros {(x-1)*tam_pag_ext + 1} al {min(x*tam_pag_ext, total_reg_ext)})", key="pag_ext_sel")
         with col_p2:
-          st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 50 por hoja</div>", unsafe_allow_html=True)
+          st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 10 por hoja</div>", unsafe_allow_html=True)
 
         i_ini = (pag_ext_act - 1) * tam_pag_ext
         i_fin = i_ini + tam_pag_ext
@@ -2595,13 +2595,13 @@ with tab_personal:
 
       total_reg_miaa = len(df_tabla_miaa)
       if total_reg_miaa > 0:
-        tam_pag_miaa = 50
+        tam_pag_miaa = 10
         tot_pag_miaa = math.ceil(total_reg_miaa / tam_pag_miaa)
         col_m1, col_m2 = st.columns([2, 1])
         with col_m1:
           pag_miaa_act = st.selectbox("Hoja / Página (MIAA)", options=list(range(1, tot_pag_miaa + 1)), format_func=lambda x: f"Hoja {x} de {tot_pag_miaa} (Registros {(x-1)*tam_pag_miaa + 1} al {min(x*tam_pag_miaa, total_reg_miaa)})", key="pag_miaa_sel")
         with col_m2:
-          st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 50 por hoja</div>", unsafe_allow_html=True)
+          st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 10 por hoja</div>", unsafe_allow_html=True)
 
         i_ini_m = (pag_miaa_act - 1) * tam_pag_miaa
         i_fin_m = i_ini_m + tam_pag_miaa
@@ -2831,7 +2831,7 @@ with tab_tabla:
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
     if total_registros_tabla > 0:
-        TAMANO_PAGINA_BD = 50
+        TAMANO_PAGINA_BD = 10
         total_paginas_bd = math.ceil(total_registros_tabla / TAMANO_PAGINA_BD)
 
         col_p_bd1, col_p_bd2 = st.columns([2, 1])
@@ -2843,7 +2843,7 @@ with tab_tabla:
                 key="select_pagina_bd_completa",
             )
         with col_p_bd2:
-            st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 50 por hoja</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 10 por hoja</div>", unsafe_allow_html=True)
 
         inicio_idx_bd = (pagina_actual_bd - 1) * TAMANO_PAGINA_BD
         fin_idx_bd = inicio_idx_bd + TAMANO_PAGINA_BD
