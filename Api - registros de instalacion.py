@@ -426,19 +426,22 @@ col_p_orig = next((c for c in ["predio", "numeroPredio"] if c in df.columns), No
 col_u_orig = next((c for c in ["unidad", "numeroUnidad"] if c in df.columns), None)
 
 def formatear_predio(row):
-    # Obtener valores limpios de predio y unidad asegurando que los ceros no se descarten
+    # Obtener el valor del predio
     val_p = str(row[col_p_orig]).strip() if col_p_orig and pd.notna(row[col_p_orig]) else "0"
-    val_u = str(row[col_u_orig]).strip() if col_u_orig and pd.notna(row[col_u_orig]) else "0"
-    
-    # Limpiar decimales si pandas los lee como float (ej. 736359.0 -> 736359)
     val_p = val_p.split(".")[0] if val_p.endswith(".0") else val_p
-    val_u = val_u.split(".")[0] if val_u.endswith(".0") else val_u
+    if val_p in ["nan", "None", "", "nat"]: 
+        val_p = "0"
     
-    # Manejar nulos o vacíos convirtiéndolos a ceros
-    if val_p in ["nan", "None", "", "nat"]: val_p = "0"
-    if val_u in ["nan", "None", "", "nat"]: val_u = "0"
+    # Si la API sí trae unidad o numeroUnidad, la usamos; si no, le ponemos "0" por defecto para que siempre salga el -0
+    if col_u_orig and col_u_orig in row and pd.notna(row[col_u_orig]):
+        val_u = str(row[col_u_orig]).strip()
+        val_u = val_u.split(".")[0] if val_u.endswith(".0") else val_u
+        if val_u in ["nan", "None", "", "nat"]: 
+            val_u = "0"
+    else:
+        val_u = "0"
     
-    # Forzar la unión con guion en TODOS los casos (ej: 515185-0)
+    # Forzar el formato idéntico con guion (ej. 780638-0)
     return f"{val_p}-{val_u}"
 
 if not df.empty and col_p_orig:
