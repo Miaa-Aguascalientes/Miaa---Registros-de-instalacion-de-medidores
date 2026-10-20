@@ -426,13 +426,11 @@ col_p_orig = next((c for c in ["predio", "numeroPredio"] if c in df.columns), No
 col_u_orig = next((c for c in ["unidad", "numeroUnidad"] if c in df.columns), None)
 
 def formatear_predio(row):
-    # Obtener el valor del predio
     val_p = str(row[col_p_orig]).strip() if col_p_orig and pd.notna(row[col_p_orig]) else "0"
     val_p = val_p.split(".")[0] if val_p.endswith(".0") else val_p
     if val_p in ["nan", "None", "", "nat"]: 
         val_p = "0"
     
-    # Si la API sí trae unidad o numeroUnidad, la usamos; si no, le ponemos "0" por defecto para que siempre salga el -0
     if col_u_orig and col_u_orig in row and pd.notna(row[col_u_orig]):
         val_u = str(row[col_u_orig]).strip()
         val_u = val_u.split(".")[0] if val_u.endswith(".0") else val_u
@@ -441,7 +439,6 @@ def formatear_predio(row):
     else:
         val_u = "0"
     
-    # Forzar el formato idéntico con guion (ej. 780638-0)
     return f"{val_p}-{val_u}"
 
 if not df.empty and col_p_orig:
@@ -520,6 +517,7 @@ if not df_metas.empty:
     ].copy()
 else:
     df_metas_valido = pd.DataFrame()
+
 # ==============================================================================
 # SECCIÓN 5: CABECERA SUPERIOR DEL TÍTULO DE LA PÁGINA
 # ==============================================================================
@@ -1118,62 +1116,8 @@ with tab_principal:
             unsafe_allow_html=True,
         )
 
-        # ==============================================================================
-        # PROCESAR PRIMERO EL BUSCADOR GLOBAL (Para que el mapa lo lea de inmediato)
-        # ==============================================================================
-        if not df.empty:
-          df_todos_inst = df.copy()
-
-          col_p_orig = next((c for c in ["predio", "numeroPredio"] if c in df_todos_inst.columns), None)
-          col_u_orig = next((c for c in ["unidad", "numeroUnidad"] if c in df_todos_inst.columns), None)
-
-          def formatear_predio_tabla(row):
-            val_p = str(row[col_p_orig]).strip() if col_p_orig and pd.notna(row[col_p_orig]) else "0"
-            val_p = val_p.split(".")[0] if val_p.endswith(".0") else val_p
-            if val_p in ["nan", "None", "", "nat"]: val_p = "0"
-            
-            if col_u_orig and col_u_orig in row and pd.notna(row[col_u_orig]):
-                val_u = str(row[col_u_orig]).strip()
-                val_u = val_u.split(".")[0] if val_u.endswith(".0") else val_u
-                if val_u in ["nan", "None", "", "nat"]: 
-                    val_u = "0"
-            else:
-                val_u = "0"
-            
-            if val_u != "0" and val_u != "":
-                return f"{val_p}-{val_u}"
-            else:
-                return f"{val_p}-0"
-
-          if col_p_orig:
-            df_todos_inst["predio_viv"] = df_todos_inst.apply(formatear_predio_tabla, axis=1)
-
-          col_cli_orig = next((c for c in ["numeroCliente", "cliente"] if c in df_todos_inst.columns), None)
-          if col_cli_orig:
-            df_todos_inst["Num_Cliente"] = df_todos_inst[col_cli_orig].astype(str).str.replace(r"\.0$", "", regex=True)
-            df_todos_inst["Num_Cliente"] = df_todos_inst["Num_Cliente"].replace(["nan", "None", "", "nat"], "0")
-          else:
-            df_todos_inst["Num_Cliente"] = "0"
-
-          busqueda_global_inst = st.text_input(
-              "Buscar en cualquier registro (Predio, Cliente, Serie, Domicilio, etc.)",
-              placeholder="Ej. 502934-1, VAZQUEZ, 222608...",
-              key="filtro_texto_global_inst",
-          )
-
-          df_filtrado_global = df_todos_inst.copy()
-          if busqueda_global_inst:
-            b_txt = busqueda_global_inst.lower()
-            mask_txt = df_filtrado_global.astype(str).apply(
-                lambda row: row.str.lower().str.contains(b_txt).any(), axis=1
-            )
-            df_filtrado_global = df_filtrado_global[mask_txt]
-        else:
-          busqueda_global_inst = ""
-          df_filtrado_global = pd.DataFrame()
-
-        # Usar el DataFrame filtrado por la búsqueda si existe, de lo contrario el filtrado general
-        df_fuente_mapa = df_filtrado_global if busqueda_global_inst else df_filtrado
+        # Usamos el DataFrame filtrado global que se genera abajo en la sección de la tabla
+        df_fuente_mapa = df_filtrado_global if 'df_filtrado_global' in locals() and not df_filtrado_global.empty else df_filtrado
 
         df_mapa_valido = (
             df_fuente_mapa.dropna(subset=["latitud", "longitud"])
@@ -1220,12 +1164,10 @@ with tab_principal:
 
           nombre = get_clean("nombreCliente")
           
-          # 1. Usar predio_viv formateado correctamente con la unidad (ej. 744350-0)
           predio = row.get("predio_viv", get_clean(["numeroPredio", "predio"]))
           if pd.isna(predio) or str(predio).strip() in ["nan", "None", "", "nat"]:
               predio = get_clean(["numeroPredio", "predio"])
 
-          # 2. Limpiar el campo Cliente para quitar el punto decimal y el cero (ej. 768685.0 -> 768685)
           raw_cliente = get_clean(["cliente", "numeroCliente"])
           if pd.notna(raw_cliente) and str(raw_cliente).strip() not in ["nan", "None", "", "nat"]:
               cliente = str(raw_cliente).split(".")[0]
@@ -1428,7 +1370,7 @@ with tab_principal:
         )
 
   # ==============================================================================
-  # SECCIÓN 9: LISTADO GENERAL DE INSTALACIONES (PAGINADO Y VISUALIZACIÓN DE TABLA)
+  # SECCIÓN 9: LISTADO GENERAL DE INSTALACIONES (Buscador y Tabla abajo)
   # ==============================================================================
   st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
   with st.container(border=True):
@@ -1438,6 +1380,54 @@ with tab_principal:
     )
 
     if not df.empty:
+      df_todos_inst = df_filtrado.copy()
+
+      col_p_orig = next((c for c in ["predio", "numeroPredio"] if c in df_todos_inst.columns), None)
+      col_u_orig = next((c for c in ["unidad", "numeroUnidad"] if c in df_todos_inst.columns), None)
+
+      def formatear_predio_tabla(row):
+        val_p = str(row[col_p_orig]).strip() if col_p_orig and pd.notna(row[col_p_orig]) else "0"
+        val_p = val_p.split(".")[0] if val_p.endswith(".0") else val_p
+        if val_p in ["nan", "None", "", "nat"]: val_p = "0"
+        
+        if col_u_orig and col_u_orig in row and pd.notna(row[col_u_orig]):
+            val_u = str(row[col_u_orig]).strip()
+            val_u = val_u.split(".")[0] if val_u.endswith(".0") else val_u
+            if val_u in ["nan", "None", "", "nat"]: 
+                val_u = "0"
+        else:
+            val_u = "0"
+        
+        if val_u != "0" and val_u != "":
+            return f"{val_p}-{val_u}"
+        else:
+            return f"{val_p}-0"
+
+      if col_p_orig and "predio_viv" not in df_todos_inst.columns:
+        df_todos_inst["predio_viv"] = df_todos_inst.apply(formatear_predio_tabla, axis=1)
+
+      col_cli_orig = next((c for c in ["numeroCliente", "cliente"] if c in df_todos_inst.columns), None)
+      if col_cli_orig:
+        df_todos_inst["Num_Cliente"] = df_todos_inst[col_cli_orig].astype(str).str.replace(r"\.0$", "", regex=True)
+        df_todos_inst["Num_Cliente"] = df_todos_inst["Num_Cliente"].replace(["nan", "None", "", "nat"], "0")
+      else:
+        df_todos_inst["Num_Cliente"] = "0"
+
+      # BARRA DE BÚSQUEDA UBICADA EN LA PARTE INFERIOR (SOBRE LA TABLA)
+      busqueda_global_inst = st.text_input(
+          "Buscar en cualquier registro (Predio, Cliente, Serie, Domicilio, etc.)",
+          placeholder="Ej. 502934-1, VAZQUEZ, 222608...",
+          key="filtro_texto_global_inst",
+      )
+
+      df_filtrado_global = df_todos_inst.copy()
+      if busqueda_global_inst:
+        b_txt = busqueda_global_inst.lower()
+        mask_txt = df_filtrado_global.astype(str).apply(
+            lambda row: row.str.lower().str.contains(b_txt).any(), axis=1
+        )
+        df_filtrado_global = df_filtrado_global[mask_txt]
+
       total_registros_filtrados = len(df_filtrado_global)
 
       if total_registros_filtrados > 0:
@@ -1468,7 +1458,6 @@ with tab_principal:
         else:
           df_pagina_actual["Instalador"] = "MIAA"
 
-        # Orden estricto de columnas solicitadas
         cols_mostrar = []
         candidatos_cols = [
             "nombreCliente",
@@ -1498,8 +1487,10 @@ with tab_principal:
             df_tabla_final_hoja, use_container_width=True, hide_index=True
         )
       else:
+        df_filtrado_global = pd.DataFrame()
         st.info("No se encontraron registros que coincidan con la búsqueda.")
     else:
+      df_filtrado_global = pd.DataFrame()
       st.info("No hay datos de instalaciones disponibles.")
 
 # ------------------------------------------------------------------------------
