@@ -793,7 +793,7 @@ else:
 ])
 
 # ------------------------------------------------------------------------------
-# PESTAÑA: DASHBOARD PRINCIPAL
+# SECCIÓN 8 PESTAÑA: DASHBOARD PRINCIPAL
 # ------------------------------------------------------------------------------
 with tab_principal:
   k1, k2, k3, k4, k5, k6 = st.columns(6)
@@ -1360,7 +1360,7 @@ with tab_principal:
         )
 
   # ==============================================================================
-  # SECCIÓN MODIFICADA: LISTADO GENERAL DE INSTALACIONES (PAGINADO EN HOJAS DE 50)
+  # SECCIÓN 9  MODIFICADA: LISTADO GENERAL DE INSTALACIONES (PAGINADO EN HOJAS DE 50)
   # ==============================================================================
   st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
   with st.container(border=True):
@@ -1375,18 +1375,28 @@ with tab_principal:
       col_p_orig = next((c for c in ["predio", "numeroPredio"] if c in df_todos_inst.columns), None)
       col_u_orig = next((c for c in ["unidad", "numeroUnidad"] if c in df_todos_inst.columns), None)
 
-      def formatear_predio(row):
-        val_p = str(row[col_p_orig]).strip() if col_p_orig and pd.notna(row[col_p_orig]) else ""
-        val_u = str(row[col_u_orig]).strip() if col_u_orig and pd.notna(row[col_u_orig]) else ""
+      def formatear_predio_tabla(row):
+        val_p = str(row[col_p_orig]).strip() if col_p_orig and pd.notna(row[col_p_orig]) else "0"
         val_p = val_p.split(".")[0] if val_p.endswith(".0") else val_p
-        val_u = val_u.split(".")[0] if val_u.endswith(".0") else val_u
+        if val_p in ["nan", "None", "", "nat"]: val_p = "0"
         
-        if val_p and val_u and val_u not in ["", "nan", "None", "0"]:
+        # Obtener la unidad si existe
+        if col_u_orig and col_u_orig in row and pd.notna(row[col_u_orig]):
+            val_u = str(row[col_u_orig]).strip()
+            val_u = val_u.split(".")[0] if val_u.endswith(".0") else val_u
+            if val_u in ["nan", "None", "", "nat"]: 
+                val_u = "0"
+        else:
+            val_u = "0"
+        
+        # Si la unidad es distinta de 0 (ej. 77), respetamos predio-unidad. Si es 0 o vacía, forzamos obligatoriamente el -0 (ej. 601655-0)
+        if val_u != "0" and val_u != "":
             return f"{val_p}-{val_u}"
-        return val_p if val_p else "N/A"
+        else:
+            return f"{val_p}-0"
 
       if col_p_orig:
-        df_todos_inst["predio_viv"] = df_todos_inst.apply(formatear_predio, axis=1)
+        df_todos_inst["predio_viv"] = df_todos_inst.apply(formatear_predio_tabla, axis=1)
 
       busqueda_global_inst = st.text_input(
           "Buscar en cualquier registro (Predio, Cliente, Serie, Domicilio, etc.)",
@@ -1436,18 +1446,17 @@ with tab_principal:
         candidatos_cols = [
             "nombreCliente",
             "predio_viv",
-            "cliente",
             "domicilio",
             "colonia",
-            "serieMedidor",
             "serie",
+            "serieMedidor",
             "tipo_instalacion_nombre",
             "Instalador",
             "anomalia_nombre",
             "fechaRegistro",
         ]
         for c in candidatos_cols:
-          if c in df_pagina_actual.columns:
+          if c in df_pagina_actual.columns and c not in cols_mostrar:
             cols_mostrar.append(c)
 
         df_tabla_final_hoja = df_pagina_actual[cols_mostrar].copy()
@@ -1466,7 +1475,7 @@ with tab_principal:
       st.info("No hay datos de instalaciones disponibles.")
 
 # ------------------------------------------------------------------------------
-# PESTAÑA: ANÁLISIS DE ANOMALÍAS
+# SECCIÓN 10 PESTAÑA: ANÁLISIS DE ANOMALÍAS
 # ------------------------------------------------------------------------------
 with tab_anomalias:
   st.markdown(
@@ -1678,7 +1687,7 @@ with tab_anomalias:
     )
 
 # ------------------------------------------------------------------------------
-# PESTAÑA: MAPA DE POLÍGONOS DE INSTALACIÓN
+# SECCIÓN 11 PESTAÑA: MAPA DE POLÍGONOS DE INSTALACIÓN
 # ------------------------------------------------------------------------------
 script_poligonos_procesados = {}
 shapely_polygons = {}
@@ -2073,7 +2082,7 @@ with tab_poligonos:
     )
 
 # ------------------------------------------------------------------------------
-# PESTAÑA: PERSONAL (EXTERNO Y MIAA)
+# SECCIÓN 12 PESTAÑA: PERSONAL (EXTERNO Y MIAA)
 # ------------------------------------------------------------------------------
 with tab_personal:
   st.markdown(
@@ -2543,7 +2552,7 @@ with tab_personal:
     st.dataframe(df_tabla_miaa, use_container_width=True)
 
 # ==============================================================================
-# CARGAR DATOS DESDE POSTGRESQL USANDO GEOM Y ETAPA
+# SECCIÓN 13 CARGAR DATOS DESDE POSTGRESQL USANDO GEOM Y ETAPA
 # ==============================================================================
 df_usuarios_miaa_medidor = cargar_usuarios_miaa_conmedidor_db()
 
@@ -2573,7 +2582,7 @@ else:
     df_usuarios_miaa_medidor["lon_calc"] = []
 
 # ------------------------------------------------------------------------------
-# PESTAÑA: TABLA BASE DE DATOS COMPLETA (usuarios_miaa_conmedidor)
+# SECCIÓN 14 PESTAÑA: TABLA BASE DE DATOS COMPLETA (usuarios_miaa_conmedidor)
 # ------------------------------------------------------------------------------
 with tab_tabla:
     st.markdown(
@@ -2765,7 +2774,7 @@ with tab_tabla:
     st.dataframe(df_tabla_filtrada, use_container_width=True, height=350)
 
 # ------------------------------------------------------------------------------
-# PESTAÑA: REGISTRO DE INSTALACIONES INTERNO (Google Sheets)
+# SECCIÓN 15 PESTAÑA: REGISTRO DE INSTALACIONES INTERNO (Google Sheets)
 # ------------------------------------------------------------------------------
 with tab_sheets_interno:
     st.markdown(
