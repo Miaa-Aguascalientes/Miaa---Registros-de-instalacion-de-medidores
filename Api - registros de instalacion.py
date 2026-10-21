@@ -1511,10 +1511,6 @@ with tab_rutas_diarias:
         "<p style='font-size:16px; font-weight:bold; margin-bottom:5px;'>🛣️ Seguimiento Diario de Rutas e Instalaciones por Personal</p>",
         unsafe_allow_html=True,
     )
-    st.markdown(
-        "<p style='font-size:13px; color: #94a3b8; margin-bottom:15px;'>Monitoreo por usuario (<code>usuarioNombre</code>), tipo de personal (<code>usuarioExterno</code>), horas y geolocalización de instalaciones.</p>",
-        unsafe_allow_html=True,
-    )
 
     if not df.empty and "fecha_dt" in df.columns and not df["fecha_dt"].isna().all():
         df_rutas_base = df.dropna(subset=["fecha_dt"]).copy()
@@ -1526,8 +1522,8 @@ with tab_rutas_diarias:
         max_fecha_ruta = datetime.date.today()
 
     with st.container(border=True):
-        st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>🔍 Filtros de Seguimiento de Rutas</p>", unsafe_allow_html=True)
-        col_r1, col_r2, col_r3 = st.columns([1.2, 1, 1.8])
+        st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>🔍 Filtros de Fecha y Tipo de Personal</p>", unsafe_allow_html=True)
+        col_r1, col_r2 = st.columns([1.2, 1])
 
         with col_r1:
             fecha_sel_rutas = st.date_input(
@@ -1551,27 +1547,49 @@ with tab_rutas_diarias:
         elif tipo_personal_sel == "Externo":
             df_rutas_dia = df_rutas_dia[df_rutas_dia["usuarioExterno"]]
 
-        usuarios_disponibles = sorted(df_rutas_dia["usuarioNombre"].unique().tolist()) if not df_rutas_dia.empty else []
+    # ==============================================================================
+    # CONTROL INTERACTIVO: ACTIVAR / DESACTIVAR INSTALADORES DESDE EL MAPA
+    # ==============================================================================
+    usuarios_disponibles = sorted(df_rutas_dia["usuarioNombre"].unique().tolist()) if not df_rutas_dia.empty else []
 
-        with col_r3:
-            usuario_sel_rutas = st.multiselect(
-                "Filtrar por Personal / Instalador (usuarioNombre)",
-                options=usuarios_disponibles,
-                default=usuarios_disponibles,
-                key="filtro_usuarios_multiselect_rutas",
-            )
+    with st.container(border=True):
+        st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:6px;'>🟢🔴 Activar / Desactivar Instaladores en el Mapa</p>", unsafe_allow_html=True)
+        
+        col_btn_all, col_btn_none, _ = st.columns([1, 1, 4])
+        if col_btn_all.button("Marcar Todos", key="btn_all_inst_map"):
+            for usr in usuarios_disponibles:
+                st.session_state[f"chk_map_usr_{usr}"] = True
+        if col_btn_none.button("Desmarcar Todos", key="btn_none_inst_map"):
+            for usr in usuarios_disponibles:
+                st.session_state[f"chk_map_usr_{usr}"] = False
 
-    if usuario_sel_rutas and not df_rutas_dia.empty:
-        df_rutas_filtrada = df_rutas_dia[df_rutas_dia["usuarioNombre"].isin(usuario_sel_rutas)].copy()
+        if usuarios_disponibles:
+            cols_check = st.columns(min(len(usuarios_disponibles), 4))
+            usuarios_activos_mapa = []
+            
+            for i, usr in enumerate(usuarios_disponibles):
+                session_key = f"chk_map_usr_{usr}"
+                if session_key not in st.session_state:
+                    st.session_state[session_key] = True
+                
+                with cols_check[i % len(cols_check)]:
+                    estado_chk = st.checkbox(f"{usr}", key=session_key)
+                    if estado_chk:
+                        usuarios_activos_mapa.append(usr)
+        else:
+            usuarios_activos_mapa = []
+            st.info("No hay instaladores disponibles para la fecha seleccionada.")
+
+    if usuarios_activos_mapa and not df_rutas_dia.empty:
+        df_rutas_filtrada = df_rutas_dia[df_rutas_dia["usuarioNombre"].isin(usuarios_activos_mapa)].copy()
     else:
-        df_rutas_filtrada = df_rutas_dia.copy() if usuario_sel_rutas else pd.DataFrame()
+        df_rutas_filtrada = pd.DataFrame(columns=df_rutas_dia.columns if not df_rutas_dia.empty else [])
 
     tot_inst_ruta = len(df_rutas_filtrada)
-    tot_instaladores_act = df_rutas_filtrada["usuarioNombre"].nunique() if not df_rutas_filtrada.empty else 0
+    tot_instaladores_act = len(usuarios_activos_mapa)
     prom_inst_persona = round(tot_inst_ruta / tot_instaladores_act, 1) if tot_instaladores_act > 0 else 0.0
 
     if not df_rutas_filtrada.empty:
-        df_rutas_filtrada["hora_dt"] = df_rutas_filtrada["fecha_dt"].dt.time
         hora_primera = df_rutas_filtrada["fecha_dt"].min().strftime("%H:%M")
         hora_ultima = df_rutas_filtrada["fecha_dt"].max().strftime("%H:%M")
         rango_horario_str = f"{hora_primera} - {hora_ultima}"
@@ -1580,57 +1598,13 @@ with tab_rutas_diarias:
 
     rk1, rk2, rk3, rk4 = st.columns(4)
     with rk1:
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-route"></i></div>
-                <div class="metric-content">
-                    <div class="metric-title">Instalaciones del Día</div>
-                    <div class="metric-value">{tot_inst_ruta:,}</div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown(f"""<div class="metric-card"><div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-route"></i></div><div class="metric-content"><div class="metric-title">Instalaciones del Día</div><div class="metric-value">{tot_inst_ruta:,}</div></div></div>""", unsafe_allow_html=True)
     with rk2:
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <div class="metric-icon-box" style="color: #4ade80;"><i class="fa-solid fa-user-check"></i></div>
-                <div class="metric-content">
-                    <div class="metric-title">Instaladores Activos</div>
-                    <div class="metric-value">{tot_instaladores_act:,}</div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown(f"""<div class="metric-card"><div class="metric-icon-box" style="color: #4ade80;"><i class="fa-solid fa-user-check"></i></div><div class="metric-content"><div class="metric-title">Instaladores Activos</div><div class="metric-value">{tot_instaladores_act:,}</div></div></div>""", unsafe_allow_html=True)
     with rk3:
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <div class="metric-icon-box" style="color: #f59e0b;"><i class="fa-solid fa-calculator"></i></div>
-                <div class="metric-content">
-                    <div class="metric-title">Prom. por Instalador</div>
-                    <div class="metric-value">{prom_inst_persona}</div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown(f"""<div class="metric-card"><div class="metric-icon-box" style="color: #f59e0b;"><i class="fa-solid fa-calculator"></i></div><div class="metric-content"><div class="metric-title">Prom. por Instalador</div><div class="metric-value">{prom_inst_persona}</div></div></div>""", unsafe_allow_html=True)
     with rk4:
-        st.markdown(
-            f"""
-            <div class="metric-card">
-                <div class="metric-icon-box" style="color: #a855f7;"><i class="fa-solid fa-clock"></i></div>
-                <div class="metric-content">
-                    <div class="metric-title">Jornada Detectada</div>
-                    <div class="metric-value">{rango_horario_str}</div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.markdown(f"""<div class="metric-card"><div class="metric-icon-box" style="color: #a855f7;"><i class="fa-solid fa-clock"></i></div><div class="metric-content"><div class="metric-title">Jornada Detectada</div><div class="metric-value">{rango_horario_str}</div></div></div>""", unsafe_allow_html=True)
 
     st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
@@ -1654,13 +1628,11 @@ with tab_rutas_diarias:
             mapa_rutas = folium.Map(location=[r_lat_c, r_lon_c], zoom_start=13, tiles=None)
             agregar_capas_base(mapa_rutas)
 
-            # PALETA EXTENDIDA DE COLORES HEX ÚNICOS
             paleta_colores_ext = [
                 "#38bdf8", "#4ade80", "#f59e0b", "#a855f7", "#f43f5e",
                 "#06b6d4", "#84cc16", "#ec4899", "#6366f1", "#14b8a6",
                 "#ff7043", "#ab47bc", "#26a69a", "#d4e157", "#ffa726",
-                "#78909c", "#8d6e63", "#26c6da", "#9ccc65", "#ffca28",
-                "#5c6bc0", "#e91e63", "#00e676", "#ff9100", "#d500f9"
+                "#78909c", "#8d6e63", "#26c6da", "#9ccc65", "#ffca28"
             ]
             usuarios_unicos_mapa = df_mapa_ruta["usuarioNombre"].unique().tolist() if not df_mapa_ruta.empty else []
             mapa_color_usuario = {usr: paleta_colores_ext[i % len(paleta_colores_ext)] for i, usr in enumerate(usuarios_unicos_mapa)}
@@ -1668,43 +1640,17 @@ with tab_rutas_diarias:
             for usr in usuarios_unicos_mapa:
                 df_usr = df_mapa_ruta[df_mapa_ruta["usuarioNombre"] == usr].sort_values("fecha_dt")
                 c_usr = mapa_color_usuario[usr]
-
                 puntos_linea = []
-                total_puntos_usr = len(df_usr)
 
                 for _, row_r in df_usr.iterrows():
-                    lat_i, lon_i = float(row_r["latitud"]), float(row_r["longitud"])
-                    puntos_linea.append([lat_i, lon_i])
+                    puntos_linea.append([float(row_r["latitud"]), float(row_r["longitud"])])
 
-                # --- DIBUJAR LÍNEA BASE Y FLECHAS ANIMADAS DE DIRECCIÓN ---
                 if len(puntos_linea) > 1:
-                    # Línea base sutil de fondo
-                    folium.PolyLine(
-                        puntos_linea,
-                        color=c_usr,
-                        weight=2.5,
-                        opacity=0.4,
-                        tooltip=f"Ruta de {usr}",
-                    ).add_to(mapa_rutas)
+                    folium.PolyLine(puntos_linea, color=c_usr, weight=2.5, opacity=0.4, tooltip=f"Ruta de {usr}").add_to(mapa_rutas)
+                    AntPath(locations=puntos_linea, color=c_usr, pulse_color="#ffffff", weight=4, opacity=0.9, dash_array=[15, 25], delay=800, symbol="▶", tooltip=f"Recorrido: {usr}").add_to(mapa_rutas)
 
-                    # AntPath configurado con flechas en movimiento (símbolo '▶')
-                    AntPath(
-                        locations=puntos_linea,
-                        color=c_usr,
-                        pulse_color="#ffffff",
-                        weight=4,
-                        opacity=0.9,
-                        dash_array=[15, 25],
-                        delay=800,
-                        hardware_acceleration=True,
-                        symbol="▶", 
-                        tooltip=f"Sentido del recorrido: {usr}"
-                    ).add_to(mapa_rutas)
-
-                # Ciclo para colocar los marcadores de inicio, fin e intermedios
                 for orden_i, (_, row_r) in enumerate(df_usr.iterrows(), start=1):
                     lat_i, lon_i = float(row_r["latitud"]), float(row_r["longitud"])
-
                     nombre_usr = str(row_r.get("usuarioNombre", "N/A"))
                     es_ext = "Externo" if row_r.get("usuarioExterno", False) else "Interno MIAA"
                     predio_r = str(row_r.get("predio_viv", "N/A"))
@@ -1712,91 +1658,20 @@ with tab_rutas_diarias:
                     hora_r = row_r["fecha_dt"].strftime("%H:%M:%S") if pd.notna(row_r["fecha_dt"]) else "N/A"
                     colonia_r = str(row_r.get("colonia", "N/A"))
 
-                    # --- MARCADOR DE INICIO (MÁS CHICO CON ICONO DE PLAY) ---
                     if orden_i == 1:
-                        popup_ruta = f"""
-                        <div style="font-size: 11px; line-height: 1.4; color: #000000;">
-                            <b style="color: #10b981;">🚩 INICIO DE RUTA</b><br>
-                            <b>Instalador:</b> {nombre_usr} ({es_ext})<br>
-                            <b>Hora Inicio:</b> {hora_r}<br>
-                            <b>Predio:</b> {predio_r}<br>
-                            <b>Serie Medidor:</b> {serie_r}<br>
-                            <b>Colonia:</b> {colonia_r}
-                        </div>
-                        """
-                        icon_inicio = folium.DivIcon(
-                            html="""<div style="background-color: #10b981; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"><i class="fa-solid fa-play" style="color: white; font-size: 10px;"></i></div>""",
-                            icon_size=(24, 24),
-                            icon_anchor=(12, 12)
-                        )
-                        folium.Marker(
-                            location=[lat_i, lon_i],
-                            popup=folium.Popup(popup_ruta, max_width=260),
-                            tooltip=f"Inicio Ruta: {usr}",
-                            icon=icon_inicio
-                        ).add_to(mapa_rutas)
-
-                    # --- MARCADOR DE FIN (MÁS CHICO CON BANDERA A CUADROS) ---
-                    elif orden_i == total_puntos_usr:
-                        popup_ruta = f"""
-                        <div style="font-size: 11px; line-height: 1.4; color: #000000;">
-                            <b style="color: #f43f5e;">🏁 FIN DE RUTA</b><br>
-                            <b>Instalador:</b> {nombre_usr} ({es_ext})<br>
-                            <b>Hora Fin:</b> {hora_r}<br>
-                            <b>Predio:</b> {predio_r}<br>
-                            <b>Serie Medidor:</b> {serie_r}<br>
-                            <b>Colonia:</b> {colonia_r}
-                        </div>
-                        """
-                        icon_fin = folium.DivIcon(
-                            html="""<div style="background-color: #f43f5e; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"><i class="fa-solid fa-flag-checkered" style="color: white; font-size: 10px;"></i></div>""",
-                            icon_size=(24, 24),
-                            icon_anchor=(12, 12)
-                        )
-                        folium.Marker(
-                            location=[lat_i, lon_i],
-                            popup=folium.Popup(popup_ruta, max_width=260),
-                            tooltip=f"Fin Ruta: {usr}",
-                            icon=icon_fin
-                        ).add_to(mapa_rutas)
-
-                    # --- PUNTOS INTERMEDIOS DE LA RUTA ---
+                        icon_inicio = folium.DivIcon(html='''<div style="background-color: #10b981; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"><i class="fa-solid fa-play" style="color: white; font-size: 10px;"></i></div>''', icon_size=(24, 24), icon_anchor=(12, 12))
+                        folium.Marker([lat_i, lon_i], popup=folium.Popup(f"<b>Inicio: {nombre_usr}</b><br>Hora: {hora_r}<br>Predio: {predio_r}", max_width=260), tooltip=f"Inicio Ruta: {usr}", icon=icon_inicio).add_to(mapa_rutas)
+                    elif orden_i == len(df_usr):
+                        icon_fin = folium.DivIcon(html='''<div style="background-color: #f43f5e; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"><i class="fa-solid fa-flag-checkered" style="color: white; font-size: 10px;"></i></div>''', icon_size=(24, 24), icon_anchor=(12, 12))
+                        folium.Marker([lat_i, lon_i], popup=folium.Popup(f"<b>Fin: {nombre_usr}</b><br>Hora: {hora_r}<br>Predio: {predio_r}", max_width=260), tooltip=f"Fin Ruta: {usr}", icon=icon_fin).add_to(mapa_rutas)
                     else:
-                        popup_ruta = f"""
-                        <div style="font-size: 11px; line-height: 1.4; color: #000000;">
-                            <b style="color: {c_usr};">#{orden_i} Punto Intermedio</b><br>
-                            <b>Instalador:</b> {nombre_usr} ({es_ext})<br>
-                            <b>Hora:</b> {hora_r}<br>
-                            <b>Predio:</b> {predio_r}<br>
-                            <b>Serie Medidor:</b> {serie_r}<br>
-                            <b>Colonia:</b> {colonia_r}
-                        </div>
-                        """
-                        folium.CircleMarker(
-                            location=[lat_i, lon_i],
-                            radius=3.5,
-                            color=c_usr,
-                            weight=1,
-                            fill=True,
-                            fill_color=c_usr,
-                            fill_opacity=0.85,
-                            popup=folium.Popup(popup_ruta, max_width=260),
-                        ).add_to(mapa_rutas)
+                        folium.CircleMarker([lat_i, lon_i], radius=3.5, color=c_usr, weight=1, fill=True, fill_color=c_usr, fill_opacity=0.85, popup=folium.Popup(f"<b>Punto #{orden_i}: {nombre_usr}</b><br>Hora: {hora_r}<br>Predio: {predio_r}", max_width=260)).add_to(mapa_rutas)
 
-            st_folium(
-                mapa_rutas,
-                width=None,
-                height=450,
-                key="mapa_rutas_diarias_instaladores",
-                returned_objects=[],
-            )
+            st_folium(mapa_rutas, width=None, height=450, key="mapa_rutas_diarias_instaladores", returned_objects=[])
 
     with col_t_ruta:
         with st.container(border=True):
-            st.markdown(
-                "<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>📊 Resumen de Instalaciones por Usuario / Personal</p>",
-                unsafe_allow_html=True,
-            )
+            st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>📊 Resumen de Instalaciones por Usuario</p>", unsafe_allow_html=True)
 
             if not df_rutas_filtrada.empty:
                 df_resumen_usr = df_rutas_filtrada.groupby(["usuarioNombre", "usuarioExterno"], as_index=False).agg(
@@ -1806,88 +1681,16 @@ with tab_rutas_diarias:
                 )
                 df_resumen_usr["Tipo Personal"] = np.where(df_resumen_usr["usuarioExterno"], "Externo", "Interno MIAA")
                 df_resumen_usr = df_resumen_usr.sort_values(by="Total_Instalaciones", ascending=False).drop(columns=["usuarioExterno"])
-                df_resumen_usr = df_resumen_usr.rename(columns={
-                    "usuarioNombre": "Instalador",
-                    "Total_Instalaciones": "Total",
-                    "Primera_Instalacion": "Inicio",
-                    "Ultima_Instalacion": "Fin",
-                })
+                df_resumen_usr = df_resumen_usr.rename(columns={"usuarioNombre": "Instalador", "Total_Instalaciones": "Total", "Primera_Instalacion": "Inicio", "Ultima_Instalacion": "Fin"})
 
                 st.dataframe(df_resumen_usr, use_container_width=True, hide_index=True, height=200)
 
-                fig_usr_bar = px.bar(
-                    df_resumen_usr,
-                    x="Total",
-                    y="Instalador",
-                    orientation="h",
-                    text="Total",
-                    color="Tipo Personal",
-                    color_discrete_map={"Externo": "#f59e0b", "Interno MIAA": "#10b981"},
-                )
+                fig_usr_bar = px.bar(df_resumen_usr, x="Total", y="Instalador", orientation="h", text="Total", color="Tipo Personal", color_discrete_map={"Externo": "#f59e0b", "Interno MIAA": "#10b981"})
                 fig_usr_bar.update_traces(textposition="outside", textfont_size=10)
-                fig_usr_bar.update_layout(
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    font_color="#ffffff",
-                    margin=dict(t=10, b=5, l=5, r=25),
-                    height=210,
-                    xaxis=dict(showgrid=False, title=None),
-                    yaxis=dict(showgrid=False, title=None, categoryorder="total ascending"),
-                    legend=dict(orientation="h", y=1.1, x=0),
-                )
+                fig_usr_bar.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="#ffffff", margin=dict(t=10, b=5, l=5, r=25), height=210, xaxis=dict(showgrid=False, title=None), yaxis=dict(showgrid=False, title=None, categoryorder="total ascending"), legend=dict(orientation="h", y=1.1, x=0))
                 st.plotly_chart(fig_usr_bar, use_container_width=True, key="grafico_barras_instaladores_ruta")
             else:
-                st.info("No se registraron instalaciones para la fecha u opciones elegidas.")
-
-    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
-
-    with st.container(border=True):
-        st.markdown(
-            "<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>📋 Detalle Cronológico de Instalaciones de la Ruta</p>",
-            unsafe_allow_html=True,
-        )
-
-        if not df_rutas_filtrada.empty:
-            df_tabla_rutas = df_rutas_filtrada.sort_values("fecha_dt", ascending=False).copy()
-
-            df_tabla_rutas["Hora"] = df_tabla_rutas["fecha_dt"].dt.strftime("%H:%M:%S")
-            df_tabla_rutas["Tipo_Personal"] = np.where(df_tabla_rutas["usuarioExterno"], "Externo", "Interno MIAA")
-
-            cols_ruta_mostrar = []
-            cand_cols_ruta = [
-                "Hora",
-                "usuarioNombre",
-                "Tipo_Personal",
-                "nombreCliente",
-                "predio_viv",
-                "domicilio",
-                "colonia",
-                "serie",
-                "serieMedidor",
-                "tipo_instalacion_nombre",
-                "anomalia_nombre",
-            ]
-            for c in cand_cols_ruta:
-                if c in df_tabla_rutas.columns and c not in cols_ruta_mostrar:
-                    cols_ruta_mostrar.append(c)
-
-            st.dataframe(
-                df_tabla_rutas[cols_ruta_mostrar].rename(columns={
-                    "usuarioNombre": "Instalador",
-                    "Tipo_Personal": "Personal",
-                    "nombreCliente": "Cliente",
-                    "predio_viv": "Predio",
-                    "domicilio": "Domicilio",
-                    "colonia": "Colonia",
-                    "tipo_instalacion_nombre": "Lugar",
-                    "anomalia_nombre": "Anomalía",
-                }),
-                use_container_width=True,
-                hide_index=True,
-                height=320,
-            )
-        else:
-            st.info("No hay detalle de registros para la fecha seleccionada.")
+                st.info("No hay instaladores activos en el mapa.")
 
 # ------------------------------------------------------------------------------
 # SECCIÓN 10 PESTAÑA: ANÁLISIS DE ANOMALÍAS
