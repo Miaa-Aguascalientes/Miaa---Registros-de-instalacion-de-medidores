@@ -1548,42 +1548,34 @@ with tab_rutas_diarias:
             df_rutas_dia = df_rutas_dia[df_rutas_dia["usuarioExterno"]]
 
     # ==============================================================================
-    # EXPANDER CON LISTBOX DE CHECKBOXES PARA FILTRAR INSTALADORES
+    # EXPANDER CON LISTBOX DE CHECKBOXES PARA FILTRAR INSTALADORES (SIN BOTONES)
     # ==============================================================================
     usuarios_disponibles = sorted(df_rutas_dia["usuarioNombre"].unique().tolist()) if not df_rutas_dia.empty else []
 
     with st.expander("👷‍♂️ Filtrar y Seleccionar Instaladores en el Mapa", expanded=False):
-        col_btn_all, col_btn_none, _ = st.columns([1, 1, 4])
-        if col_btn_all.button("Marcar Todos", key="btn_all_inst_map"):
-            for usr in usuarios_disponibles:
-                st.session_state[f"chk_map_usr_{usr}"] = True
-        if col_btn_none.button("Desmarcar Todos", key="btn_none_inst_map"):
-            for usr in usuarios_disponibles:
-                st.session_state[f"chk_map_usr_{usr}"] = False
-
-        st.markdown("<div style='margin-top: 5px;'></div>", unsafe_allow_html=True)
-
         if usuarios_disponibles:
             cols_check = st.columns(4)
-            usuarios_activos_mapa = []
+            usuarios_seleccionados_manual = []
             
             for i, usr in enumerate(usuarios_disponibles):
                 session_key = f"chk_map_usr_{usr}"
                 if session_key not in st.session_state:
-                    st.session_state[session_key] = True
+                    st.session_state[session_key] = False
                 
                 with cols_check[i % 4]:
                     estado_chk = st.checkbox(f"{usr}", key=session_key)
                     if estado_chk:
-                        usuarios_activos_mapa.append(usr)
+                        usuarios_seleccionados_manual.append(usr)
         else:
-            usuarios_activos_mapa = []
+            usuarios_seleccionados_manual = []
             st.info("No hay instaladores disponibles para la fecha seleccionada.")
 
-    if usuarios_activos_mapa and not df_rutas_dia.empty:
-        df_rutas_filtrada = df_rutas_dia[df_rutas_dia["usuarioNombre"].isin(usuarios_activos_mapa)].copy()
+    if usuarios_seleccionados_manual and not df_rutas_dia.empty:
+        df_rutas_filtrada = df_rutas_dia[df_rutas_dia["usuarioNombre"].isin(usuarios_seleccionados_manual)].copy()
+        usuarios_activos_mapa = usuarios_seleccionados_manual
     else:
-        df_rutas_filtrada = pd.DataFrame(columns=df_rutas_dia.columns if not df_rutas_dia.empty else [])
+        df_rutas_filtrada = df_rutas_dia.copy()
+        usuarios_activos_mapa = usuarios_disponibles
 
     tot_inst_ruta = len(df_rutas_filtrada)
     tot_instaladores_act = len(usuarios_activos_mapa)
@@ -1664,7 +1656,6 @@ with tab_rutas_diarias:
                     colonia_r = str(row_r.get("colonia", "N/A"))
                     lugar_r = str(row_r.get("tipo_instalacion_nombre", row_r.get("lugarInstalacion", "N/A")))
                     
-                    # EXTRACCIÓN 100% BLINDADA PARA EVITAR QUE SEA UNA SERIE DE PANDAS
                     anom_raw = row_r["anomalia_nombre"] if "anomalia_nombre" in row_r else "SIN ANOMALÍA / REGULAR"
                     if isinstance(anom_raw, pd.Series):
                         anom_raw = anom_raw.iloc[0]
@@ -1672,7 +1663,6 @@ with tab_rutas_diarias:
                     
                     hora_r = row_r["fecha_dt"].strftime("%H:%M:%S") if pd.notna(row_r["fecha_dt"]) else "N/A"
 
-                    # EVALUACIÓN SEGURA CON STRINGS PLANOS
                     anom_upper = anomalia_r.upper()
                     es_normal = (
                         anom_upper == "" 
