@@ -1664,13 +1664,12 @@ with tab_rutas_diarias:
             usuarios_unicos_mapa = df_mapa_ruta["usuarioNombre"].unique().tolist() if not df_mapa_ruta.empty else []
             mapa_color_usuario = {usr: paleta_colores_ext[i % len(paleta_colores_ext)] for i, usr in enumerate(usuarios_unicos_mapa)}
 
-            # CREAR UN GRUPO DE CAPA (FEATURE GROUP) INDEPENDIENTE POR CADA INSTALADOR
+            # GRUPO GENERAL PARA CONTROL DE CAPAS ESTABLE
+            capa_general_rutas = folium.FeatureGroup(name="🛣️ Todas las Rutas", overlay=True, control=True).add_to(mapa_rutas)
+
             for usr in usuarios_unicos_mapa:
                 df_usr = df_mapa_ruta[df_mapa_ruta["usuarioNombre"] == usr].sort_values("fecha_dt")
                 c_usr = mapa_color_usuario[usr]
-
-                # Capa interactiva para este usuario en el control de capas del mapa
-                capa_usuario = folium.FeatureGroup(name=f"👤 {usr}", overlay=True, control=True)
 
                 puntos_linea = []
                 total_puntos_usr = len(df_usr)
@@ -1686,7 +1685,7 @@ with tab_rutas_diarias:
                         weight=2.5,
                         opacity=0.4,
                         tooltip=f"Ruta de {usr}",
-                    ).add_to(capa_usuario)
+                    ).add_to(capa_general_rutas)
 
                     AntPath(
                         locations=puntos_linea,
@@ -1699,7 +1698,7 @@ with tab_rutas_diarias:
                         hardware_acceleration=True,
                         symbol="▶", 
                         tooltip=f"Sentido del recorrido: {usr}"
-                    ).add_to(capa_usuario)
+                    ).add_to(capa_general_rutas)
 
                 for orden_i, (_, row_r) in enumerate(df_usr.iterrows(), start=1):
                     lat_i, lon_i = float(row_r["latitud"]), float(row_r["longitud"])
@@ -1732,7 +1731,7 @@ with tab_rutas_diarias:
                             popup=folium.Popup(popup_ruta, max_width=260),
                             tooltip=f"Inicio Ruta: {usr}",
                             icon=icon_inicio
-                        ).add_to(capa_usuario)
+                        ).add_to(capa_general_rutas)
 
                     elif orden_i == total_puntos_usr:
                         popup_ruta = f"""
@@ -1755,7 +1754,7 @@ with tab_rutas_diarias:
                             popup=folium.Popup(popup_ruta, max_width=260),
                             tooltip=f"Fin Ruta: {usr}",
                             icon=icon_fin
-                        ).add_to(capa_usuario)
+                        ).add_to(capa_general_rutas)
 
                     else:
                         popup_ruta = f"""
@@ -1777,12 +1776,8 @@ with tab_rutas_diarias:
                             fill_color=c_usr,
                             fill_opacity=0.85,
                             popup=folium.Popup(popup_ruta, max_width=260),
-                        ).add_to(capa_usuario)
+                        ).add_to(capa_general_rutas)
 
-                # Añadir la capa del instalador al mapa
-                capa_usuario.add_to(mapa_rutas)
-
-            # Agregar el control interactivo de capas (el menú flotante del mapa para activar/desactivar rutas)
             folium.LayerControl(position="topright", collapsed=False).add_to(mapa_rutas)
 
             st_folium(
