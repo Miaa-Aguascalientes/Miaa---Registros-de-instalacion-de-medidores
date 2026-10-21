@@ -1533,7 +1533,7 @@ with tab_rutas_diarias:
             fecha_sel_rutas = st.date_input(
                 "Seleccionar Fecha para Ruta",
                 value=max_fecha_ruta,
-                key="filtro_fecha_diaria_rutas",
+                key="filtro_fecha_diaria_rutas_tab",
             )
 
         with col_r2:
@@ -1541,15 +1541,16 @@ with tab_rutas_diarias:
                 "Tipo de Personal",
                 options=["Todos", "Interno MIAA", "Externo"],
                 index=0,
-                key="filtro_tipo_personal_rutas",
+                key="filtro_tipo_personal_rutas_tab",
             )
 
-        df_rutas_dia = df_rutas_base[df_rutas_base["fecha_dt"].dt.date == fecha_sel_rutas].copy()
+        df_rutas_dia = df_rutas_base[df_rutas_base["fecha_dt"].dt.date == fecha_sel_rutas].copy() if not df_rutas_base.empty else pd.DataFrame()
 
-        if tipo_personal_sel == "Interno MIAA":
-            df_rutas_dia = df_rutas_dia[~df_rutas_dia["usuarioExterno"]]
-        elif tipo_personal_sel == "Externo":
-            df_rutas_dia = df_rutas_dia[df_rutas_dia["usuarioExterno"]]
+        if not df_rutas_dia.empty:
+            if tipo_personal_sel == "Interno MIAA":
+                df_rutas_dia = df_rutas_dia[~df_rutas_dia["usuarioExterno"]]
+            elif tipo_personal_sel == "Externo":
+                df_rutas_dia = df_rutas_dia[df_rutas_dia["usuarioExterno"]]
 
         usuarios_disponibles = sorted(df_rutas_dia["usuarioNombre"].unique().tolist()) if not df_rutas_dia.empty else []
 
@@ -1558,20 +1559,19 @@ with tab_rutas_diarias:
                 "Filtrar por Personal / Instalador (usuarioNombre)",
                 options=usuarios_disponibles,
                 default=usuarios_disponibles,
-                key="filtro_usuarios_multiselect_rutas",
+                key="filtro_usuarios_multiselect_rutas_tab",
             )
 
     if usuario_sel_rutas and not df_rutas_dia.empty:
         df_rutas_filtrada = df_rutas_dia[df_rutas_dia["usuarioNombre"].isin(usuario_sel_rutas)].copy()
     else:
-        df_rutas_filtrada = df_rutas_dia.copy() if usuario_sel_rutas else pd.DataFrame()
+        df_rutas_filtrada = pd.DataFrame(columns=df.columns if not df.empty else [])
 
     tot_inst_ruta = len(df_rutas_filtrada)
     tot_instaladores_act = df_rutas_filtrada["usuarioNombre"].nunique() if not df_rutas_filtrada.empty else 0
     prom_inst_persona = round(tot_inst_ruta / tot_instaladores_act, 1) if tot_instaladores_act > 0 else 0.0
 
     if not df_rutas_filtrada.empty:
-        df_rutas_filtrada["hora_dt"] = df_rutas_filtrada["fecha_dt"].dt.time
         hora_primera = df_rutas_filtrada["fecha_dt"].min().strftime("%H:%M")
         hora_ultima = df_rutas_filtrada["fecha_dt"].max().strftime("%H:%M")
         rango_horario_str = f"{hora_primera} - {hora_ultima}"
@@ -1654,7 +1654,6 @@ with tab_rutas_diarias:
             mapa_rutas = folium.Map(location=[r_lat_c, r_lon_c], zoom_start=13, tiles=None)
             agregar_capas_base(mapa_rutas)
 
-            # PALETA EXTENDIDA DE COLORES HEX ÚNICOS
             paleta_colores_ext = [
                 "#38bdf8", "#4ade80", "#f59e0b", "#a855f7", "#f43f5e",
                 "#06b6d4", "#84cc16", "#ec4899", "#6366f1", "#14b8a6",
@@ -1665,9 +1664,13 @@ with tab_rutas_diarias:
             usuarios_unicos_mapa = df_mapa_ruta["usuarioNombre"].unique().tolist() if not df_mapa_ruta.empty else []
             mapa_color_usuario = {usr: paleta_colores_ext[i % len(paleta_colores_ext)] for i, usr in enumerate(usuarios_unicos_mapa)}
 
+            # CREAR UN GRUPO DE CAPA (FEATURE GROUP) INDEPENDIENTE POR CADA INSTALADOR
             for usr in usuarios_unicos_mapa:
                 df_usr = df_mapa_ruta[df_mapa_ruta["usuarioNombre"] == usr].sort_values("fecha_dt")
                 c_usr = mapa_color_usuario[usr]
+
+                # Capa interactiva para este usuario en el control de capas del mapa
+                capa_usuario = folium.FeatureGroup(name=f"👤 {usr}", overlay=True, control=True)
 
                 puntos_linea = []
                 total_puntos_usr = len(df_usr)
@@ -1676,18 +1679,15 @@ with tab_rutas_diarias:
                     lat_i, lon_i = float(row_r["latitud"]), float(row_r["longitud"])
                     puntos_linea.append([lat_i, lon_i])
 
-                # --- DIBUJAR LÍNEA BASE Y FLECHAS ANIMADAS DE DIRECCIÓN ---
                 if len(puntos_linea) > 1:
-                    # Línea base sutil de fondo
                     folium.PolyLine(
                         puntos_linea,
                         color=c_usr,
                         weight=2.5,
                         opacity=0.4,
                         tooltip=f"Ruta de {usr}",
-                    ).add_to(mapa_rutas)
+                    ).add_to(capa_usuario)
 
-                    # AntPath configurado con flechas en movimiento (símbolo '▶')
                     AntPath(
                         locations=puntos_linea,
                         color=c_usr,
@@ -1699,9 +1699,8 @@ with tab_rutas_diarias:
                         hardware_acceleration=True,
                         symbol="▶", 
                         tooltip=f"Sentido del recorrido: {usr}"
-                    ).add_to(mapa_rutas)
+                    ).add_to(capa_usuario)
 
-                # Ciclo para colocar los marcadores de inicio, fin e intermedios
                 for orden_i, (_, row_r) in enumerate(df_usr.iterrows(), start=1):
                     lat_i, lon_i = float(row_r["latitud"]), float(row_r["longitud"])
 
@@ -1712,7 +1711,6 @@ with tab_rutas_diarias:
                     hora_r = row_r["fecha_dt"].strftime("%H:%M:%S") if pd.notna(row_r["fecha_dt"]) else "N/A"
                     colonia_r = str(row_r.get("colonia", "N/A"))
 
-                    # --- MARCADOR DE INICIO (MÁS CHICO CON ICONO DE PLAY) ---
                     if orden_i == 1:
                         popup_ruta = f"""
                         <div style="font-size: 11px; line-height: 1.4; color: #000000;">
@@ -1734,9 +1732,8 @@ with tab_rutas_diarias:
                             popup=folium.Popup(popup_ruta, max_width=260),
                             tooltip=f"Inicio Ruta: {usr}",
                             icon=icon_inicio
-                        ).add_to(mapa_rutas)
+                        ).add_to(capa_usuario)
 
-                    # --- MARCADOR DE FIN (MÁS CHICO CON BANDERA A CUADROS) ---
                     elif orden_i == total_puntos_usr:
                         popup_ruta = f"""
                         <div style="font-size: 11px; line-height: 1.4; color: #000000;">
@@ -1758,9 +1755,8 @@ with tab_rutas_diarias:
                             popup=folium.Popup(popup_ruta, max_width=260),
                             tooltip=f"Fin Ruta: {usr}",
                             icon=icon_fin
-                        ).add_to(mapa_rutas)
+                        ).add_to(capa_usuario)
 
-                    # --- PUNTOS INTERMEDIOS DE LA RUTA ---
                     else:
                         popup_ruta = f"""
                         <div style="font-size: 11px; line-height: 1.4; color: #000000;">
@@ -1781,7 +1777,13 @@ with tab_rutas_diarias:
                             fill_color=c_usr,
                             fill_opacity=0.85,
                             popup=folium.Popup(popup_ruta, max_width=260),
-                        ).add_to(mapa_rutas)
+                        ).add_to(capa_usuario)
+
+                # Añadir la capa del instalador al mapa
+                capa_usuario.add_to(mapa_rutas)
+
+            # Agregar el control interactivo de capas (el menú flotante del mapa para activar/desactivar rutas)
+            folium.LayerControl(position="topright", collapsed=False).add_to(mapa_rutas)
 
             st_folium(
                 mapa_rutas,
@@ -1838,6 +1840,56 @@ with tab_rutas_diarias:
                 st.plotly_chart(fig_usr_bar, use_container_width=True, key="grafico_barras_instaladores_ruta")
             else:
                 st.info("No se registraron instalaciones para la fecha u opciones elegidas.")
+
+    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
+
+    with st.container(border=True):
+        st.markdown(
+            "<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>📋 Detalle Cronológico de Instalaciones de la Ruta</p>",
+            unsafe_allow_html=True,
+        )
+
+        if not df_rutas_filtrada.empty:
+            df_tabla_rutas = df_rutas_filtrada.sort_values("fecha_dt", ascending=False).copy()
+
+            df_tabla_rutas["Hora"] = df_tabla_rutas["fecha_dt"].dt.strftime("%H:%M:%S")
+            df_tabla_rutas["Tipo_Personal"] = np.where(df_tabla_rutas["usuarioExterno"], "Externo", "Interno MIAA")
+
+            cols_ruta_mostrar = []
+            cand_cols_ruta = [
+                "Hora",
+                "usuarioNombre",
+                "Tipo_Personal",
+                "nombreCliente",
+                "predio_viv",
+                "domicilio",
+                "colonia",
+                "serie",
+                "serieMedidor",
+                "tipo_instalacion_nombre",
+                "anomalia_nombre",
+            ]
+            for c in cand_cols_ruta:
+                if c in df_tabla_rutas.columns and c not in cols_ruta_mostrar:
+                    cols_ruta_mostrar.append(c)
+
+            st.dataframe(
+                df_tabla_rutas[cols_ruta_mostrar].rename(columns={
+                    "usuarioNombre": "Instalador",
+                    "Tipo_Personal": "Personal",
+                    "nombreCliente": "Cliente",
+                    "predio_viv": "Predio",
+                    "domicilio": "Domicilio",
+                    "colonia": "Colonia",
+                    "tipo_instalacion_nombre": "Lugar",
+                    "anomalia_nombre": "Anomalía",
+                }),
+                use_container_width=True,
+                hide_index=True,
+                height=320,
+            )
+        else:
+            st.info("No hay detalle de registros para la fecha seleccionada.")
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
