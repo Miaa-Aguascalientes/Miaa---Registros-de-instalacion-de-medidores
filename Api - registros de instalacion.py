@@ -569,7 +569,7 @@ st.sidebar.markdown("---")
 
 st.sidebar.subheader("Estado de Conexión API")
 
-if st.sidebar.button("🔄 Reconectar API", use_container_width=True):
+if st.sidebar.button("🔄 Reconectar API", use_container_width=True, key="btn_reconectar_api_global"):
     st.cache_data.clear()
     if "datos_instalaciones" in st.session_state:
         del st.session_state["datos_instalaciones"]
@@ -601,6 +601,7 @@ opcion_periodo = st.sidebar.selectbox(
         "El año pasado",
     ],
     index=4,
+    key="select_rango_fechas_global",
 )
 
 if not df.empty and "fecha_dt" in df.columns and not df["fecha_dt"].isna().all():
@@ -643,8 +644,8 @@ for p in lista_poligonos:
         st.session_state[f"chk_pol_{p}"] = True
 
 col_c1, col_c2 = st.sidebar.columns(2)
-seleccionar_todos = col_c1.button("Marcar todos")
-deseleccionar_todos = col_c2.button("Desmarcar")
+seleccionar_todos = col_c1.button("Marcar todos", key="btn_marcar_todos_global")
+deseleccionar_todos = col_c2.button("Desmarcar", key="btn_desmarcar_todos_global")
 
 if seleccionar_todos:
     for p in lista_poligonos:
@@ -1161,7 +1162,7 @@ with tab_principal:
             busqueda_global_inst = st.text_input(
                 "Buscar en cualquier registro (Predio, Cliente, Serie, Domicilio, etc.)",
                 placeholder="Ej. 502934-1, VAZQUEZ, 222608...",
-                key="filtro_texto_global_inst",
+                key="filtro_texto_global_inst_tab_prin",
             )
 
             df_filtrado_global = df_todos_inst.copy()
@@ -1184,7 +1185,6 @@ with tab_principal:
                     unsafe_allow_html=True,
                 )
 
-                # EL MAPA AHORA SÍ LEE EL FILTRADO GLOBAL QUE ESTÁ ARRIBA
                 df_fuente_mapa = df_filtrado_global if not df_filtrado_global.empty else df_filtrado
 
                 df_mapa_valido = (
@@ -1326,7 +1326,7 @@ with tab_principal:
                     mapa_miaa,
                     width=None,
                     height=320,
-                    key="mapa_estatico_instalaciones",
+                    key="mapa_estatico_instalaciones_dash_prin",
                     returned_objects=[],
                 )
 
@@ -1438,7 +1438,7 @@ with tab_principal:
                 )
 
     # ==============================================================================
-    # SECCIÓN 9.1 (CONT.) RENDERIZADO DE LA TABLA PAGINADA ABAJO
+    # SECCIÓN 9 (CONT.) RENDERIZADO DE LA TABLA PAGINADA ABAJO
     # ==============================================================================
     with st.container(border=True):
         total_registros_filtrados = len(df_filtrado_global)
@@ -1453,7 +1453,7 @@ with tab_principal:
                     f"Seleccionar Hoja / Página (Total registros: {total_registros_filtrados:,})",
                     options=list(range(1, total_paginas + 1)),
                     format_func=lambda x: f"Hoja {x} de {total_paginas} (Registros {(x-1)*TAMANO_PAGINA + 1} al {min(x*TAMANO_PAGINA, total_registros_filtrados)})",
-                    key="select_pagina_registros",
+                    key="select_pagina_registros_dash_prin",
                 )
             with col_pag2:
                 st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 10 por hoja</div>", unsafe_allow_html=True)
@@ -1503,7 +1503,7 @@ with tab_principal:
             st.info("No se encontraron registros que coincidan con la búsqueda.")
 
 # ------------------------------------------------------------------------------
-# SECCIÓN 9.2 PESTAÑA: SEGUIMIENTO DIARIO DE RUTAS E INSTALADORES
+# SECCIÓN 9.5 PESTAÑA: SEGUIMIENTO DIARIO DE RUTAS E INSTALADORES
 # ------------------------------------------------------------------------------
 with tab_rutas_diarias:
     st.markdown(
@@ -1532,7 +1532,7 @@ with tab_rutas_diarias:
             fecha_sel_rutas = st.date_input(
                 "Seleccionar Fecha para Ruta",
                 value=max_fecha_ruta,
-                key="filtro_fecha_diaria_rutas",
+                key="filtro_fecha_diaria_rutas_tab",
             )
 
         with col_r2:
@@ -1540,7 +1540,7 @@ with tab_rutas_diarias:
                 "Tipo de Personal",
                 options=["Todos", "Interno MIAA", "Externo"],
                 index=0,
-                key="filtro_tipo_personal_rutas",
+                key="filtro_tipo_personal_rutas_tab",
             )
 
         df_rutas_dia = df_rutas_base[df_rutas_base["fecha_dt"].dt.date == fecha_sel_rutas].copy()
@@ -1557,7 +1557,7 @@ with tab_rutas_diarias:
                 "Filtrar por Personal / Instalador (usuarioNombre)",
                 options=usuarios_disponibles,
                 default=usuarios_disponibles,
-                key="filtro_usuarios_multiselect_rutas",
+                key="filtro_usuarios_multiselect_rutas_tab",
             )
 
     if usuario_sel_rutas and not df_rutas_dia.empty:
@@ -2167,15 +2167,15 @@ with tab_poligonos:
     with col_c_izq:
         with st.container(border=True):
             st.markdown(
-                "<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Seleccionar Polígonos (FID)</p>",
+                "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Seleccionar Polígonos (FID)</p>",
                 unsafe_allow_html=True,
             )
 
             b_col1, b_col2 = st.columns(2)
-            if b_col1.button("Todos", key="btn_all_fids_ref"):
+            if b_col1.button("Todos", key="btn_all_fids_ref_tab"):
                 for f_id in fids_disponibles:
                     st.session_state[f"map_fid_chk_{f_id}"] = True
-            if b_col2.button("Ninguno", key="btn_none_fids_ref"):
+            if b_col2.button("Ninguno", key="btn_none_fids_ref_tab"):
                 for f_id in fids_disponibles:
                     st.session_state[f"map_fid_chk_{f_id}"] = False
 
@@ -2183,6 +2183,7 @@ with tab_poligonos:
                 "Buscar FID...",
                 placeholder="Buscar FID...",
                 label_visibility="collapsed",
+                key="busqueda_fid_input_tab",
             )
             st.markdown("<div style='margin-bottom: 4px;'></div>", unsafe_allow_html=True)
 
@@ -2205,7 +2206,7 @@ with tab_poligonos:
     with col_c_centro:
         with st.container(border=True):
             st.markdown(
-                "<p style='font-size:12px; font-weight:bold; margin-bottom:2px;'>Mapa de Polígonos de Instalación</p>",
+                "<p style='font-size:12px; margin-bottom:2px;'>Mapa de Polígonos de Instalación</p>",
                 unsafe_allow_html=True,
             )
 
@@ -2679,7 +2680,7 @@ with tab_personal:
                 errors="ignore",
             )
 
-            busqueda_ext = st.text_input("Buscar en Personal Externo...", placeholder="Ej. Predio, Nombre, Serie...", key="filtro_ext_global")
+            busqueda_ext = st.text_input("Buscar en Personal Externo...", placeholder="Ej. Predio, Nombre, Serie...", key="filtro_ext_global_tab")
             if busqueda_ext:
                 b_ext_txt = busqueda_ext.lower()
                 mask_ext = df_tabla_ext.astype(str).apply(lambda row: row.str.lower().str.contains(b_ext_txt).any(), axis=1)
@@ -2691,7 +2692,7 @@ with tab_personal:
                 tot_pag_ext = math.ceil(total_reg_ext / tam_pag_ext)
                 col_p1, col_p2 = st.columns([2, 1])
                 with col_p1:
-                    pag_ext_act = st.selectbox("Hoja / Página (Externo)", options=list(range(1, tot_pag_ext + 1)), format_func=lambda x: f"Hoja {x} de {tot_pag_ext} (Registros {(x-1)*tam_pag_ext + 1} al {min(x*tam_pag_ext, total_reg_ext)})", key="pag_ext_sel")
+                    pag_ext_act = st.selectbox("Hoja / Página (Externo)", options=list(range(1, tot_pag_ext + 1)), format_func=lambda x: f"Hoja {x} de {tot_pag_ext} (Registros {(x-1)*tam_pag_ext + 1} al {min(x*tam_pag_ext, total_reg_ext)})", key="pag_ext_sel_tab")
                 with col_p2:
                     st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 10 por hoja</div>", unsafe_allow_html=True)
 
@@ -2932,7 +2933,7 @@ with tab_personal:
                 errors="ignore",
             )
 
-            busqueda_miaa_p = st.text_input("Buscar en Personal MIAA...", placeholder="Ej. Predio, Nombre, Serie...", key="filtro_miaa_global")
+            busqueda_miaa_p = st.text_input("Buscar en Personal MIAA...", placeholder="Ej. Predio, Nombre, Serie...", key="filtro_miaa_global_tab")
             if busqueda_miaa_p:
                 b_miaa_txt = busqueda_miaa_p.lower()
                 mask_miaa = df_tabla_miaa.astype(str).apply(lambda row: row.str.lower().str.contains(b_miaa_txt).any(), axis=1)
@@ -2944,7 +2945,7 @@ with tab_personal:
                 tot_pag_miaa = math.ceil(total_reg_miaa / tam_pag_miaa)
                 col_m1, col_m2 = st.columns([2, 1])
                 with col_m1:
-                    pag_miaa_act = st.selectbox("Hoja / Página (MIAA)", options=list(range(1, tot_pag_miaa + 1)), format_func=lambda x: f"Hoja {x} de {tot_pag_miaa} (Registros {(x-1)*tam_pag_miaa + 1} al {min(x*tam_pag_miaa, total_reg_miaa)})", key="pag_miaa_sel")
+                    pag_miaa_act = st.selectbox("Hoja / Página (MIAA)", options=list(range(1, tot_pag_miaa + 1)), format_func=lambda x: f"Hoja {x} de {tot_pag_miaa} (Registros {(x-1)*tam_pag_miaa + 1} al {min(x*tam_pag_miaa, total_reg_miaa)})", key="pag_miaa_sel_tab")
                 with col_m2:
                     st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 10 por hoja</div>", unsafe_allow_html=True)
 
@@ -3005,19 +3006,19 @@ with tab_tabla:
             filtro_serie = st.text_input(
                 "Filtrar por Número de Serie",
                 placeholder="Ej. _Serie...",
-                key="filtro_tab_serie_miaa",
+                key="filtro_tab_serie_miaa_tab",
             )
         with col_f2:
             filtro_medidor = st.text_input(
                 "Filtrar por Número de Medidor",
                 placeholder="Ej. Medidor...",
-                key="filtro_tab_medidor_miaa",
+                key="filtro_tab_medidor_miaa_tab",
             )
         with col_f3:
             filtro_predio = st.text_input(
                 "Filtrar por Predio",
                 placeholder="Ej. Predio_Viv...",
-                key="filtro_tab_predio_miaa",
+                key="filtro_tab_predio_miaa_tab",
             )
 
     df_tabla_filtrada = df_usuarios_miaa_medidor.copy()
@@ -3169,7 +3170,7 @@ with tab_tabla:
             mapa_tabla_tab,
             width=None,
             height=350,
-            key="mapa_usuarios_miaa_conmedidor_geom_final",
+            key="mapa_usuarios_miaa_conmedidor_geom_final_tab",
             returned_objects=[],
         )
 
@@ -3185,7 +3186,7 @@ with tab_tabla:
                 f"Seleccionar Hoja / Página (Total registros filtrados: {total_registros_tabla:,})",
                 options=list(range(1, total_paginas_bd + 1)),
                 format_func=lambda x: f"Hoja {x} de {total_paginas_bd} (Registros {(x-1)*TAMANO_PAGINA_BD + 1} al {min(x*TAMANO_PAGINA_BD, total_registros_tabla)})",
-                key="select_pagina_bd_completa",
+                key="select_pagina_bd_completa_tab",
             )
         with col_p_bd2:
             st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 10 por hoja</div>", unsafe_allow_html=True)
