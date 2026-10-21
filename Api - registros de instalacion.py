@@ -1639,7 +1639,7 @@ with tab_rutas_diarias:
     with col_m_ruta:
         with st.container(border=True):
             st.markdown(
-                f"<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>🗺️ Mapa de Rutas Diarias por Personal ({fecha_sel_rutas.strftime('%d/%m/%Y') if fecha_sel_rutas else ''})</p>",
+                f"<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>🗺️ Mapa 3D de Rutas Diarias por Personal ({fecha_sel_rutas.strftime('%d/%m/%Y') if fecha_sel_rutas else ''})</p>",
                 unsafe_allow_html=True,
             )
 
@@ -1651,59 +1651,31 @@ with tab_rutas_diarias:
             else:
                 r_lat_c, r_lon_c = lat_centro, lon_centro
 
-            mapa_rutas = folium.Map(location=[r_lat_c, r_lon_c], zoom_start=13, tiles=None)
-            agregar_capas_base(mapa_rutas)
-
             # PALETA EXTENDIDA DE COLORES HEX ÚNICOS
             paleta_colores_ext = [
-                "#38bdf8", "#4ade80", "#f59e0b", "#a855f7", "#f43f5e",
-                "#06b6d4", "#84cc16", "#ec4899", "#6366f1", "#14b8a6",
-                "#ff7043", "#ab47bc", "#26a69a", "#d4e157", "#ffa726",
-                "#78909c", "#8d6e63", "#26c6da", "#9ccc65", "#ffca28",
-                "#5c6bc0", "#e91e63", "#00e676", "#ff9100", "#d500f9"
+                [56, 189, 248], [74, 222, 128], [245, 158, 11], [168, 85, 247], [244, 63, 94],
+                [6, 182, 212], [132, 204, 22], [236, 72, 153], [99, 102, 241], [20, 184, 166],
+                [255, 112, 67], [171, 71, 188], [38, 166, 154], [212, 225, 87], [255, 167, 38],
+                [120, 144, 156], [141, 110, 99], [38, 198, 218], [156, 204, 101], [255, 202, 40],
+                [92, 107, 192], [233, 30, 99], [0, 230, 118], [255, 145, 0], [213, 0, 249]
             ]
+            
             usuarios_unicos_mapa = df_mapa_ruta["usuarioNombre"].unique().tolist() if not df_mapa_ruta.empty else []
             mapa_color_usuario = {usr: paleta_colores_ext[i % len(paleta_colores_ext)] for i, usr in enumerate(usuarios_unicos_mapa)}
 
+            paths_data = []
+            scatter_data = []
+
             for usr in usuarios_unicos_mapa:
                 df_usr = df_mapa_ruta[df_mapa_ruta["usuarioNombre"] == usr].sort_values("fecha_dt")
-                c_usr = mapa_color_usuario[usr]
+                c_rgb = mapa_color_usuario[usr]
 
-                puntos_linea = []
+                puntos_trayectoria = []
                 total_puntos_usr = len(df_usr)
 
-                for _, row_r in df_usr.iterrows():
-                    lat_i, lon_i = float(row_r["latitud"]), float(row_r["longitud"])
-                    puntos_linea.append([lat_i, lon_i])
-
-                # --- DIBUJAR LÍNEA BASE Y FLECHAS ANIMADAS DE DIRECCIÓN ---
-                if len(puntos_linea) > 1:
-                    # Línea base sutil de fondo
-                    folium.PolyLine(
-                        puntos_linea,
-                        color=c_usr,
-                        weight=2.5,
-                        opacity=0.4,
-                        tooltip=f"Ruta de {usr}",
-                    ).add_to(mapa_rutas)
-
-                    # AntPath configurado con flechas en movimiento (símbolo '▶')
-                    AntPath(
-                        locations=puntos_linea,
-                        color=c_usr,
-                        pulse_color="#ffffff",
-                        weight=4,
-                        opacity=0.9,
-                        dash_array=[15, 25],
-                        delay=800,
-                        hardware_acceleration=True,
-                        symbol="▶", 
-                        tooltip=f"Sentido del recorrido: {usr}"
-                    ).add_to(mapa_rutas)
-
-                # Ciclo para colocar los marcadores de inicio, fin e intermedios
                 for orden_i, (_, row_r) in enumerate(df_usr.iterrows(), start=1):
                     lat_i, lon_i = float(row_r["latitud"]), float(row_r["longitud"])
+                    puntos_trayectoria.append([lon_i, lat_i, 15.0]) # Coordenadas [lon, lat, altitud en 3D]
 
                     nombre_usr = str(row_r.get("usuarioNombre", "N/A"))
                     es_ext = "Externo" if row_r.get("usuarioExterno", False) else "Interno MIAA"
@@ -1712,84 +1684,85 @@ with tab_rutas_diarias:
                     hora_r = row_r["fecha_dt"].strftime("%H:%M:%S") if pd.notna(row_r["fecha_dt"]) else "N/A"
                     colonia_r = str(row_r.get("colonia", "N/A"))
 
-                    # --- MARCADOR DE INICIO (MÁS CHICO CON ICONO DE PLAY) ---
+                    # Clasificación de puntos para marcadores 3D
                     if orden_i == 1:
-                        popup_ruta = f"""
-                        <div style="font-size: 11px; line-height: 1.4; color: #000000;">
-                            <b style="color: #10b981;">🚩 INICIO DE RUTA</b><br>
-                            <b>Instalador:</b> {nombre_usr} ({es_ext})<br>
-                            <b>Hora Inicio:</b> {hora_r}<br>
-                            <b>Predio:</b> {predio_r}<br>
-                            <b>Serie Medidor:</b> {serie_r}<br>
-                            <b>Colonia:</b> {colonia_r}
-                        </div>
-                        """
-                        icon_inicio = folium.DivIcon(
-                            html="""<div style="background-color: #10b981; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"><i class="fa-solid fa-play" style="color: white; font-size: 10px;"></i></div>""",
-                            icon_size=(24, 24),
-                            icon_anchor=(12, 12)
-                        )
-                        folium.Marker(
-                            location=[lat_i, lon_i],
-                            popup=folium.Popup(popup_ruta, max_width=260),
-                            tooltip=f"Inicio Ruta: {usr}",
-                            icon=icon_inicio
-                        ).add_to(mapa_rutas)
-
-                    # --- MARCADOR DE FIN (MÁS CHICO CON BANDERA A CUADROS) ---
+                        tipo_pto = "🚩 INICIO DE RUTA"
+                        color_pto = [16, 185, 129, 255] # Verde
                     elif orden_i == total_puntos_usr:
-                        popup_ruta = f"""
-                        <div style="font-size: 11px; line-height: 1.4; color: #000000;">
-                            <b style="color: #f43f5e;">🏁 FIN DE RUTA</b><br>
-                            <b>Instalador:</b> {nombre_usr} ({es_ext})<br>
-                            <b>Hora Fin:</b> {hora_r}<br>
-                            <b>Predio:</b> {predio_r}<br>
-                            <b>Serie Medidor:</b> {serie_r}<br>
-                            <b>Colonia:</b> {colonia_r}
-                        </div>
-                        """
-                        icon_fin = folium.DivIcon(
-                            html="""<div style="background-color: #f43f5e; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"><i class="fa-solid fa-flag-checkered" style="color: white; font-size: 10px;"></i></div>""",
-                            icon_size=(24, 24),
-                            icon_anchor=(12, 12)
-                        )
-                        folium.Marker(
-                            location=[lat_i, lon_i],
-                            popup=folium.Popup(popup_ruta, max_width=260),
-                            tooltip=f"Fin Ruta: {usr}",
-                            icon=icon_fin
-                        ).add_to(mapa_rutas)
-
-                    # --- PUNTOS INTERMEDIOS DE LA RUTA ---
+                        tipo_pto = "🏁 FIN DE RUTA"
+                        color_pto = [244, 63, 94, 255] # Rojo
                     else:
-                        popup_ruta = f"""
-                        <div style="font-size: 11px; line-height: 1.4; color: #000000;">
-                            <b style="color: {c_usr};">#{orden_i} Punto Intermedio</b><br>
-                            <b>Instalador:</b> {nombre_usr} ({es_ext})<br>
-                            <b>Hora:</b> {hora_r}<br>
-                            <b>Predio:</b> {predio_r}<br>
-                            <b>Serie Medidor:</b> {serie_r}<br>
-                            <b>Colonia:</b> {colonia_r}
-                        </div>
-                        """
-                        folium.CircleMarker(
-                            location=[lat_i, lon_i],
-                            radius=3.5,
-                            color=c_usr,
-                            weight=1,
-                            fill=True,
-                            fill_color=c_usr,
-                            fill_opacity=0.85,
-                            popup=folium.Popup(popup_ruta, max_width=260),
-                        ).add_to(mapa_rutas)
+                        tipo_pto = f"#{orden_i} Punto Intermedio"
+                        color_pto = c_rgb + [200]
 
-            st_folium(
-                mapa_rutas,
-                width=None,
-                height=450,
-                key="mapa_rutas_diarias_instaladores",
-                returned_objects=[],
+                    scatter_data.append({
+                        "coordinates": [lon_i, lat_i, 20.0],
+                        "color": color_pto,
+                        "radius": 18 if (orden_i == 1 or orden_i == total_puntos_usr) else 8,
+                        "usuario": nombre_usr,
+                        "tipo": tipo_pto,
+                        "hora": hora_r,
+                        "predio": predio_r,
+                        "serie": serie_r,
+                        "colonia": colonia_r
+                    })
+
+                if len(puntos_trayectoria) > 1:
+                    paths_data.append({
+                        "path": puntos_trayectoria,
+                        "color": c_rgb + [220],
+                        "usuario": usr
+                    })
+
+            # Capa 3D para las líneas de las rutas
+            layer_path = pdk.Layer(
+                "PathLayer",
+                paths_data,
+                get_path="path",
+                get_color="color",
+                width_scale=4,
+                width_min_pixels=3,
+                pickable=True,
+                auto_highlight=True,
             )
+
+            # Capa 3D para los puntos (inicio, fin e intermedios) elevados
+            layer_scatter = pdk.Layer(
+                "ScatterplotLayer",
+                scatter_data,
+                get_position="coordinates",
+                get_fill_color="color",
+                get_radius="radius",
+                pickable=True,
+                auto_highlight=True,
+            )
+
+            # Configuración de la vista en 3D con inclinación (pitch y bearing)
+            r_3d = pdk.Deck(
+                layers=[layer_path, layer_scatter],
+                initial_view_state=pdk.ViewState(
+                    latitude=r_lat_c,
+                    longitude=r_lon_c,
+                    zoom=14,
+                    pitch=55,  # Inclinación tridimensional de la cámara
+                    bearing=15 # Rotación lateral para apreciar el relieve y volumen
+                ),
+                tooltip={
+                    "html": """
+                        <div style="font-size: 11px; line-height: 1.4; color: #ffffff; background: rgba(15, 23, 42, 0.95); padding: 8px; border-radius: 6px;">
+                            <b>{tipo}</b><br/>
+                            <b>Instalador:</b> {usuario}<br/>
+                            <b>Hora:</b> {hora}<br/>
+                            <b>Predio:</b> {predio}<br/>
+                            <b>Serie:</b> {serie}<br/>
+                            <b>Colonia:</b> {colonia}
+                        </div>
+                    """,
+                    "style": {"backgroundColor": "transparent"}
+                },
+            )
+
+            st.pydeck_chart(r_3d, use_container_width=True, height=450)
 
     with col_t_ruta:
         with st.container(border=True):
