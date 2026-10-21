@@ -333,37 +333,71 @@ def cargar_usuarios_miaa_conmedidor_db():
 # ==============================================================================
 
 
-def agregar_capas_base(m):
-    api_key = "cb1_26ji_1_864817f3cb73c0bdbe0daccd"
+def agregar_capas_base(mapa):
+    """
+    Agrega capas base estándar (OSM, CartoDB Oscuro/Claro, Satélite) 
+    y aplica un filtro CSS global para forzar letras blancas en el mapa oscuro.
+    """
+    import folium
 
-    folium.TileLayer(
-        tiles="OpenStreetMap",
-        name="OpenStreetMap",
-        max_zoom=19,
-    ).add_to(m)
-
-    folium.TileLayer(
-        tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-        attr="Google Satellite",
-        name="Satélite con Calles",
-        max_zoom=20,
-    ).add_to(m)
-
-    folium.TileLayer(
-        tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
-        name="Vista Nocturna",
+    # 1. Capa CartoDB Dark Matter (Fondo oscuro)
+    carto_dark = folium.TileLayer(
+        tiles="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
         attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains="abcd",
+        name="CartoDB Dark Matter",
         max_zoom=20,
-    ).add_to(m)
+        subkeys="abcd",
+        control=True
+    )
+    carto_dark.add_to(mapa)
 
-    folium.LayerControl(position="topleft").add_to(m)
+    # 2. Capa CartoDB Positron (Fondo claro alternativo)
+    carto_light = folium.TileLayer(
+        tiles="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        name="CartoDB Positron",
+        max_zoom=20,
+        subkeys="abcd",
+        control=True
+    )
+    carto_light.add_to(mapa)
+
+    # 3. Capa de Satélite (Esri World Imagery)
+    esri_sat = folium.TileLayer(
+        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        attr='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-egis, and GIS User Community',
+        name="Esri Satélite",
+        max_zoom=19,
+        control=True
+    )
+    esri_sat.add_to(mapa)
+
+    # Control de capas
+    folium.LayerControl(position="topleft").add_to(mapa)
 
     Fullscreen(
         position="topright",
         title="Ampliar Mapa",
         cancel_title="Salir de pantalla completa",
     ).add_to(m)
+
+    # ==============================================================================
+    # INYECCIÓN DE CSS PARA FORZAR LETRAS BLANCAS EN LAS CALLES (MAPA OSCURO)
+    # ==============================================================================
+    css_calteras_blancas = """
+    <style>
+        /* Invierte y aclara los nombres de las calles en los tiles oscuros de CartoDB */
+        .leaflet-tile-pane {
+            filter: brightness(1.3) contrast(1.2);
+        }
+        /* Opcional: Asegura que cualquier capa vectorial de texto sobresalga en blanco nítido */
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background-color: #0f172a !important;
+            color: #f8fafc !important;
+        }
+    </style>
+    """
+    mapa.get_root().html.add_child(folium.Element(css_calteras_blancas))
 
 
 # ==============================================================================
