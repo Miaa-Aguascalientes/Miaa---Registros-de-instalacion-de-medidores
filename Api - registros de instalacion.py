@@ -3,6 +3,7 @@ import json
 import math
 import folium
 from folium.plugins import Fullscreen
+from folium.plugins import Fullscreen, AntPath
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -1653,7 +1654,7 @@ with tab_rutas_diarias:
             mapa_rutas = folium.Map(location=[r_lat_c, r_lon_c], zoom_start=13, tiles=None)
             agregar_capas_base(mapa_rutas)
 
-            # PALETA EXTENDIDA DE 25 COLORES HEX NÚNICOS PARA QUE NINGÚN INSTALADOR REPITA COLOR
+            # PALETA EXTENDIDA DE COLORES HEX ÚNICOS
             paleta_colores_ext = [
                 "#38bdf8", "#4ade80", "#f59e0b", "#a855f7", "#f43f5e",
                 "#06b6d4", "#84cc16", "#ec4899", "#6366f1", "#14b8a6",
@@ -1682,49 +1683,87 @@ with tab_rutas_diarias:
                     hora_r = row_r["fecha_dt"].strftime("%H:%M:%S") if pd.notna(row_r["fecha_dt"]) else "N/A"
                     colonia_r = str(row_r.get("colonia", "N/A"))
 
-                    # IDENTIFICACIÓN DE INICIO Y FIN DE RUTA
+                    # --- MARCADOR DE INICIO (BANDERA VERDE / PLAY) ---
                     if orden_i == 1:
-                        etiqueta_pos = "🚩 INICIO DE RUTA"
-                        radio_p = 7
-                        fill_op = 1.0
+                        popup_ruta = f"""
+                        <div style="font-size: 11px; line-height: 1.4; color: #000000;">
+                            <b style="color: #10b981;">🚩 INICIO DE RUTA</b><br>
+                            <b>Instalador:</b> {nombre_usr} ({es_ext})<br>
+                            <b>Hora Inicio:</b> {hora_r}<br>
+                            <b>Predio:</b> {predio_r}<br>
+                            <b>Serie Medidor:</b> {serie_r}<br>
+                            <b>Colonia:</b> {colonia_r}
+                        </div>
+                        """
+                        folium.Marker(
+                            location=[lat_i, lon_i],
+                            popup=folium.Popup(popup_ruta, max_width=260),
+                            tooltip=f"Inicio Ruta: {usr}",
+                            icon=folium.Icon(color="green", icon="play", prefix="fa")
+                        ).add_to(mapa_rutas)
+
+                    # --- MARCADOR DE FIN (BANDERA A CUADROS / FLAG-CHECKERED) ---
                     elif orden_i == total_puntos_usr:
-                        etiqueta_pos = "🏁 FIN DE RUTA"
-                        radio_p = 7
-                        fill_op = 1.0
+                        popup_ruta = f"""
+                        <div style="font-size: 11px; line-height: 1.4; color: #000000;">
+                            <b style="color: #f43f5e;">🏁 FIN DE RUTA</b><br>
+                            <b>Instalador:</b> {nombre_usr} ({es_ext})<br>
+                            <b>Hora Fin:</b> {hora_r}<br>
+                            <b>Predio:</b> {predio_r}<br>
+                            <b>Serie Medidor:</b> {serie_r}<br>
+                            <b>Colonia:</b> {colonia_r}
+                        </div>
+                        """
+                        folium.Marker(
+                            location=[lat_i, lon_i],
+                            popup=folium.Popup(popup_ruta, max_width=260),
+                            tooltip=f"Fin Ruta: {usr}",
+                            icon=folium.Icon(color="red", icon="flag-checkered", prefix="fa")
+                        ).add_to(mapa_rutas)
+
+                    # --- PUNTOS INTERMEDIOS DE LA RUTA ---
                     else:
-                        etiqueta_pos = f"#{orden_i} Punto Intermedio"
-                        radio_p = 4
-                        fill_op = 0.85
+                        popup_ruta = f"""
+                        <div style="font-size: 11px; line-height: 1.4; color: #000000;">
+                            <b style="color: {c_usr};">#{orden_i} Punto Intermedio</b><br>
+                            <b>Instalador:</b> {nombre_usr} ({es_ext})<br>
+                            <b>Hora:</b> {hora_r}<br>
+                            <b>Predio:</b> {predio_r}<br>
+                            <b>Serie Medidor:</b> {serie_r}<br>
+                            <b>Colonia:</b> {colonia_r}
+                        </div>
+                        """
+                        folium.CircleMarker(
+                            location=[lat_i, lon_i],
+                            radius=4,
+                            color=c_usr,
+                            weight=1,
+                            fill=True,
+                            fill_color=c_usr,
+                            fill_opacity=0.85,
+                            popup=folium.Popup(popup_ruta, max_width=260),
+                        ).add_to(mapa_rutas)
 
-                    popup_ruta = f"""
-                    <div style="font-size: 11px; line-height: 1.4; color: #000000;">
-                        <b style="color: {c_usr};">{etiqueta_pos}</b><br>
-                        <b>Instalador:</b> {nombre_usr} ({es_ext})<br>
-                        <b>Hora:</b> {hora_r}<br>
-                        <b>Predio:</b> {predio_r}<br>
-                        <b>Serie Medidor:</b> {serie_r}<br>
-                        <b>Colonia:</b> {colonia_r}
-                    </div>
-                    """
-
-                    folium.CircleMarker(
-                        location=[lat_i, lon_i],
-                        radius=radio_p,
-                        color="#ffffff" if (orden_i == 1 or orden_i == total_puntos_usr) else c_usr,
-                        weight=2 if (orden_i == 1 or orden_i == total_puntos_usr) else 1,
-                        fill=True,
-                        fill_color=c_usr,
-                        fill_opacity=fill_op,
-                        popup=folium.Popup(popup_ruta, max_width=260),
-                    ).add_to(mapa_rutas)
-
+                # --- DIBUJAR LÍNEA CON FLECHAS DE DIRECCIÓN Y ANIMACIÓN DE RUTA ---
                 if len(puntos_linea) > 1:
+                    # Línea base con PolyLine
                     folium.PolyLine(
                         puntos_linea,
                         color=c_usr,
-                        weight=2.5,
-                        opacity=0.7,
+                        weight=3,
+                        opacity=0.8,
                         tooltip=f"Ruta de {usr}",
+                    ).add_to(mapa_rutas)
+
+                    # Flechas animadas de dirección indicando el sentido del recorrido
+                    AntPath(
+                        locations=puntos_linea,
+                        color=c_usr,
+                        pulse_color="#ffffff",
+                        weight=3,
+                        dash_array=[10, 20],
+                        delay=1000,
+                        tooltip=f"Sentido del recorrido: {usr}"
                     ).add_to(mapa_rutas)
 
             st_folium(
