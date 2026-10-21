@@ -1438,7 +1438,7 @@ with tab_principal:
                 )
 
     # ==============================================================================
-    # SECCIÓN 9 (CONT.) RENDERIZADO DE LA TABLA PAGINADA ABAJO
+    # SECCIÓN 9.1 (CONT.) RENDERIZADO DE LA TABLA PAGINADA ABAJO
     # ==============================================================================
     with st.container(border=True):
         total_registros_filtrados = len(df_filtrado_global)
@@ -1503,7 +1503,7 @@ with tab_principal:
             st.info("No se encontraron registros que coincidan con la búsqueda.")
 
 # ------------------------------------------------------------------------------
-# SECCIÓN 9.5 PESTAÑA: SEGUIMIENTO DIARIO DE RUTAS E INSTALADORES
+# SECCIÓN 9.2 PESTAÑA: SEGUIMIENTO DIARIO DE RUTAS E INSTALADORES
 # ------------------------------------------------------------------------------
 with tab_rutas_diarias:
     st.markdown(
@@ -1653,18 +1653,24 @@ with tab_rutas_diarias:
             mapa_rutas = folium.Map(location=[r_lat_c, r_lon_c], zoom_start=13, tiles=None)
             agregar_capas_base(mapa_rutas)
 
-            paleta_colores = [
+            # PALETA EXTENDIDA DE 25 COLORES HEX NÚNICOS PARA QUE NINGÚN INSTALADOR REPITA COLOR
+            paleta_colores_ext = [
                 "#38bdf8", "#4ade80", "#f59e0b", "#a855f7", "#f43f5e",
-                "#06b6d4", "#84cc16", "#ec4899", "#6366f1", "#14b8a6"
+                "#06b6d4", "#84cc16", "#ec4899", "#6366f1", "#14b8a6",
+                "#ff7043", "#ab47bc", "#26a69a", "#d4e157", "#ffa726",
+                "#78909c", "#8d6e63", "#26c6da", "#9ccc65", "#ffca28",
+                "#5c6bc0", "#e91e63", "#00e676", "#ff9100", "#d500f9"
             ]
             usuarios_unicos_mapa = df_mapa_ruta["usuarioNombre"].unique().tolist() if not df_mapa_ruta.empty else []
-            mapa_color_usuario = {usr: paleta_colores[i % len(paleta_colores)] for i, usr in enumerate(usuarios_unicos_mapa)}
+            mapa_color_usuario = {usr: paleta_colores_ext[i % len(paleta_colores_ext)] for i, usr in enumerate(usuarios_unicos_mapa)}
 
             for usr in usuarios_unicos_mapa:
                 df_usr = df_mapa_ruta[df_mapa_ruta["usuarioNombre"] == usr].sort_values("fecha_dt")
                 c_usr = mapa_color_usuario[usr]
 
                 puntos_linea = []
+                total_puntos_usr = len(df_usr)
+
                 for orden_i, (_, row_r) in enumerate(df_usr.iterrows(), start=1):
                     lat_i, lon_i = float(row_r["latitud"]), float(row_r["longitud"])
                     puntos_linea.append([lat_i, lon_i])
@@ -1676,9 +1682,23 @@ with tab_rutas_diarias:
                     hora_r = row_r["fecha_dt"].strftime("%H:%M:%S") if pd.notna(row_r["fecha_dt"]) else "N/A"
                     colonia_r = str(row_r.get("colonia", "N/A"))
 
+                    # IDENTIFICACIÓN DE INICIO Y FIN DE RUTA
+                    if orden_i == 1:
+                        etiqueta_pos = "🚩 INICIO DE RUTA"
+                        radio_p = 7
+                        fill_op = 1.0
+                    elif orden_i == total_puntos_usr:
+                        etiqueta_pos = "🏁 FIN DE RUTA"
+                        radio_p = 7
+                        fill_op = 1.0
+                    else:
+                        etiqueta_pos = f"#{orden_i} Punto Intermedio"
+                        radio_p = 4
+                        fill_op = 0.85
+
                     popup_ruta = f"""
                     <div style="font-size: 11px; line-height: 1.4; color: #000000;">
-                        <b style="color: {c_usr};">#{orden_i} Instalación de la Ruta</b><br>
+                        <b style="color: {c_usr};">{etiqueta_pos}</b><br>
                         <b>Instalador:</b> {nombre_usr} ({es_ext})<br>
                         <b>Hora:</b> {hora_r}<br>
                         <b>Predio:</b> {predio_r}<br>
@@ -1689,11 +1709,12 @@ with tab_rutas_diarias:
 
                     folium.CircleMarker(
                         location=[lat_i, lon_i],
-                        radius=4,
-                        color=c_usr,
+                        radius=radio_p,
+                        color="#ffffff" if (orden_i == 1 or orden_i == total_puntos_usr) else c_usr,
+                        weight=2 if (orden_i == 1 or orden_i == total_puntos_usr) else 1,
                         fill=True,
                         fill_color=c_usr,
-                        fill_opacity=0.9,
+                        fill_opacity=fill_op,
                         popup=folium.Popup(popup_ruta, max_width=260),
                     ).add_to(mapa_rutas)
 
@@ -1761,42 +1782,6 @@ with tab_rutas_diarias:
                 st.plotly_chart(fig_usr_bar, use_container_width=True, key="grafico_barras_instaladores_ruta")
             else:
                 st.info("No se registraron instalaciones para la fecha u opciones elegidas.")
-
-    st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
-
-    with st.container(border=True):
-        st.markdown(
-            "<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>📈 Avance de Instalaciones por Hora del Día</p>",
-            unsafe_allow_html=True,
-        )
-
-        if not df_rutas_filtrada.empty:
-            df_rutas_filtrada["Hora_Bloque"] = df_rutas_filtrada["fecha_dt"].dt.strftime("%H:00")
-            df_hora_usr = df_rutas_filtrada.groupby(["Hora_Bloque", "usuarioNombre"], as_index=False).size()
-
-            fig_timeline = px.bar(
-                df_hora_usr,
-                x="Hora_Bloque",
-                y="size",
-                color="usuarioNombre",
-                text="size",
-                title=None,
-                barmode="stack",
-                color_discrete_sequence=px.colors.qualitative.Bold,
-            )
-            fig_timeline.update_layout(
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                font_color="#ffffff",
-                margin=dict(t=10, b=10, l=10, r=10),
-                height=260,
-                xaxis_title="Hora del Día",
-                yaxis_title="Cantidad de Instalaciones",
-                legend=dict(orientation="h", y=-0.25, x=0, font=dict(size=9)),
-            )
-            st.plotly_chart(fig_timeline, use_container_width=True, key="grafico_timeline_rutas_dia")
-        else:
-            st.info("Sin datos para generar línea de tiempo.")
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
