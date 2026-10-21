@@ -1653,18 +1653,73 @@ with tab_rutas_diarias:
                     lat_i, lon_i = float(row_r["latitud"]), float(row_r["longitud"])
                     nombre_usr = str(row_r.get("usuarioNombre", "N/A"))
                     predio_r = str(row_r.get("predio_viv", "N/A"))
+                    
+                    # Extracción completa de datos para el popup de cada punto
+                    col_cli_p = next((c for c in ["cliente", "numeroCliente", "nombreCliente"] if c in row_r), None)
+                    cliente_r = str(row_r[col_cli_p]) if col_cli_p and pd.notna(row_r[col_cli_p]) else "N/A"
+                    
+                    col_ser_p = next((c for c in ["serieMedidor", "serie"] if c in row_r), None)
+                    serie_r = str(row_r[col_ser_p]) if col_ser_p and pd.notna(row_r[col_ser_p]) else "N/A"
+                    
+                    domicilio_r = str(row_r.get("domicilio", "N/A"))
+                    colonia_r = str(row_r.get("colonia", "N/A"))
+                    lugar_r = str(row_r.get("tipo_instalacion_nombre", row_r.get("lugarInstalacion", "N/A")))
+                    anomalia_r = str(row_r.get("anomalia_nombre", "N/A"))
                     hora_r = row_r["fecha_dt"].strftime("%H:%M:%S") if pd.notna(row_r["fecha_dt"]) else "N/A"
+
+                    popup_html = f"""
+                    <div style="font-size: 11px; line-height: 1.4; color: #000000; min-width: 180px;">
+                        <b>📍 Detalle de Instalación</b><br>
+                        <b>Instalador:</b> {nombre_usr}<br>
+                        <b>Hora:</b> {hora_r}<br>
+                        <b>Predio:</b> {predio_r}<br>
+                        <b>Cliente:</b> {cliente_r}<br>
+                        <b>Serie:</b> {serie_r}<br>
+                        <b>Domicilio:</b> {domicilio_r}<br>
+                        <b>Colonia:</b> {colonia_r}<br>
+                        <b>Lugar:</b> {lugar_r}<br>
+                        <b>Anomalía:</b> {anomalia_r}
+                    </div>
+                    """
+                    popup_obj = folium.Popup(popup_html, max_width=280)
 
                     if orden_i == 1:
                         icon_inicio = folium.DivIcon(html='''<div style="background-color: #10b981; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"><i class="fa-solid fa-play" style="color: white; font-size: 10px;"></i></div>''', icon_size=(24, 24), icon_anchor=(12, 12))
-                        folium.Marker([lat_i, lon_i], popup=folium.Popup(f"<b>Inicio: {nombre_usr}</b><br>Hora: {hora_r}<br>Predio: {predio_r}", max_width=260), tooltip=f"Inicio Ruta: {usr}", icon=icon_inicio).add_to(mapa_rutas)
+                        folium.Marker([lat_i, lon_i], popup=popup_obj, tooltip=f"Inicio Ruta: {usr}", icon=icon_inicio).add_to(mapa_rutas)
                     elif orden_i == len(df_usr):
                         icon_fin = folium.DivIcon(html='''<div style="background-color: #f43f5e; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"><i class="fa-solid fa-flag-checkered" style="color: white; font-size: 10px;"></i></div>''', icon_size=(24, 24), icon_anchor=(12, 12))
-                        folium.Marker([lat_i, lon_i], popup=folium.Popup(f"<b>Fin: {nombre_usr}</b><br>Hora: {hora_r}<br>Predio: {predio_r}", max_width=260), tooltip=f"Fin Ruta: {usr}", icon=icon_fin).add_to(mapa_rutas)
+                        folium.Marker([lat_i, lon_i], popup=popup_obj, tooltip=f"Fin Ruta (Meta): {usr}", icon=icon_fin).add_to(mapa_rutas)
                     else:
-                        folium.CircleMarker([lat_i, lon_i], radius=3.5, color=c_usr, weight=1, fill=True, fill_color=c_usr, fill_opacity=0.85, popup=folium.Popup(f"<b>Punto #{orden_i}: {nombre_usr}</b><br>Hora: {hora_r}<br>Predio: {predio_r}", max_width=260)).add_to(mapa_rutas)
+                        folium.CircleMarker([lat_i, lon_i], radius=3.5, color=c_usr, weight=1, fill=True, fill_color=c_usr, fill_opacity=0.85, popup=popup_obj).add_to(mapa_rutas)
 
-            st_folium(mapa_rutas, width=None, height=490, key="mapa_rutas_diarias_instaladores", returned_objects=[])
+            st_folium(mapa_rutas, width=None, height=535, key="mapa_rutas_diarias_instaladores", returned_objects=[])
+
+            # ==============================================================================
+            # LEYENDA INFERIOR DENTRO DEL RECUADRO DEL MAPA
+            # ==============================================================================
+            st.markdown(
+                """
+                <div style="display: flex; justify-content: center; align-items: center; gap: 25px; margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 12px; color: #cbd5e1;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="background-color: #10b981; width: 14px; height: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+                            <i class="fa-solid fa-play" style="color: white; font-size: 7px;"></i>
+                        </div>
+                        <span><b>Inicio de Ruta</b></span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="background-color: #f43f5e; width: 14px; height: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+                            <i class="fa-solid fa-flag-checkered" style="color: white; font-size: 7px;"></i>
+                        </div>
+                        <span><b>Meta / Fin de Ruta</b></span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="background-color: #3b82f6; width: 10px; height: 10px; border-radius: 50%; border: 1px solid white;"></div>
+                        <span><b>Puntos de Instalación (Clic para ver detalles)</b></span>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
     with col_t_ruta:
         with st.container(border=True):
@@ -1682,7 +1737,6 @@ with tab_rutas_diarias:
 
                 st.dataframe(df_resumen_usr, use_container_width=True, hide_index=True, height=200)
 
-                # GRÁFICO CORREGIDO: ALTURA AMPLIADA Y LEYENDA LIMPIA ABAJO
                 fig_usr_bar = px.bar(
                     df_resumen_usr, 
                     x="Total", 
