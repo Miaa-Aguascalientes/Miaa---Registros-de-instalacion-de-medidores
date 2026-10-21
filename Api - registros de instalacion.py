@@ -1666,14 +1666,17 @@ with tab_rutas_diarias:
                     anomalia_r = str(row_r.get("anomalia_nombre", "SIN ANOMALÍA / REGULAR")).strip()
                     hora_r = row_r["fecha_dt"].strftime("%H:%M:%S") if pd.notna(row_r["fecha_dt"]) else "N/A"
 
+                    # DETECCIÓN BLINDADA DE ANOMALÍA (Ignora tildes, signos raros como '?' y espacios)
                     anom_upper = anomalia_r.upper()
-                    tiene_anomalia = (
-                        anom_upper != "" 
-                        and anom_upper != "NAN" 
-                        and anom_upper != "NONE" 
-                        and "SIN ANOMALÍA" not in an_upper 
-                        and "REGULAR" not in an_upper
+                    es_normal = (
+                        anom_upper == "" 
+                        or anom_upper == "NAN" 
+                        or anom_upper == "NONE" 
+                        or "SIN" in anom_upper 
+                        or "REGULAR" in an_upper 
+                        or "BUENO" in an_upper
                     )
+                    tiene_anomalia = not es_normal
 
                     popup_html = f"""
                     <div style="font-size: 11px; line-height: 1.4; color: #000000; min-width: 180px;">
@@ -1708,7 +1711,6 @@ with tab_rutas_diarias:
                         else:
                             folium.CircleMarker([lat_i, lon_i], radius=3.5, color=c_usr, weight=1, fill=True, fill_color=c_usr, fill_opacity=0.85, popup=popup_obj).add_to(mapa_rutas)
 
-            # ALTURA AJUSTADA A 320 PARA EMPAREJAR CON EL BLOQUE DERECHO
             st_folium(mapa_rutas, width=None, height=320, key="mapa_rutas_diarias_instaladores", returned_objects=[])
 
             # LEYENDA INFERIOR DENTRO DEL RECUADRO DEL MAPA
