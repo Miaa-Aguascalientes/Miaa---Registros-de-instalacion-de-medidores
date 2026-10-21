@@ -1759,20 +1759,31 @@ with tab_rutas_diarias:
 
             if not df_rutas_filtrada.empty:
                 # ------------------------------------------------------------------
-                # CÁLCULO DE DISTANCIA ESPACIAL Y EFICIENCIA DE RUTA
+                # CÁLCULO DE DISTANCIA ESPACIAL Y EFICIENCIA DE RUTA (CON VALIDACIÓN DE COORDENADAS)
                 # ------------------------------------------------------------------
                 def evaluar_eficiencia_usuario(df_sub):
-                    if len(df_sub) <= 2:
-                        return "Alta (Óptima)"
+                    # Filtrar únicamente registros que SÍ tengan coordenadas válidas
+                    df_geo = df_sub.dropna(subset=["latitud", "longitud"]).copy()
                     
-                    df_orden = df_sub.dropna(subset=["latitud", "longitud"]).sort_values("fecha_dt")
-                    if len(df_orden) <= 2:
+                    # Convertir a numérico por si vienen como strings sucios
+                    df_geo["latitud"] = pd.to_numeric(df_geo["latitud"], errors="coerce")
+                    df_geo["longitud"] = pd.to_numeric(df_geo["longitud"], errors="coerce")
+                    df_geo = df_geo.dropna(subset=["latitud", "longitud"])
+
+                    # Si no hay coordenadas geográficas registradas para este instalador
+                    if df_geo.empty:
+                        return "Sin registro de puntos"
+
+                    # Si solo tiene 1 o 2 puntos geográficos, no hay ruta suficiente para evaluar trazo
+                    if len(df_geo) <= 2:
                         return "Alta (Óptima)"
+
+                    df_orden = df_geo.sort_values("fecha_dt")
 
                     lats = df_orden["latitud"].to_numpy()
                     lons = df_orden["longitud"].to_numpy()
 
-                    # Fórmula de Haversine simplificada en metros
+                    # Fórmula de Haversine en metros
                     R = 6371000.0
                     phi = np.radians(lats)
                     lam = np.radians(lons)
@@ -1784,7 +1795,6 @@ with tab_rutas_diarias:
                     distancia_total = np.sum(distancias_m)
                     distancia_promedio = np.mean(distancias_m)
 
-                    # Si los saltos promedio entre instalaciones consecutivas en la misma zona superan 120 metros o hay variabilidad extrema
                     if distancia_promedio > 150 or (np.std(distancias_m) > 120 and distancia_total > 500):
                         return "Baja (Cruzada / Ineficiente)"
                     elif distancia_promedio > 80:
@@ -1803,9 +1813,8 @@ with tab_rutas_diarias:
                 )
                 
                 df_resumen_usr["Tipo Personal"] = np.where(df_resumen_usr["usuarioExterno"], "Externo", "Interno MIAA")
-                df_resumen_usr["Eficiencia"] = df_resumen_usr["usuarioNombre"].map(dict_eficiencias).fillna("N/A")
+                df_resumen_usr["Eficiencia"] = df_resumen_usr["usuarioNombre"].map(dict_eficiencias).fillna("Sin registro de puntos")
                 
-                # ORDENAMOS Y RENOMBRAMOS RETENIENDO 'Tipo Personal' PARA PLOTLY
                 df_resumen_usr = df_resumen_usr.sort_values(by="Total_Instalaciones", ascending=False)
                 
                 df_tabla_mostrar = df_resumen_usr[[
@@ -1819,7 +1828,6 @@ with tab_rutas_diarias:
 
                 st.dataframe(df_tabla_mostrar, use_container_width=True, hide_index=True, height=220)
 
-                # RENOMBRAR CAMPOS DE df_resumen_usr PARA QUE COINCIDAN CON EL GRÁFICO PLOTLY
                 df_grafica_usr = df_resumen_usr.rename(columns={"usuarioNombre": "Instalador", "Total_Instalaciones": "Total"})
 
                 fig_usr_bar = px.bar(
