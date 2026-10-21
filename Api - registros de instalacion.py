@@ -1666,7 +1666,6 @@ with tab_rutas_diarias:
                     anomalia_r = str(row_r.get("anomalia_nombre", "SIN ANOMALÍA / REGULAR")).strip()
                     hora_r = row_r["fecha_dt"].strftime("%H:%M:%S") if pd.notna(row_r["fecha_dt"]) else "N/A"
 
-                    # CONDICIÓN ESTRICTA: Solo es anomalía si NO dice "sin anomalía" ni "regular" (y no está vacío)
                     anom_upper = anomalia_r.upper()
                     tiene_anomalia = (
                         anom_upper != "" 
@@ -1709,35 +1708,34 @@ with tab_rutas_diarias:
                         else:
                             folium.CircleMarker([lat_i, lon_i], radius=3.5, color=c_usr, weight=1, fill=True, fill_color=c_usr, fill_opacity=0.85, popup=popup_obj).add_to(mapa_rutas)
 
-            st_folium(mapa_rutas, width=None, height=535, key="mapa_rutas_diarias_instaladores", returned_objects=[])
+            # ALTURA AJUSTADA A 320 PARA EMPAREJAR CON EL BLOQUE DERECHO
+            st_folium(mapa_rutas, width=None, height=320, key="mapa_rutas_diarias_instaladores", returned_objects=[])
 
-            # ==============================================================================
             # LEYENDA INFERIOR DENTRO DEL RECUADRO DEL MAPA
-            # ==============================================================================
             st.markdown(
                 """
-                <div style="display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 11px; color: #cbd5e1; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="background-color: #10b981; width: 13px; height: 13px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <i class="fa-solid fa-play" style="color: white; font-size: 6px;"></i>
+                <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 11px; color: #cbd5e1; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <div style="background-color: #10b981; width: 12px; height: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-play" style="color: white; font-size: 5px;"></i>
                         </div>
                         <span><b>Inicio</b></span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="background-color: #f43f5e; width: 13px; height: 13px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <i class="fa-solid fa-flag-checkered" style="color: white; font-size: 6px;"></i>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <div style="background-color: #f43f5e; width: 12px; height: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-flag-checkered" style="color: white; font-size: 5px;"></i>
                         </div>
                         <span><b>Meta / Fin</b></span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="background-color: #3b82f6; width: 9px; height: 9px; border-radius: 50%; border: 1px solid white;"></div>
-                        <span><b>Instalación Regular</b></span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <div style="background-color: #3b82f6; width: 8px; height: 8px; border-radius: 50%; border: 1px solid white;"></div>
+                        <span><b>Regular</b></span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="background-color: #eab308; width: 13px; height: 13px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <i class="fa-solid fa-triangle-exclamation" style="color: black; font-size: 6px;"></i>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <div style="background-color: #eab308; width: 12px; height: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-triangle-exclamation" style="color: black; font-size: 5px;"></i>
                         </div>
-                        <span><b>Con Anomalía</b></span>
+                        <span><b>Anomalía</b></span>
                     </div>
                 </div>
                 """,
@@ -1758,7 +1756,7 @@ with tab_rutas_diarias:
                 df_resumen_usr = df_resumen_usr.sort_values(by="Total_Instalaciones", ascending=False).drop(columns=["usuarioExterno"])
                 df_resumen_usr = df_resumen_usr.rename(columns={"usuarioNombre": "Instalador", "Total_Instalaciones": "Total", "Primera_Instalacion": "Inicio", "Ultima_Instalacion": "Fin"})
 
-                st.dataframe(df_resumen_usr, use_container_width=True, hide_index=True, height=200)
+                st.dataframe(df_resumen_usr, use_container_width=True, hide_index=True, height=140)
 
                 fig_usr_bar = px.bar(
                     df_resumen_usr, 
@@ -1769,19 +1767,19 @@ with tab_rutas_diarias:
                     color="Tipo Personal", 
                     color_discrete_map={"Externo": "#f59e0b", "Interno MIAA": "#10b981"}
                 )
-                fig_usr_bar.update_traces(textposition="outside", textfont_size=10)
+                fig_usr_bar.update_traces(textposition="outside", textfont_size=9)
                 fig_usr_bar.update_layout(
                     plot_bgcolor="rgba(0,0,0,0)", 
                     paper_bgcolor="rgba(0,0,0,0)", 
                     font_color="#ffffff", 
-                    margin=dict(t=30, b=20, l=10, r=25), 
-                    height=280, 
+                    margin=dict(t=25, b=10, l=5, r=15), 
+                    height=180, 
                     xaxis=dict(showgrid=False, title=None), 
                     yaxis=dict(showgrid=False, title=None, categoryorder="total ascending"), 
                     legend=dict(
                         orientation="h", 
                         yanchor="bottom", 
-                        y=1.02, 
+                        y=1.05, 
                         xanchor="left", 
                         x=0,
                         title=dict(text="")
