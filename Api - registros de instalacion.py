@@ -1682,9 +1682,34 @@ with tab_rutas_diarias:
 
                 st.dataframe(df_resumen_usr, use_container_width=True, hide_index=True, height=200)
 
-                fig_usr_bar = px.bar(df_resumen_usr, x="Total", y="Instalador", orientation="h", text="Total", color="Tipo Personal", color_discrete_map={"Externo": "#f59e0b", "Interno MIAA": "#10b981"})
+                # GRÁFICO CORREGIDO: ALTURA AMPLIADA Y LEYENDA LIMPIA ABAJO
+                fig_usr_bar = px.bar(
+                    df_resumen_usr, 
+                    x="Total", 
+                    y="Instalador", 
+                    orientation="h", 
+                    text="Total", 
+                    color="Tipo Personal", 
+                    color_discrete_map={"Externo": "#f59e0b", "Interno MIAA": "#10b981"}
+                )
                 fig_usr_bar.update_traces(textposition="outside", textfont_size=10)
-                fig_usr_bar.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="#ffffff", margin=dict(t=10, b=5, l=5, r=25), height=210, xaxis=dict(showgrid=False, title=None), yaxis=dict(showgrid=False, title=None, categoryorder="total ascending"), legend=dict(orientation="h", y=1.1, x=0))
+                fig_usr_bar.update_layout(
+                    plot_bgcolor="rgba(0,0,0,0)", 
+                    paper_bgcolor="rgba(0,0,0,0)", 
+                    font_color="#ffffff", 
+                    margin=dict(t=30, b=20, l=10, r=25), 
+                    height=280, 
+                    xaxis=dict(showgrid=False, title=None), 
+                    yaxis=dict(showgrid=False, title=None, categoryorder="total ascending"), 
+                    legend=dict(
+                        orientation="h", 
+                        yanchor="bottom", 
+                        y=1.02, 
+                        xanchor="left", 
+                        x=0,
+                        title=dict(text="")
+                    )
+                )
                 st.plotly_chart(fig_usr_bar, use_container_width=True, key="grafico_barras_instaladores_ruta")
             else:
                 st.info("No hay instaladores activos en el mapa.")
