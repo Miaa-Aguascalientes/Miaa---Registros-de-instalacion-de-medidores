@@ -1548,22 +1548,34 @@ with tab_rutas_diarias:
             df_rutas_dia = df_rutas_dia[df_rutas_dia["usuarioExterno"]]
 
     # ==============================================================================
-    # SELECTOR MÚLTIPLE PRÁCTICO PARA FILTRAR INSTALADORES EN EL MAPA
+    # EXPANDER CON LISTBOX DE CHECKBOXES PARA FILTRAR INSTALADORES
     # ==============================================================================
     usuarios_disponibles = sorted(df_rutas_dia["usuarioNombre"].unique().tolist()) if not df_rutas_dia.empty else []
 
-    with st.container(border=True):
-        st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>🟢 Filtrar Instaladores en el Mapa</p>", unsafe_allow_html=True)
-        
+    with st.expander("🟢🔴 Filtrar y Seleccionar Instaladores en el Mapa", expanded=False):
+        col_btn_all, col_btn_none, _ = st.columns([1, 1, 4])
+        if col_btn_all.button("Marcar Todos", key="btn_all_inst_map"):
+            for usr in usuarios_disponibles:
+                st.session_state[f"chk_map_usr_{usr}"] = True
+        if col_btn_none.button("Desmarcar Todos", key="btn_none_inst_map"):
+            for usr in usuarios_disponibles:
+                st.session_state[f"chk_map_usr_{usr}"] = False
+
+        st.markdown("<div style='margin-top: 5px;'></div>", unsafe_allow_html=True)
+
         if usuarios_disponibles:
-            # Por defecto seleccionamos todos los usuarios disponibles
-            usuarios_activos_mapa = st.multiselect(
-                "Seleccione los instaladores a visualizar",
-                options=usuarios_disponibles,
-                default=usuarios_disponibles,
-                key="multiselect_instaladores_mapa",
-                label_visibility="collapsed"
-            )
+            cols_check = st.columns(4)
+            usuarios_activos_mapa = []
+            
+            for i, usr in enumerate(usuarios_disponibles):
+                session_key = f"chk_map_usr_{usr}"
+                if session_key not in st.session_state:
+                    st.session_state[session_key] = True
+                
+                with cols_check[i % 4]:
+                    estado_chk = st.checkbox(f"{usr}", key=session_key)
+                    if estado_chk:
+                        usuarios_activos_mapa.append(usr)
         else:
             usuarios_activos_mapa = []
             st.info("No hay instaladores disponibles para la fecha seleccionada.")
