@@ -1676,7 +1676,7 @@ with tab_rutas_diarias:
 
                     popup_html = f"""
                     <div style="font-size: 11px; line-height: 1.4; color: #000000; min-width: 180px;">
-                        <b>📍 Detalle de Instalación</b><br>
+                        <b>📍 Detalle de Instalación (#{orden_i})</b><br>
                         <b>Instalador:</b> {nombre_usr}<br>
                         <b>Hora:</b> {hora_r}<br>
                         <b>Predio:</b> {predio_r}<br>
@@ -1691,21 +1691,34 @@ with tab_rutas_diarias:
                     popup_obj = folium.Popup(popup_html, max_width=280)
 
                     if orden_i == 1:
-                        icon_inicio = folium.DivIcon(html='''<div style="background-color: #10b981; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"><i class="fa-solid fa-play" style="color: white; font-size: 10px;"></i></div>''', icon_size=(24, 24), icon_anchor=(12, 12))
-                        folium.Marker([lat_i, lon_i], popup=popup_obj, tooltip=f"Inicio Ruta: {usr}", icon=icon_inicio).add_to(mapa_rutas)
+                        icon_inicio = folium.DivIcon(
+                            html=f'''<div style="display: flex; align-items: center; gap: 4px;"><div style="background-color: #10b981; width: 22px; height: 22px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"><i class="fa-solid fa-play" style="color: white; font-size: 9px;"></i></div><span style="background: rgba(15,23,42,0.85); color: #10b981; padding: 1px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);">{orden_i}</span></div>''',
+                            icon_size=(50, 24),
+                            icon_anchor=(11, 12)
+                        )
+                        folium.Marker([lat_i, lon_i], popup=popup_obj, tooltip=f"Inicio Ruta #{orden_i}: {usr}", icon=icon_inicio).add_to(mapa_rutas)
                     elif orden_i == len(df_usr):
-                        icon_fin = folium.DivIcon(html='''<div style="background-color: #f43f5e; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"><i class="fa-solid fa-flag-checkered" style="color: white; font-size: 10px;"></i></div>''', icon_size=(24, 24), icon_anchor=(12, 12))
-                        folium.Marker([lat_i, lon_i], popup=popup_obj, tooltip=f"Fin Ruta (Meta): {usr}", icon=icon_fin).add_to(mapa_rutas)
+                        icon_fin = folium.DivIcon(
+                            html=f'''<div style="display: flex; align-items: center; gap: 4px;"><div style="background-color: #f43f5e; width: 22px; height: 22px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"><i class="fa-solid fa-flag-checkered" style="color: white; font-size: 9px;"></i></div><span style="background: rgba(15,23,42,0.85); color: #f43f5e; padding: 1px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);">{orden_i}</span></div>''',
+                            icon_size=(50, 24),
+                            icon_anchor=(11, 12)
+                        )
+                        folium.Marker([lat_i, lon_i], popup=popup_obj, tooltip=f"Fin Ruta #{orden_i}: {usr}", icon=icon_fin).add_to(mapa_rutas)
                     else:
                         if tiene_anomalia:
                             icon_anomalia = folium.DivIcon(
-                                html='''<div style="background-color: #eab308; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.5);"><i class="fa-solid fa-triangle-exclamation" style="color: #000000; font-size: 10px;"></i></div>''',
-                                icon_size=(22, 22),
-                                icon_anchor=(11, 11)
+                                html=f'''<div style="display: flex; align-items: center; gap: 4px;"><div style="background-color: #eab308; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.5);"><i class="fa-solid fa-triangle-exclamation" style="color: #000000; font-size: 8px;"></i></div><span style="background: rgba(15,23,42,0.85); color: #eab308; padding: 1px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);">{orden_i}</span></div>''',
+                                icon_size=(50, 22),
+                                icon_anchor=(10, 11)
                             )
-                            folium.Marker([lat_i, lon_i], popup=popup_obj, tooltip=f"⚠️ Anomalía ({usr}): {anomalia_r}", icon=icon_anomalia).add_to(mapa_rutas)
+                            folium.Marker([lat_i, lon_i], popup=popup_obj, tooltip=f"⚠️ Anomalía #{orden_i} ({usr}): {anomalia_r}", icon=icon_anomalia).add_to(mapa_rutas)
                         else:
-                            folium.CircleMarker([lat_i, lon_i], radius=3.5, color=c_usr, weight=1, fill=True, fill_color=c_usr, fill_opacity=0.85, popup=popup_obj).add_to(mapa_rutas)
+                            icon_num = folium.DivIcon(
+                                html=f'''<div style="display: flex; align-items: center; gap: 4px;"><div style="background-color: {c_usr}; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div><span style="background: rgba(15,23,42,0.85); color: #ffffff; padding: 1px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);">{orden_i}</span></div>''',
+                                icon_size=(45, 20),
+                                icon_anchor=(6, 10)
+                            )
+                            folium.Marker([lat_i, lon_i], popup=popup_obj, tooltip=f"Punto #{orden_i}: {usr}", icon=icon_num).add_to(mapa_rutas)
 
             st_folium(mapa_rutas, width=None, height=450, key="mapa_rutas_diarias_instaladores", returned_objects=[])
 
@@ -1717,7 +1730,7 @@ with tab_rutas_diarias:
                         <div style="background-color: #10b981; width: 12px; height: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                             <i class="fa-solid fa-play" style="color: white; font-size: 5px;"></i>
                         </div>
-                        <span><b>Inicio</b></span>
+                        <span><b>Inicio (#1)</b></span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 4px;">
                         <div style="background-color: #f43f5e; width: 12px; height: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
@@ -1727,7 +1740,7 @@ with tab_rutas_diarias:
                     </div>
                     <div style="display: flex; align-items: center; gap: 4px;">
                         <div style="background-color: #3b82f6; width: 8px; height: 8px; border-radius: 50%; border: 1px solid white;"></div>
-                        <span><b>Regular</b></span>
+                        <span><b>Secuencia numérica</b></span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 4px;">
                         <div style="background-color: #eab308; width: 12px; height: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
