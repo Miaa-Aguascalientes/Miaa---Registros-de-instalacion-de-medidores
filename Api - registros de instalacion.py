@@ -1663,16 +1663,17 @@ with tab_rutas_diarias:
                     domicilio_r = str(row_r.get("domicilio", "N/A"))
                     colonia_r = str(row_r.get("colonia", "N/A"))
                     lugar_r = str(row_r.get("tipo_instalacion_nombre", row_r.get("lugarInstalacion", "N/A")))
-                    anomalia_r = str(row_r.get("anomalia_nombre", "N/A")).strip()
+                    anomalia_r = str(row_r.get("anomalia_nombre", "SIN ANOMALÍA / REGULAR")).strip()
                     hora_r = row_r["fecha_dt"].strftime("%H:%M:%S") if pd.notna(row_r["fecha_dt"]) else "N/A"
 
-                    # Detección de anomalía real (diferente de regular/vacía/nula)
+                    # CONDICIÓN ESTRICTA: Solo es anomalía si NO dice "sin anomalía" ni "regular" (y no está vacío)
+                    anom_upper = anomalia_r.upper()
                     tiene_anomalia = (
-                        anomalia_r != "" 
-                        and anomalia_r.lower() != "nan" 
-                        and anomalia_r.lower() != "none" 
-                        and "sin anomalía" not in anomalia_r.lower()
-                        and "regular" not in anomalia_r.lower()
+                        anom_upper != "" 
+                        and anom_upper != "NAN" 
+                        and anom_upper != "NONE" 
+                        and "SIN ANOMALÍA" not in an_upper 
+                        and "REGULAR" not in an_upper
                     )
 
                     popup_html = f"""
@@ -1699,7 +1700,6 @@ with tab_rutas_diarias:
                         folium.Marker([lat_i, lon_i], popup=popup_obj, tooltip=f"Fin Ruta (Meta): {usr}", icon=icon_fin).add_to(mapa_rutas)
                     else:
                         if tiene_anomalia:
-                            # Símbolo amarillo de advertencia con exclamación para puntos con anomalía
                             icon_anomalia = folium.DivIcon(
                                 html='''<div style="background-color: #eab308; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.5);"><i class="fa-solid fa-triangle-exclamation" style="color: #000000; font-size: 10px;"></i></div>''',
                                 icon_size=(22, 22),
@@ -1709,7 +1709,7 @@ with tab_rutas_diarias:
                         else:
                             folium.CircleMarker([lat_i, lon_i], radius=3.5, color=c_usr, weight=1, fill=True, fill_color=c_usr, fill_opacity=0.85, popup=popup_obj).add_to(mapa_rutas)
 
-            st_folium(mapa_rutas, width=None, height=490, key="mapa_rutas_diarias_instaladores", returned_objects=[])
+            st_folium(mapa_rutas, width=None, height=535, key="mapa_rutas_diarias_instaladores", returned_objects=[])
 
             # ==============================================================================
             # LEYENDA INFERIOR DENTRO DEL RECUADRO DEL MAPA
