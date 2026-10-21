@@ -1664,20 +1664,24 @@ with tab_rutas_diarias:
                     colonia_r = str(row_r.get("colonia", "N/A"))
                     lugar_r = str(row_r.get("tipo_instalacion_nombre", row_r.get("lugarInstalacion", "N/A")))
                     
-                    # CONVERSIÓN SEGURA A STRING PARA EVITAR ERRORES DE TIPO
+                    # EXTRACCIÓN Y VALIDACIÓN SEGURA DE ANOMALÍA
                     anomalia_val = row_r.get("anomalia_nombre", "SIN ANOMALÍA / REGULAR")
+                    if isinstance(anomalia_val, pd.Series):
+                        anomalia_val = anomalia_val.iloc[0]
                     anomalia_r = str(anomalia_val).strip() if pd.notna(anomalia_val) else "SIN ANOMALÍA / REGULAR"
                     
                     hora_r = row_r["fecha_dt"].strftime("%H:%M:%S") if pd.notna(row_r["fecha_dt"]) else "N/A"
 
                     anom_upper = anomalia_r.upper()
+                    
+                    # Validamos limpiamente sin caracteres extraños
                     es_normal = (
                         anom_upper == "" 
                         or anom_upper == "NAN" 
                         or anom_upper == "NONE" 
-                        or "SIN" in an_upper 
-                        or "REGULAR" in an_upper 
-                        or "BUENO" in an_upper
+                        or "SIN" in anom_upper 
+                        or "REGULAR" in anom_upper 
+                        or "BUENO" in anom_upper
                     )
                     tiene_anomalia = not es_normal
 
