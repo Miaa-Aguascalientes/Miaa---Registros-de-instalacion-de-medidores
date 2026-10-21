@@ -1758,45 +1758,72 @@ with tab_rutas_diarias:
             st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>📊 Resumen de Instalaciones por Usuario</p>", unsafe_allow_html=True)
 
             if not df_rutas_filtrada.empty:
-                df_resumen_usr = df_rutas_filtrada.groupby(["usuarioNombre", "usuarioExterno"], as_index=False).agg(
-                    Total_Instalaciones=("fecha_dt", "count"),
-                    Primera_Instalacion=("fecha_dt", lambda x: x.min().strftime("%H:%M")),
-                    Ultima_Instalacion=("fecha_dt", lambda x: x.max().strftime("%H:%M")),
-                )
-                df_resumen_usr = df_rutas_filtrada.groupby(["usuarioNombre", "usuarioExterno"], as_index=False).agg(
-                    Total_Instalaciones=("fecha_dt", "count"),
-                    Primera_Instalacion=("fecha_dt", lambda x: x.min().strftime("%H:%M")),
-                    Ultima_Instalacion=("fecha_dt", lambda x: x.max().strftime("%H:%M")),
-                    Min_Dt=("fecha_dt", "min"),
-                    Max_Dt=("fecha_dt", "max")
-                )
-                
-                # CÁLCULO DE EFICIENCIA OPERATIVA BASADO EN TIEMPO POR INSTALACIÓN Y FLUJO
-                def calcular_eficiencia_ruta(row):
-                    total = row["Total_Instalaciones"]
-                    if total <= 1:
-                        return "100% (Óptima)"
+                # ------------------------------------------------------------------
+                # CÁLCULO DE DISTANCIA ESPACIAL Y EFICIENCIA DE RUTA
+                # ------------------------------------------------------------------
+                def evaluar_eficiencia_usuario(df_sub):
+                    if len(df_sub) <= 2:
+                        return "Alta (Óptima)"
                     
-                    duracion_minutos = (row["Max_Dt"] - row["Min_Dt"]).total_seconds() / 60.0
-                    promedio_min_por_inst = duracion_minutos / total if total > 0 else 0
+                    df_orden = df_sub.dropna(subset=["latitud", "longitud"]).sort_values("fecha_dt")
+                    if len(df_orden) <= 2:
+                        return "Alta (Óptima)"
+
+                    lats = df_orden["latitud"].to_numpy()
+                    lons = df_orden["longitud"].to_numpy()
+
+                    # Fórmula de Haversine simplificada en metros
+                    R = 6371000.0
+                    phi = np.radians(lats)
+                    lam = np.radians(lons)
+                    dphi = phi[1:] - phi[:-1]
+                    dlam = lam[1:] - lam[:-1]
+                    a = np.sin(dphi/2.0)**2 + np.cos(phi[:-1])*np.cos(phi[1:])*np.sin(dlam/2.0)**2
+                    distancias_m = R * 2.0 * np.arctan2(np.sqrt(a), np.sqrt(1.0 - a))
                     
-                    # Criterio operativo: Una instalación eficiente toma entre 10 y 25 mins por medidor
-                    if 8 <= promedio_min_por_inst <= 30:
-                        return "Alta (Fluida)"
-                    elif promedio_min_por_inst < 8:
-                        return "Media (Muy Rápida / Revisar)"
+                    distancia_total = np.sum(distancias_m)
+                    distancia_promedio = np.mean(distancias_m)
+
+                    # Si los saltos promedio entre instalaciones consecutivas en la misma zona superan 120 metros o hay variabilidad extrema
+                    if distancia_promedio > 150 or (np.std(distancias_m) > 120 and distancia_total > 500):
+                        return "Baja (Cruzada / Ineficiente)"
+                    elif distancia_promedio > 80:
+                        return "Media (Sinuosa)"
                     else:
-                        return "Baja (Demorada)"
+                        return "Alta (Secuencial)"
 
-                df_resumen_usr["Eficiencia"] = df_resumen_usr.apply(calcular_eficiencia_ruta, axis=1)
+                dict_eficiencias = {}
+                for usr_k, df_u in df_rutas_filtrada.groupby("usuarioNombre"):
+                    dict_eficiencias[usr_k] = evaluar_eficiencia_usuario(df_u)
+
+                df_resumen_usr = df_rutas_filtrada.groupby(["usuarioNombre", "usuarioExterno"], as_index=False).agg(
+                    Total_Instalaciones=("fecha_dt", "count"),
+                    Primera_Instalacion=("fecha_dt", lambda x: x.min().strftime("%H:%M")),
+                    Ultima_Instalacion=("fecha_dt", lambda x: x.max().strftime("%H:%M")),
+                )
                 
-                df_resumen_usr = df_resumen_usr.sort_values(by="Total_Instalaciones", ascending=False).drop(columns=["usuarioExterno", "Min_Dt", "Max_Dt"])
-                df_resumen_usr = df_resumen_usr.rename(columns={"usuarioNombre": "Instalador", "Total_Instalaciones": "Total", "Primera_Instalacion": "Inicio", "Ultima_Instalacion": "Fin"})
+                df_resumen_usr["Tipo Personal"] = np.where(df_resumen_usr["usuarioExterno"], "Externo", "Interno MIAA")
+                df_resumen_usr["Eficiencia"] = df_resumen_usr["usuarioNombre"].map(dict_eficiencias).fillna("N/A")
+                
+                # ORDENAMOS Y RENOMBRAMOS RETENIENDO 'Tipo Personal' PARA PLOTLY
+                df_resumen_usr = df_resumen_usr.sort_values(by="Total_Instalaciones", ascending=False)
+                
+                df_tabla_mostrar = df_resumen_usr[[
+                    "usuarioNombre", "Total_Instalaciones", "Primera_Instalacion", "Ultima_Instalacion", "Eficiencia"
+                ]].rename(columns={
+                    "usuarioNombre": "Instalador", 
+                    "Total_Instalaciones": "Total", 
+                    "Primera_Instalacion": "Inicio", 
+                    "Ultima_Instalacion": "Fin"
+                })
 
-                st.dataframe(df_resumen_usr, use_container_width=True, hide_index=True, height=220)
+                st.dataframe(df_tabla_mostrar, use_container_width=True, hide_index=True, height=220)
+
+                # RENOMBRAR CAMPOS DE df_resumen_usr PARA QUE COINCIDAN CON EL GRÁFICO PLOTLY
+                df_grafica_usr = df_resumen_usr.rename(columns={"usuarioNombre": "Instalador", "Total_Instalaciones": "Total"})
 
                 fig_usr_bar = px.bar(
-                    df_resumen_usr, 
+                    df_grafica_usr, 
                     x="Total", 
                     y="Instalador", 
                     orientation="h", 
