@@ -1709,7 +1709,7 @@ with tab_rutas_diarias:
                         else:
                             folium.CircleMarker([lat_i, lon_i], radius=3.5, color=c_usr, weight=1, fill=True, fill_color=c_usr, fill_opacity=0.85, popup=popup_obj).add_to(mapa_rutas)
 
-            st_folium(mapa_rutas, width=None, height=535, key="mapa_rutas_diarias_instaladores", returned_objects=[])
+            st_folium(mapa_rutas, width=None, height=490, key="mapa_rutas_diarias_instaladores", returned_objects=[])
 
             # ==============================================================================
             # LEYENDA INFERIOR DENTRO DEL RECUADRO DEL MAPA
