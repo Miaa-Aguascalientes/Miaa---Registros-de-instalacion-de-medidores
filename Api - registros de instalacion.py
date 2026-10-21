@@ -1543,7 +1543,6 @@ with tab_rutas_diarias:
                 key="filtro_tipo_personal_rutas",
             )
 
-        # Aplicar primero filtro de fecha y tipo para poblar lista de usuarios
         df_rutas_dia = df_rutas_base[df_rutas_base["fecha_dt"].dt.date == fecha_sel_rutas].copy()
 
         if tipo_personal_sel == "Interno MIAA":
@@ -1566,7 +1565,6 @@ with tab_rutas_diarias:
     else:
         df_rutas_filtrada = df_rutas_dia.copy() if usuario_sel_rutas else pd.DataFrame()
 
-    # MÉTICAS / INDICADORES CLAVE DE LA RUTA
     tot_inst_ruta = len(df_rutas_filtrada)
     tot_instaladores_act = df_rutas_filtrada["usuarioNombre"].nunique() if not df_rutas_filtrada.empty else 0
     prom_inst_persona = round(tot_inst_ruta / tot_instaladores_act, 1) if tot_instaladores_act > 0 else 0.0
@@ -1655,7 +1653,6 @@ with tab_rutas_diarias:
             mapa_rutas = folium.Map(location=[r_lat_c, r_lon_c], zoom_start=13, tiles=None)
             agregar_capas_base(mapa_rutas)
 
-            # Paleta de colores para diferenciar usuarios
             paleta_colores = [
                 "#38bdf8", "#4ade80", "#f59e0b", "#a855f7", "#f43f5e",
                 "#06b6d4", "#84cc16", "#ec4899", "#6366f1", "#14b8a6"
@@ -1700,7 +1697,6 @@ with tab_rutas_diarias:
                         popup=folium.Popup(popup_ruta, max_width=260),
                     ).add_to(mapa_rutas)
 
-                # Dibujar línea/traza secuencial de la ruta
                 if len(puntos_linea) > 1:
                     folium.PolyLine(
                         puntos_linea,
@@ -1742,7 +1738,6 @@ with tab_rutas_diarias:
 
                 st.dataframe(df_resumen_usr, use_container_width=True, hide_index=True, height=200)
 
-                # Gráfico de barras por instalador
                 fig_usr_bar = px.bar(
                     df_resumen_usr,
                     x="Total",
@@ -1769,7 +1764,6 @@ with tab_rutas_diarias:
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-    # LÍNEA DEL TIEMPO / AVANCE POR HORA DE LA RUTA
     with st.container(border=True):
         st.markdown(
             "<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>📈 Avance de Instalaciones por Hora del Día</p>",
@@ -1806,7 +1800,6 @@ with tab_rutas_diarias:
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
 
-    # TABLA DE DETALLE DE LA RUTA SELECCIONADA
     with st.container(border=True):
         st.markdown(
             "<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>📋 Detalle Cronológico de Instalaciones de la Ruta</p>",
@@ -2409,7 +2402,7 @@ with tab_poligonos:
 
     with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Detalle de Polígonos de Instalación y Conteo de Medidores</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Detalle de Polígonos de Instalación y Conteo de Medidores</p>",
             unsafe_allow_html=True,
         )
 
