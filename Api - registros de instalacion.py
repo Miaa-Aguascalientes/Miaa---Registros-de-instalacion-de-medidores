@@ -1862,7 +1862,7 @@ with tab_rutas_diarias:
                 st.info("No hay instaladores activos en el mapa.")
 
     # ==============================================================================
-    # TABLA: DETALLE CRONOLÓGICO DE INSTALACIONES DE LA RUTA (CON COORDENADAS)
+    # TABLA: DETALLE CRONOLÓGICO DE INSTALACIONES DE LA RUTA (CON NÚMERO DE PUNTO)
     # ==============================================================================
     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
     with st.container(border=True):
@@ -1873,6 +1873,11 @@ with tab_rutas_diarias:
 
         if not df_rutas_filtrada.empty:
             df_cronologico = df_rutas_filtrada.copy()
+            
+            # CÁLCULO DEL NÚMERO DE PUNTO POR INSTALADOR EN ORDEN CRONOLÓGICO ASCENDENTE
+            df_cronologico = df_cronologico.sort_values(by=["usuarioNombre", "fecha_dt"], ascending=[True, True])
+            df_cronologico["#"] = df_cronologico.groupby("usuarioNombre").cumcount() + 1
+            
             df_cronologico["Hora"] = df_cronologico["fecha_dt"].dt.strftime("%H:%M:%S")
             df_cronologico["Instalador"] = df_cronologico["usuarioNombre"]
             df_cronologico["Personal"] = np.where(df_cronologico["usuarioExterno"], "Externo", "Interno MIAA")
@@ -1892,13 +1897,22 @@ with tab_rutas_diarias:
             df_cronologico["Latitud"] = pd.to_numeric(df_cronologico["latitud"], errors="coerce")
             df_cronologico["Longitud"] = pd.to_numeric(df_cronologico["longitud"], errors="coerce")
 
+            # REORDENAMOS LA TABLA PARA MOSTRAR PRIMERO LA COLUMNA `#` SEGUIDA DE `Hora`
             df_tabla_final_cron = df_cronologico[[
-                "Hora", "Instalador", "Personal", "Cliente", "Predio", 
+                "#", "Hora", "Instalador", "Personal", "Cliente", "Predio", 
                 "Domicilio", "Colonia", "Serie", "Lugar", "Anomalía", 
                 "Latitud", "Longitud"
-            ]].sort_values(by="Hora", ascending=False)
+            ]].sort_values(by=["Instalador", "#"], ascending=[True, False])
 
-            st.dataframe(df_tabla_final_cron, use_container_width=True, hide_index=True, height=300)
+            st.dataframe(
+                df_tabla_final_cron, 
+                use_container_width=True, 
+                hide_index=True, 
+                height=300,
+                column_config={
+                    "#": st.column_config.NumberColumn("#", format="%d", width="small")
+                }
+            )
         else:
             st.info("No hay registros cronológicos para mostrar con los filtros actuales.")
 
