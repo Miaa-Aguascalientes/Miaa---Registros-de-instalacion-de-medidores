@@ -1664,21 +1664,23 @@ with tab_rutas_diarias:
                     colonia_r = str(row_r.get("colonia", "N/A"))
                     lugar_r = str(row_r.get("tipo_instalacion_nombre", row_r.get("lugarInstalacion", "N/A")))
                     
-                    anomalia_val = row_r.get("anomalia_nombre", "SIN ANOMALÍA / REGULAR")
-                    if isinstance(anomalia_val, pd.Series):
-                        anomalia_val = anomalia_val.iloc[0]
-                    anomalia_r = str(anomalia_val).strip() if pd.notna(anomalia_val) else "SIN ANOMALÍA / REGULAR"
+                    # EXTRACCIÓN 100% BLINDADA PARA EVITAR QUE SEA UNA SERIE DE PANDAS
+                    anom_raw = row_r["anomalia_nombre"] if "anomalia_nombre" in row_r else "SIN ANOMALÍA / REGULAR"
+                    if isinstance(anom_raw, pd.Series):
+                        anom_raw = anom_raw.iloc[0]
+                    anomalia_r = str(anom_raw).strip() if pd.notna(anom_raw) else "SIN ANOMALÍA / REGULAR"
                     
                     hora_r = row_r["fecha_dt"].strftime("%H:%M:%S") if pd.notna(row_r["fecha_dt"]) else "N/A"
 
+                    # EVALUACIÓN SEGURA CON STRINGS PLANOS
                     anom_upper = anomalia_r.upper()
                     es_normal = (
                         anom_upper == "" 
                         or anom_upper == "NAN" 
                         or anom_upper == "NONE" 
                         or "SIN" in anom_upper 
-                        or "REGULAR" in an_upper 
-                        or "BUENO" in an_upper
+                        or "REGULAR" in anom_upper 
+                        or "BUENO" in anom_upper
                     )
                     tiene_anomalia = not es_normal
 
@@ -1715,7 +1717,6 @@ with tab_rutas_diarias:
                         else:
                             folium.CircleMarker([lat_i, lon_i], radius=3.5, color=c_usr, weight=1, fill=True, fill_color=c_usr, fill_opacity=0.85, popup=popup_obj).add_to(mapa_rutas)
 
-            # ALTURA DEL MAPA AMPLIADA A 450
             st_folium(mapa_rutas, width=None, height=450, key="mapa_rutas_diarias_instaladores", returned_objects=[])
 
             # LEYENDA INFERIOR DENTRO DEL RECUADRO DEL MAPA
@@ -1763,7 +1764,6 @@ with tab_rutas_diarias:
                 df_resumen_usr = df_resumen_usr.sort_values(by="Total_Instalaciones", ascending=False).drop(columns=["usuarioExterno"])
                 df_resumen_usr = df_resumen_usr.rename(columns={"usuarioNombre": "Instalador", "Total_Instalaciones": "Total", "Primera_Instalacion": "Inicio", "Ultima_Instalacion": "Fin"})
 
-                # ALTURA DE LA TABLA AMPLIADA A 220
                 st.dataframe(df_resumen_usr, use_container_width=True, hide_index=True, height=220)
 
                 fig_usr_bar = px.bar(
@@ -1781,7 +1781,7 @@ with tab_rutas_diarias:
                     paper_bgcolor="rgba(0,0,0,0)", 
                     font_color="#ffffff", 
                     margin=dict(t=25, b=10, l=5, r=15), 
-                    height=245, # ALTURA DEL GRÁFICO AMPLIADA A 245
+                    height=245, 
                     xaxis=dict(showgrid=False, title=None), 
                     yaxis=dict(showgrid=False, title=None, categoryorder="total ascending"), 
                     legend=dict(
