@@ -1763,8 +1763,34 @@ with tab_rutas_diarias:
                     Primera_Instalacion=("fecha_dt", lambda x: x.min().strftime("%H:%M")),
                     Ultima_Instalacion=("fecha_dt", lambda x: x.max().strftime("%H:%M")),
                 )
-                df_resumen_usr["Tipo Personal"] = np.where(df_resumen_usr["usuarioExterno"], "Externo", "Interno MIAA")
-                df_resumen_usr = df_resumen_usr.sort_values(by="Total_Instalaciones", ascending=False).drop(columns=["usuarioExterno"])
+                df_resumen_usr = df_rutas_filtrada.groupby(["usuarioNombre", "usuarioExterno"], as_index=False).agg(
+                    Total_Instalaciones=("fecha_dt", "count"),
+                    Primera_Instalacion=("fecha_dt", lambda x: x.min().strftime("%H:%M")),
+                    Ultima_Instalacion=("fecha_dt", lambda x: x.max().strftime("%H:%M")),
+                    Min_Dt=("fecha_dt", "min"),
+                    Max_Dt=("fecha_dt", "max")
+                )
+                
+                # CÁLCULO DE EFICIENCIA OPERATIVA BASADO EN TIEMPO POR INSTALACIÓN Y FLUJO
+                def calcular_eficiencia_ruta(row):
+                    total = row["Total_Instalaciones"]
+                    if total <= 1:
+                        return "100% (Óptima)"
+                    
+                    duracion_minutos = (row["Max_Dt"] - row["Min_Dt"]).total_seconds() / 60.0
+                    promedio_min_por_inst = duracion_minutos / total if total > 0 else 0
+                    
+                    # Criterio operativo: Una instalación eficiente toma entre 10 y 25 mins por medidor
+                    if 8 <= promedio_min_por_inst <= 30:
+                        return "Alta (Fluida)"
+                    elif promedio_min_por_inst < 8:
+                        return "Media (Muy Rápida / Revisar)"
+                    else:
+                        return "Baja (Demorada)"
+
+                df_resumen_usr["Eficiencia"] = df_resumen_usr.apply(calcular_eficiencia_ruta, axis=1)
+                
+                df_resumen_usr = df_resumen_usr.sort_values(by="Total_Instalaciones", ascending=False).drop(columns=["usuarioExterno", "Min_Dt", "Max_Dt"])
                 df_resumen_usr = df_resumen_usr.rename(columns={"usuarioNombre": "Instalador", "Total_Instalaciones": "Total", "Primera_Instalacion": "Inicio", "Ultima_Instalacion": "Fin"})
 
                 st.dataframe(df_resumen_usr, use_container_width=True, hide_index=True, height=220)
