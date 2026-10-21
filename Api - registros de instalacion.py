@@ -1552,7 +1552,7 @@ with tab_rutas_diarias:
     # ==============================================================================
     usuarios_disponibles = sorted(df_rutas_dia["usuarioNombre"].unique().tolist()) if not df_rutas_dia.empty else []
 
-    with st.expander("🟢🔴 Filtrar y Seleccionar Instaladores en el Mapa", expanded=False):
+    with st.expander("👷‍♂️ Filtrar y Seleccionar Instaladores en el Mapa", expanded=False):
         col_btn_all, col_btn_none, _ = st.columns([1, 1, 4])
         if col_btn_all.button("Marcar Todos", key="btn_all_inst_map"):
             for usr in usuarios_disponibles:
