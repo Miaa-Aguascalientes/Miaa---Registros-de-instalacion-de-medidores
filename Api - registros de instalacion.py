@@ -1654,7 +1654,6 @@ with tab_rutas_diarias:
                     nombre_usr = str(row_r.get("usuarioNombre", "N/A"))
                     predio_r = str(row_r.get("predio_viv", "N/A"))
                     
-                    # Extracción completa de datos para el popup de cada punto
                     col_cli_p = next((c for c in ["cliente", "numeroCliente", "nombreCliente"] if c in row_r), None)
                     cliente_r = str(row_r[col_cli_p]) if col_cli_p and pd.notna(row_r[col_cli_p]) else "N/A"
                     
@@ -1664,8 +1663,17 @@ with tab_rutas_diarias:
                     domicilio_r = str(row_r.get("domicilio", "N/A"))
                     colonia_r = str(row_r.get("colonia", "N/A"))
                     lugar_r = str(row_r.get("tipo_instalacion_nombre", row_r.get("lugarInstalacion", "N/A")))
-                    anomalia_r = str(row_r.get("anomalia_nombre", "N/A"))
+                    anomalia_r = str(row_r.get("anomalia_nombre", "N/A")).strip()
                     hora_r = row_r["fecha_dt"].strftime("%H:%M:%S") if pd.notna(row_r["fecha_dt"]) else "N/A"
+
+                    # Detección de anomalía real (diferente de regular/vacía/nula)
+                    tiene_anomalia = (
+                        anomalia_r != "" 
+                        and anomalia_r.lower() != "nan" 
+                        and anomalia_r.lower() != "none" 
+                        and "sin anomalía" not in anomalia_r.lower()
+                        and "regular" not in anomalia_r.lower()
+                    )
 
                     popup_html = f"""
                     <div style="font-size: 11px; line-height: 1.4; color: #000000; min-width: 180px;">
@@ -1678,7 +1686,7 @@ with tab_rutas_diarias:
                         <b>Domicilio:</b> {domicilio_r}<br>
                         <b>Colonia:</b> {colonia_r}<br>
                         <b>Lugar:</b> {lugar_r}<br>
-                        <b>Anomalía:</b> {anomalia_r}
+                        <b>Anomalía:</b> <span style="color: {'#d97706' if tiene_anomalia else '#059669'}; font-weight: bold;">{anomalia_r}</span>
                     </div>
                     """
                     popup_obj = folium.Popup(popup_html, max_width=280)
@@ -1690,7 +1698,16 @@ with tab_rutas_diarias:
                         icon_fin = folium.DivIcon(html='''<div style="background-color: #f43f5e; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"><i class="fa-solid fa-flag-checkered" style="color: white; font-size: 10px;"></i></div>''', icon_size=(24, 24), icon_anchor=(12, 12))
                         folium.Marker([lat_i, lon_i], popup=popup_obj, tooltip=f"Fin Ruta (Meta): {usr}", icon=icon_fin).add_to(mapa_rutas)
                     else:
-                        folium.CircleMarker([lat_i, lon_i], radius=3.5, color=c_usr, weight=1, fill=True, fill_color=c_usr, fill_opacity=0.85, popup=popup_obj).add_to(mapa_rutas)
+                        if tiene_anomalia:
+                            # Símbolo amarillo de advertencia con exclamación para puntos con anomalía
+                            icon_anomalia = folium.DivIcon(
+                                html='''<div style="background-color: #eab308; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.5);"><i class="fa-solid fa-triangle-exclamation" style="color: #000000; font-size: 10px;"></i></div>''',
+                                icon_size=(22, 22),
+                                icon_anchor=(11, 11)
+                            )
+                            folium.Marker([lat_i, lon_i], popup=popup_obj, tooltip=f"⚠️ Anomalía ({usr}): {anomalia_r}", icon=icon_anomalia).add_to(mapa_rutas)
+                        else:
+                            folium.CircleMarker([lat_i, lon_i], radius=3.5, color=c_usr, weight=1, fill=True, fill_color=c_usr, fill_opacity=0.85, popup=popup_obj).add_to(mapa_rutas)
 
             st_folium(mapa_rutas, width=None, height=535, key="mapa_rutas_diarias_instaladores", returned_objects=[])
 
@@ -1699,22 +1716,28 @@ with tab_rutas_diarias:
             # ==============================================================================
             st.markdown(
                 """
-                <div style="display: flex; justify-content: center; align-items: center; gap: 25px; margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 12px; color: #cbd5e1;">
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="background-color: #10b981; width: 14px; height: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
-                            <i class="fa-solid fa-play" style="color: white; font-size: 7px;"></i>
+                <div style="display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 11px; color: #cbd5e1; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="background-color: #10b981; width: 13px; height: 13px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-play" style="color: white; font-size: 6px;"></i>
                         </div>
-                        <span><b>Inicio de Ruta</b></span>
+                        <span><b>Inicio</b></span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="background-color: #f43f5e; width: 14px; height: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
-                            <i class="fa-solid fa-flag-checkered" style="color: white; font-size: 7px;"></i>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="background-color: #f43f5e; width: 13px; height: 13px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-flag-checkered" style="color: white; font-size: 6px;"></i>
                         </div>
-                        <span><b>Meta / Fin de Ruta</b></span>
+                        <span><b>Meta / Fin</b></span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="background-color: #3b82f6; width: 10px; height: 10px; border-radius: 50%; border: 1px solid white;"></div>
-                        <span><b>Puntos de Instalación (Clic para ver detalles)</b></span>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="background-color: #3b82f6; width: 9px; height: 9px; border-radius: 50%; border: 1px solid white;"></div>
+                        <span><b>Instalación Regular</b></span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="background-color: #eab308; width: 13px; height: 13px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-triangle-exclamation" style="color: black; font-size: 6px;"></i>
+                        </div>
+                        <span><b>Con Anomalía</b></span>
                     </div>
                 </div>
                 """,
