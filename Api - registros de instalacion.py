@@ -1701,7 +1701,7 @@ with tab_rutas_diarias:
                         name="Polígonos de Colonias",
                         style_function=lambda x: {
                             "fillColor": "#2980B9",
-                            "color": "#2980B9,
+                            "color": "#2980B9",
                             "weight": 1,
                             "fillOpacity": 0.08,
                         },
