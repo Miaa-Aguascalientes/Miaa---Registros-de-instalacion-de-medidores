@@ -365,6 +365,32 @@ def agregar_capas_base(m):
         cancel_title="Salir de pantalla completa",
     ).add_to(m)
 
+    # ==============================================================================
+    # INYECCIÓN DE CSS PARA FORZAR LETRAS BLANCAS EN LAS CALLES (MAPA OSCURO)
+    # ==============================================================================
+    css_calteras_blancas = """
+    <style>
+        /* Invierte y aclara los nombres de las calles en los tiles oscuros de CartoDB */
+        .leaflet-tile-pane {
+            filter: brightness(1.4) contrast(1.3);
+        }
+        /* Asegura que los popups mantengan estilo oscuro coherente */
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background-color: #0f172a !important;
+            color: #f8fafc !important;
+        }
+    </style>
+    """
+    m.get_root().html.add_child(folium.Element(css_calteras_blancas))
+
+    folium.LayerControl(position="topleft").add_to(m)
+
+    Fullscreen(
+        position="topright",
+        title="Ampliar Mapa",
+        cancel_title="Salir de pantalla completa",
+    ).add_to(m)
+
 
 # ==============================================================================
 # SECCIÓN 4: PROCESAMIENTO Y LIMPIEZA INICIAL DE DATOS
