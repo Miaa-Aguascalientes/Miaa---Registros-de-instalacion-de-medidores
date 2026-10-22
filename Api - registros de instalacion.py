@@ -365,6 +365,24 @@ def agregar_capas_base(m):
         cancel_title="Salir de pantalla completa",
     ).add_to(m)
 
+    # ==============================================================================
+    # INYECCIÓN DE CSS PARA OCULTAR LA BARRA DE ATRIBUCIÓN Y ESTILIZAR POPUPS
+    # ==============================================================================
+    css_quitar_atribucion = """
+    <style>
+        /* Oculta la barra de texto de atribución de Leaflet en la esquina inferior izquierda */
+        .leaflet-control-attribution {
+            display: none !important;
+        }
+        /* Estilo coherente para los popups en modo oscuro */
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background-color: #0f172a !important;
+            color: #f8fafc !important;
+        }
+    </style>
+    """
+    m.get_root().html.add_child(folium.Element(css_quitar_atribucion))
+
 
 # ==============================================================================
 # SECCIÓN 4: PROCESAMIENTO Y LIMPIEZA INICIAL DE DATOS
