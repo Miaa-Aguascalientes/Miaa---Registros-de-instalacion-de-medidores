@@ -349,7 +349,7 @@ def agregar_capas_base(m):
         max_zoom=20,
     ).add_to(m)
 
-    # Vista Nocturna nativa limpia y elegante (CartoDB Dark Matter puro)
+    # Capa base oscura base de CartoDB
     folium.TileLayer(
         tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
         name="Vista Nocturna",
@@ -367,16 +367,23 @@ def agregar_capas_base(m):
         cancel_title="Salir de pantalla completa",
     ).add_to(m)
 
-    # Estilo coherente para los popups en modo oscuro
-    css_popups = """
+    # ==============================================================================
+    # INYECCIÓN DE CSS LIMPIO: FONDO OSCURO CON CALLES Y TEXTOS CLAROS NÍDIDOS
+    # ==============================================================================
+    css_mapa_limpio_oscuro = """
     <style>
+        /* Ajuste fino de inversión y contraste: oscurece el fondo y vuelve las calles y textos blancos/claros */
+        .leaflet-tile-pane img[src*="cartocdn.com/rastertiles/dark_all"] {
+            filter: invert(85%) hue-rotate(180deg) contrast(1.5) brightness(1.1);
+        }
+        /* Estilo coherente para los popups en modo oscuro */
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
             background-color: #0f172a !important;
             color: #f8fafc !important;
         }
     </style>
     """
-    m.get_root().html.add_child(folium.Element(css_popups))
+    m.get_root().html.add_child(folium.Element(css_mapa_limpio_oscuro))
 
 # ==============================================================================
 # SECCIÓN 4: PROCESAMIENTO Y LIMPIEZA INICIAL DE DATOS
