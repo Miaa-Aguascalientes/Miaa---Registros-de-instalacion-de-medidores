@@ -300,12 +300,13 @@ def cargar_usuarios_miaa_conmedidor_db():
         conn_str = f"postgresql+psycopg2://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/{cfg['database']}"
         engine = create_engine(conn_str)
         
-        # AQUÍ USAMOS ÚNICAMENTE EL CAMPO GEOM Y LO REPROYECTAMOS NATIVAMENTE EN POSTGIS
+        # CAMBIO: Usar ST_AsText(geom) para que la columna geom se muestre como POINT (X Y)
+        # y transformar simultáneamente a EPSG:4326 para obtener lat/lon exactas en el mapa.
         query = """
             SELECT *, 
-                   ST_AsText(geom) as geom_wkt,
-                   ST_X(ST_Transform(ST_SetSRID(geom, 32613), 4326)) as lon_calc, 
-                   ST_Y(ST_Transform(ST_SetSRID(geom, 32613), 4326)) as lat_calc 
+                   ST_AsText(geom) as geom,
+                   ST_X(ST_Transform(geom, 4326)) as lon_calc, 
+                   ST_Y(ST_Transform(geom, 4326)) as lat_calc 
             FROM "Usuarios"."usuarios_miaa_conmedidor"
             WHERE etapa::text IN ('1', '2', 'etapa 1', 'etapa 2')
         """
@@ -318,9 +319,9 @@ def cargar_usuarios_miaa_conmedidor_db():
             engine = create_engine(conn_str)
             query = """
                 SELECT *, 
-                       ST_AsText(geom) as geom_wkt,
-                       ST_X(ST_Transform(ST_SetSRID(geom, 32613), 4326)) as lon_calc, 
-                       ST_Y(ST_Transform(ST_SetSRID(geom, 32613), 4326)) as lat_calc 
+                       ST_AsText(geom) as geom,
+                       ST_X(ST_Transform(geom, 4326)) as lon_calc, 
+                       ST_Y(ST_Transform(geom, 4326)) as lat_calc 
                 FROM usuarios_miaa_conmedidor
                 WHERE etapa::text IN ('1', '2', 'etapa 1', 'etapa 2')
             """
