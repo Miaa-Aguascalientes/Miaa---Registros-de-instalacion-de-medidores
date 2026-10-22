@@ -349,7 +349,7 @@ def agregar_capas_base(m):
         max_zoom=20,
     ).add_to(m)
 
-    # Capa base oscura optimizada para aplicar el filtro de estilo "Midnight Commander" (Azul / Cian)
+    # Vista Nocturna nativa limpia y elegante (CartoDB Dark Matter puro)
     folium.TileLayer(
         tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
         name="Vista Nocturna",
@@ -367,24 +367,16 @@ def agregar_capas_base(m):
         cancel_title="Salir de pantalla completa",
     ).add_to(m)
 
-    # ==============================================================================
-    # INYECCIÓN DE CSS PARA EL ESTILO "MIDNIGHT COMMANDER" (AZUL PROFUNDO Y CIAN)
-    # ==============================================================================
-    css_midnight_commander = """
+    # Estilo coherente para los popups en modo oscuro
+    css_popups = """
     <style>
-        /* Transforma el mapa oscuro estándar en la paleta azul marino y cian de Midnight Commander */
-        .leaflet-tile-pane img[src*="cartocdn.com/rastertiles/dark_all"] {
-            filter: brightness(1.3) contrast(1.4) hue-rotate(160deg) saturate(2.5);
-        }
-        /* Estilo coherente para los popups en modo oscuro */
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-            background-color: #050a10 !important;
-            color: #38bdf8 !important;
-            border: 1px solid rgba(56, 189, 248, 0.3);
+            background-color: #0f172a !important;
+            color: #f8fafc !important;
         }
     </style>
     """
-    m.get_root().html.add_child(folium.Element(css_midnight_commander))
+    m.get_root().html.add_child(folium.Element(css_popups))
 
 # ==============================================================================
 # SECCIÓN 4: PROCESAMIENTO Y LIMPIEZA INICIAL DE DATOS
