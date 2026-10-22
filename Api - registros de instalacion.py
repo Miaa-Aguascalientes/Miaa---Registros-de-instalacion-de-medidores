@@ -300,13 +300,13 @@ def cargar_usuarios_miaa_conmedidor_db():
         conn_str = f"postgresql+psycopg2://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/{cfg['database']}"
         engine = create_engine(conn_str)
         
-        # CAMBIO: Usar ST_AsText(geom) para que la columna geom se muestre como POINT (X Y)
-        # y transformar simultáneamente a EPSG:4326 para obtener lat/lon exactas en el mapa.
+        # FORZAMOS ST_AsText(geom) PARA QUE LA TABLA MUESTRE "POINT (X Y)"
+        # Y EXTRAEMOS X e Y DIRECTAMENTE DE LA GEOMETRÍA UTM
         query = """
             SELECT *, 
                    ST_AsText(geom) as geom,
-                   ST_X(ST_Transform(geom, 4326)) as lon_calc, 
-                   ST_Y(ST_Transform(geom, 4326)) as lat_calc 
+                   ST_X(geom) as utm_x, 
+                   ST_Y(geom) as utm_y 
             FROM "Usuarios"."usuarios_miaa_conmedidor"
             WHERE etapa::text IN ('1', '2', 'etapa 1', 'etapa 2')
         """
@@ -320,8 +320,8 @@ def cargar_usuarios_miaa_conmedidor_db():
             query = """
                 SELECT *, 
                        ST_AsText(geom) as geom,
-                       ST_X(ST_Transform(geom, 4326)) as lon_calc, 
-                       ST_Y(ST_Transform(geom, 4326)) as lat_calc 
+                       ST_X(geom) as utm_x, 
+                       ST_Y(geom) as utm_y 
                 FROM usuarios_miaa_conmedidor
                 WHERE etapa::text IN ('1', '2', 'etapa 1', 'etapa 2')
             """
