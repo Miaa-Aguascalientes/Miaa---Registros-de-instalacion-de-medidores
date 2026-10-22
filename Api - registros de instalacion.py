@@ -1253,9 +1253,9 @@ with tab_principal:
                         gdf_colonias,
                         name="Polígonos de Colonias",
                         style_function=lambda x: {
-                            "fillColor": "#38bdf8",
-                            "color": "#00eaff",
-                            "weight": 1.5,
+                            "fillColor": "#2980B9",
+                            "color": "#2980B9",
+                            "weight": 1,
                             "fillOpacity": 0.08,
                         },
                         tooltip=folium.GeoJsonTooltip(
@@ -1690,16 +1690,16 @@ with tab_rutas_diarias:
 
             # --- 4. INTEGRACIÓN DE LOS POLÍGONOS DE COLONIA EN EL MAPA DE RUTAS ---
             if gdf_colonias is not None and not gdf_colonias.empty:
-                folium.GeoJson(
-                    gdf_colonias,
-                    name="Polígonos de Colonias",
-                    style_function=lambda x: {
-                        "fillColor": "#38bdf8",
-                        "color": "#00eaff",
-                        "weight": 1.5,
-                        "fillOpacity": 0.08,
-                    },
-                    tooltip=folium.GeoJsonTooltip(
+                    folium.GeoJson(
+                        gdf_colonias,
+                        name="Polígonos de Colonias",
+                        style_function=lambda x: {
+                            "fillColor": "#2980B9",
+                            "color": "#2980B9",
+                            "weight": 1,
+                            "fillOpacity": 0.08,
+                        },
+                        tooltip=folium.GeoJsonTooltip(
                         fields=["Col_atl", "Sector", "Distrito"],
                         aliases=["Colonia:", "Sector:", "Distrito:"],
                         style=(
