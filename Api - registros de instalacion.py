@@ -349,11 +349,12 @@ def agregar_capas_base(m):
         max_zoom=20,
     ).add_to(m)
 
-    # Vista Nocturna con estilo limpio y definido idéntico a Mapbox Dark (Stadia Alidade Smooth Dark)
+    # Vista Nocturna con CartoDB Dark Matter y tu API key integrada correctamente
     folium.TileLayer(
-        tiles="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png",
-        attr='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors',
+        tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
         name="Vista Nocturna",
+        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains="abcd",
         max_zoom=20,
         control=True,
     ).add_to(m)
