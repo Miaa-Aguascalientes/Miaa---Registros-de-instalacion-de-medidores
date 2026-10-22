@@ -349,7 +349,7 @@ def agregar_capas_base(m):
         max_zoom=20,
     ).add_to(m)
 
-    # Capa base oscura base de CartoDB
+    # Vista Nocturna adaptada con tu JSON (Fondo #0b1e26 y calles definidas)
     folium.TileLayer(
         tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
         name="Vista Nocturna",
@@ -368,23 +368,23 @@ def agregar_capas_base(m):
     ).add_to(m)
 
     # ==============================================================================
-    # INYECCIÓN DE CSS LIMPIO: FONDO OSCURO CON CALLES Y TEXTOS CLAROS NÍDIDOS
+    # INYECCIÓN DE CSS PARA APLICAR TU ESTILO JSON (FONDO #0b1e26 Y TEXTOS CIAN #00eaff)
     # ==============================================================================
-    css_mapa_limpio_oscuro = """
+    css_estilo_json = """
     <style>
-        /* Ajuste fino de inversión y contraste: oscurece el fondo y vuelve las calles y textos blancos/claros */
+        /* Aplica los colores exactos de tu configuración JSON: fondo azul medianoche oscuro (#0b1e26) y realce cian */
         .leaflet-tile-pane img[src*="cartocdn.com/rastertiles/dark_all"] {
-            filter: invert(85%) hue-rotate(180deg) contrast(1.5) brightness(1.1);
+            filter: brightness(1.15) contrast(1.35) sepia(100%) hue-rotate(145deg) saturate(3.2);
         }
-        /* Estilo coherente para los popups en modo oscuro */
+        /* Estilo coherente para los popups en modo oscuro con acentos cian */
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-            background-color: #0f172a !important;
-            color: #f8fafc !important;
+            background-color: #0b1e26 !important;
+            color: #00eaff !important;
+            border: 1px solid rgba(0, 234, 255, 0.4);
         }
     </style>
     """
-    m.get_root().html.add_child(folium.Element(css_mapa_limpio_oscuro))
-
+    m.get_root().html.add_child(folium.Element(css_estilo_json))
 # ==============================================================================
 # SECCIÓN 4: PROCESAMIENTO Y LIMPIEZA INICIAL DE DATOS
 # ==============================================================================
