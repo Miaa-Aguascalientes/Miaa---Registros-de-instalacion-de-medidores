@@ -349,9 +349,9 @@ def agregar_capas_base(m):
         max_zoom=20,
     ).add_to(m)
 
-    # Capa base alternativa clara que al invertirla da un resultado nocturno perfecto con calles blancas
+    # Volvemos a usar la capa dark_all que trae la estructura de calles y manzanas integrada
     folium.TileLayer(
-        tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/voyager/{{z}}/{{x}}/{{y}}.png?key={api_key}",
+        tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
         name="Vista Nocturna",
         attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         subdomains="abcd",
@@ -368,13 +368,13 @@ def agregar_capas_base(m):
     ).add_to(m)
 
     # ==============================================================================
-    # INYECCIÓN DE CSS PARA INVERTIR EL MAPA VOYAGER Y OBTENER UN FONDO NEGRO CON CALLES BLANCAS NÍDIDAS
+    # INYECCIÓN DE CSS PARA ILUMINAR TANTO LAS CALLES COMO LOS TEXTOS EN EL MAPA OSCURO
     # ==============================================================================
-    css_mapa_nocturno_perfecto = """
+    css_calles_y_textos_claros = """
     <style>
-        /* Selecciona únicamente las teselas de la capa "Vista Nocturna" y las convierte a modo oscuro puro con letras blancas */
-        .leaflet-tile-pane img[src*="cartocdn.com/rastertiles/voyager"] {
-            filter: invert(100%) hue-rotate(180deg) brightness(1.2) contrast(1.3);
+        /* Eleva el brillo y el contraste de la capa oscura para que las líneas de las calles y los textos resalten claramente */
+        .leaflet-tile-pane img[src*="cartocdn.com/rastertiles/dark_all"] {
+            filter: brightness(2.2) contrast(1.8) grayscale(30%);
         }
         /* Estilo coherente para los popups */
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
@@ -383,7 +383,7 @@ def agregar_capas_base(m):
         }
     </style>
     """
-    m.get_root().html.add_child(folium.Element(css_mapa_nocturno_perfecto))
+    m.get_root().html.add_child(folium.Element(css_calles_y_textos_claros))
 
 
 # ==============================================================================
