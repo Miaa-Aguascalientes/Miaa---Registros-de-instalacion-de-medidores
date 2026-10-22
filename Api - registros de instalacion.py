@@ -3147,25 +3147,25 @@ with tab_personal:
             st.info("No hay registros disponibles para Personal MIAA.")
 
 # ==============================================================================
-# SECCIÓN 13 CARGAR DATOS DESDE POSTGRESQL USANDO GEOM Y ETAPA
+# SECCIÓN 13: PROCESAMIENTO DE COORDENADAS DESDE UTM (EPSG:32613) A WGS84
 # ==============================================================================
+from pyproj import Transformer
+
 df_usuarios_miaa_medidor = cargar_usuarios_miaa_conmedidor_db()
 
-if not df_usuarios_miaa_medidor.empty:
+if not df_usuarios_miaa_medidor.empty and "utm_x" in df_usuarios_miaa_medidor.columns:
+    # Transformador oficial de UTM Zona 13N (EPSG:32613) a WGS84 (EPSG:4326)
+    transformer = Transformer.from_crs("EPSG:32613", "EPSG:4326", always_xy=True)
+    
     lats, lons = [], []
     for _, row in df_usuarios_miaa_medidor.iterrows():
         try:
-            x_val = float(row["utm_x"])
-            y_val = float(row["utm_y"])
-            
-            if abs(x_val) > 360 or abs(y_val) > 90:
-                lon_deg = -102.2916 + (x_val - 780000) / 111000.0
-                lat_deg = 21.8853 + (y_val - 2420000) / 110500.0
-                lats.append(lat_deg)
-                lons.append(lon_deg)
-            else:
-                lats.append(y_val)
-                lons.append(x_val)
+            x = float(row["utm_x"])
+            y = float(row["utm_y"])
+            # Proyectar de metros a grados decimales exactos
+            lon_deg, lat_deg = transformer.transform(x, y)
+            lats.append(lat_deg)
+            lons.append(lon_deg)
         except:
             lats.append(np.nan)
             lons.append(np.nan)
