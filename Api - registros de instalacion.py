@@ -1253,9 +1253,9 @@ with tab_principal:
                         gdf_colonias,
                         name="Polígonos de Colonias",
                         style_function=lambda x: {
-                            "fillColor": "#38bdf8",
-                            "color": "#00eaff",
-                            "weight": 1.5,
+                            "fillColor": "#2980B9",
+                            "color": "#2980B9",
+                            "weight": 1,
                             "fillOpacity": 0.08,
                         },
                         highlight_function=lambda x: {
@@ -1700,9 +1700,9 @@ with tab_rutas_diarias:
                         gdf_colonias,
                         name="Polígonos de Colonias",
                         style_function=lambda x: {
-                            "fillColor": "#38bdf8",
-                            "color": "#00eaff",
-                            "weight": 1.5,
+                            "fillColor": "#2980B9",
+                            "color": "#2980B9,
+                            "weight": 1,
                             "fillOpacity": 0.08,
                         },
                         highlight_function=lambda x: {
