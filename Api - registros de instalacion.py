@@ -3311,6 +3311,34 @@ with tab_tabla:
         mapa_tabla_tab = folium.Map(location=[m_lat_t, m_lon_t], zoom_start=12, tiles=None)
         agregar_capas_base(mapa_tabla_tab)
 
+        # --- INTEGRACIÓN DE LOS POLÍGONOS DE COLONIA EN ESTE MAPA ---
+        if gdf_colonias is not None and not gdf_colonias.empty:
+            folium.GeoJson(
+                gdf_colonias,
+                name="Polígonos de Colonias",
+                style_function=lambda x: {
+                    "fillColor": "#2980B9",
+                    "color": "#2980B9",
+                    "weight": 1,
+                    "fillOpacity": 0.08,
+                },
+                highlight_function=lambda x: {
+                    "fillColor": "#38bdf8",
+                    "color": "#ffffff",
+                    "weight": 2.5,
+                    "fillOpacity": 0.35,
+                },
+                tooltip=folium.GeoJsonTooltip(
+                    fields=["Col_atl", "Sector", "Distrito"],
+                    aliases=["Colonia:", "Sector:", "Distrito:"],
+                    style=(
+                        "background-color: #0f172a; color: #ffffff; "
+                        "font-size: 11px; padding: 6px; border-radius: 4px;"
+                    )
+                )
+            ).add_to(mapa_tabla_tab)
+        # -----------------------------------------------------------
+
         for _, row in df_mapa_tabla.iterrows():
             try:
                 lat_val = float(row["lat_calc"])
