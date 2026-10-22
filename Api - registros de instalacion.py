@@ -1365,7 +1365,7 @@ with tab_principal:
                             hora_inst = hora_str[:5]
 
                     info_popup = f"""
-                    <div style="font-size: 11px; line-height: 1.4; color: #000000;">
+                    <div style="font-size: 11px; line-height: 1.4; color: #ffffff;">
                         <b>Información del Servicio</b><br>
                         <b>Nombre:</b> {nombre}<br>
                         <b>Número de Predio:</b> {predio}<br>
@@ -1777,7 +1777,7 @@ with tab_rutas_diarias:
                     tiene_anomalia = not es_normal
 
                     popup_html = f"""
-                    <div style="font-size: 11px; line-height: 1.4; color: #000000; min-width: 180px;">
+                    <div style="font-size: 11px; line-height: 1.4; color: #ffffff; min-width: 180px;">
                         <b>📍 Detalle de Instalación (#{orden_i})</b><br>
                         <b>Instalador:</b> {nombre_usr}<br>
                         <b>Hora:</b> {hora_r}<br>
@@ -3334,7 +3334,7 @@ with tab_tabla:
             etapa_txt = str(row.get("etapa", "N/A"))
 
             popup_html = f"""
-            <div style="font-size: 11px; line-height: 1.4; color: #000000;">
+            <div style="font-size: 11px; line-height: 1.4; color: #ffffff;">
                 <b>Cliente:</b> {nombre}<br>
                 <b>Predio:</b> {predio_val}<br>
                 <b>Serie:</b> {serie_val}<br>
