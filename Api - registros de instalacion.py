@@ -327,6 +327,28 @@ def cargar_usuarios_miaa_conmedidor_db():
             print(f"Error en respaldo de conexión: {ex}")
             return pd.DataFrame()
 
+@st.cache_data(ttl=3600)
+def get_todas_las_colonias():
+    query = """
+        SELECT ST_AsText(geom) as geom_wkt, Pozos, Col_atl, Sector, Distrito, Supervisor,
+               Pozo_1, Afectacion_1, Pozo_2, Afectacion_2, 
+               Pozo_3, Afectacion_3, Pozo_4, Afectacion_4, 
+               Pozo_5, Afectacion_5, Pozo_6, Afectacion_6, 
+               Pozo_7, Afectacion_7, Pozo_8, Afectacion_8, 
+               Pozo_9, Afectacion_9, Pozo_10, Afectacion_10 
+        FROM Diccionario_colonias
+    """
+    try:
+        df = pd.read_sql(query, get_mysql_telemetria_engine())
+        if not df.empty and df['geom_wkt'].iloc[0] is not None:
+            df['geometry'] = df['geom_wkt'].apply(wkt.loads)
+            gdf = gpd.GeoDataFrame(df, geometry='geometry')
+            gdf.set_crs(epsg=32613, inplace=True)
+            return gdf.to_crs(epsg=4326)
+    except Exception as e:
+        st.error(f"Error cargando polígonos: {e}")
+    return None
+
 
 # ==============================================================================
 # SECCIÓN 3: FUNCIONES AUXILIARES PARA MAPAS
