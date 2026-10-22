@@ -349,12 +349,14 @@ def agregar_capas_base(m):
         max_zoom=20,
     ).add_to(m)
 
+    # Capa de Vista Nocturna (CartoDB Dark Matter) con una clase o selector único
     folium.TileLayer(
         tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
         name="Vista Nocturna",
         attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         subdomains="abcd",
         max_zoom=20,
+        control=True,
     ).add_to(m)
 
     folium.LayerControl(position="topleft").add_to(m)
@@ -366,22 +368,22 @@ def agregar_capas_base(m):
     ).add_to(m)
 
     # ==============================================================================
-    # INYECCIÓN DE CSS PARA FORZAR LETRAS BLANCAS EN LAS CALLES (MAPA OSCURO)
+    # INYECCIÓN DE CSS EXCLUSIVO PARA ACLARAR LAS CALLES DE LA VISTA NOCTURNA
     # ==============================================================================
-    css_calteras_blancas = """
+    css_calteras_blancas_nocturnas = """
     <style>
-        /* Invierte y aclara los nombres de las calles en los tiles oscuros de CartoDB */
-        .leaflet-tile-pane {
+        /* Afecta únicamente a las imágenes de teselas (tiles) que provienen de cartocdn dark_all */
+        img.leaflet-tile[src*="cartocdn.com/rastertiles/dark_all"] {
             filter: brightness(1.4) contrast(1.3);
         }
-        /* Asegura que los popups mantengan estilo oscuro coherente */
+        /* Estilo coherente para los popups */
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
             background-color: #0f172a !important;
             color: #f8fafc !important;
         }
     </style>
     """
-    m.get_root().html.add_child(folium.Element(css_calteras_blancas))
+    m.get_root().html.add_child(folium.Element(css_calteras_blancas_nocturnas))
 
 
 # ==============================================================================
