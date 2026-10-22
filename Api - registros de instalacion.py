@@ -349,13 +349,13 @@ def agregar_capas_base(m):
         max_zoom=20,
     ).add_to(m)
 
-    # Capa de Vista Nocturna utilizando el proveedor oficial de la capa de transporte de OpenStreetMap
+    # Capa base oscura optimizada para aplicar el filtro de estilo "Midnight Commander" (Azul / Cian)
     folium.TileLayer(
-        tiles="https://{s}.tile.thunderforest.com/transport-dark/{z}/{x}/{y}.png?apikey=61784d7de93e4d9cbfaeef959c9d5598",
-        attr='Maps &copy; <a href="https://www.thunderforest.com/">Thunderforest</a>, Data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
         name="Vista Nocturna",
-        max_zoom=22,
-        subkeys="abc",
+        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains="abcd",
+        max_zoom=20,
         control=True,
     ).add_to(m)
 
@@ -367,16 +367,24 @@ def agregar_capas_base(m):
         cancel_title="Salir de pantalla completa",
     ).add_to(m)
 
-    # Estilo coherente para los popups en modo oscuro
-    css_popups = """
+    # ==============================================================================
+    # INYECCIÓN DE CSS PARA EL ESTILO "MIDNIGHT COMMANDER" (AZUL PROFUNDO Y CIAN)
+    # ==============================================================================
+    css_midnight_commander = """
     <style>
+        /* Transforma el mapa oscuro estándar en la paleta azul marino y cian de Midnight Commander */
+        .leaflet-tile-pane img[src*="cartocdn.com/rastertiles/dark_all"] {
+            filter: brightness(1.3) contrast(1.4) hue-rotate(160deg) saturate(2.5);
+        }
+        /* Estilo coherente para los popups en modo oscuro */
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-            background-color: #0f172a !important;
-            color: #f8fafc !important;
+            background-color: #050a10 !important;
+            color: #38bdf8 !important;
+            border: 1px solid rgba(56, 189, 248, 0.3);
         }
     </style>
     """
-    m.get_root().html.add_child(folium.Element(css_popups))
+    m.get_root().html.add_child(folium.Element(css_midnight_commander))
 
 # ==============================================================================
 # SECCIÓN 4: PROCESAMIENTO Y LIMPIEZA INICIAL DE DATOS
