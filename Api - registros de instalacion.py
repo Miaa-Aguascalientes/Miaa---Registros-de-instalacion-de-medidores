@@ -383,14 +383,6 @@ def agregar_capas_base(m):
     """
     m.get_root().html.add_child(folium.Element(css_calteras_blancas))
 
-    folium.LayerControl(position="topleft").add_to(m)
-
-    Fullscreen(
-        position="topright",
-        title="Ampliar Mapa",
-        cancel_title="Salir de pantalla completa",
-    ).add_to(m)
-
 
 # ==============================================================================
 # SECCIÓN 4: PROCESAMIENTO Y LIMPIEZA INICIAL DE DATOS
