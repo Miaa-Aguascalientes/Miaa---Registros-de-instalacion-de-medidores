@@ -349,7 +349,6 @@ def agregar_capas_base(m):
         max_zoom=20,
     ).add_to(m)
 
-    # Capa de Vista Nocturna (CartoDB Dark Matter) con una clase o selector único
     folium.TileLayer(
         tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
         name="Vista Nocturna",
@@ -368,13 +367,13 @@ def agregar_capas_base(m):
     ).add_to(m)
 
     # ==============================================================================
-    # INYECCIÓN DE CSS EXCLUSIVO PARA ACLARAR LAS CALLES DE LA VISTA NOCTURNA
+    # INYECCIÓN DE CSS PARA FORZAR LETRAS BLANCAS BRILLANTES EN EL MAPA NOCTURNO
     # ==============================================================================
-    css_calteras_blancas_nocturnas = """
+    css_calteras_blancas = """
     <style>
-        /* Afecta únicamente a las imágenes de teselas (tiles) que provienen de cartocdn dark_all */
-        img.leaflet-tile[src*="cartocdn.com/rastertiles/dark_all"] {
-            filter: brightness(1.4) contrast(1.3);
+        /* Fuerza a que los textos y elementos del mapa oscuro resalten en color blanco nítido */
+        .leaflet-tile-pane {
+            filter: brightness(1.6) contrast(1.4);
         }
         /* Estilo coherente para los popups */
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
@@ -383,7 +382,7 @@ def agregar_capas_base(m):
         }
     </style>
     """
-    m.get_root().html.add_child(folium.Element(css_calteras_blancas_nocturnas))
+    m.get_root().html.add_child(folium.Element(css_calteras_blancas))
 
 
 # ==============================================================================
