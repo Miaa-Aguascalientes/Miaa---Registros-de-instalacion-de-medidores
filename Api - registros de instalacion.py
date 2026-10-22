@@ -2,7 +2,6 @@ import datetime
 import json
 import math
 import folium
-from folium.plugins import Fullscreen
 from folium.plugins import Fullscreen, AntPath
 import numpy as np
 import pandas as pd
@@ -11,6 +10,8 @@ import plotly.graph_objects as go
 import pydeck as pdk
 import requests
 from shapely.geometry import Point, Polygon
+from shapely import wkt  # <-- 1. IMPORTANTE: Agregado para leer WKT
+import geopandas as gpd  # <-- 2. IMPORTANTE: Agregado para manejo geoespacial
 from sqlalchemy import create_engine
 import streamlit as st
 from streamlit_folium import st_folium
@@ -339,14 +340,15 @@ def get_todas_las_colonias():
         FROM Diccionario_colonias
     """
     try:
-        df = pd.read_sql(query, get_mysql_telemetria_engine())
+        engine = create_engine(st.secrets["mysql"]["connection_string"])
+        df = pd.read_sql(query, con=engine)
         if not df.empty and df['geom_wkt'].iloc[0] is not None:
             df['geometry'] = df['geom_wkt'].apply(wkt.loads)
             gdf = gpd.GeoDataFrame(df, geometry='geometry')
             gdf.set_crs(epsg=32613, inplace=True)
             return gdf.to_crs(epsg=4326)
     except Exception as e:
-        st.error(f"Error cargando polígonos: {e}")
+        st.error(f"Error cargando polígonos de colonias: {e}")
     return None
 
 
@@ -378,8 +380,6 @@ def agregar_capas_base(m):
         subdomains="abcd",
         max_zoom=20,
     ).add_to(m)
-
-    folium.LayerControl(position="topleft").add_to(m)
 
     Fullscreen(
         position="topright",
@@ -464,6 +464,9 @@ df["longitud"] = (
     if "longitud" in df.columns
     else np.nan
 )
+
+# Cargar polígonos de colonias globalmente para los mapas
+gdf_colonias = get_todas_las_colonias()
 
 # ==============================================================================
 # SECCION 4.1 CREACIÓN Y FORMATEO DE LA COLUMNA PREDIO_VIV (PREDIO + UNIDAD)
@@ -1244,6 +1247,25 @@ with tab_principal:
                 )
                 agregar_capas_base(mapa_miaa)
 
+                # --- 3. INTEGRACIÓN DE LOS POLÍGONOS DE COLONIA EN EL MAPA GENERAL ---
+                if gdf_colonias is not None and not gdf_colonias.empty:
+                    folium.GeoJson(
+                        gdf_colonias,
+                        name="Polígonos de Colonias",
+                        style_function=lambda x: {
+                            "fillColor": "#38bdf8",
+                            "color": "#00eaff",
+                            "weight": 1.5,
+                            "fillOpacity": 0.08,
+                        },
+                        tooltip=folium.GeoJsonTooltip(
+                            fields=["Col_atl", "Sector", "Distrito", "Supervisor", "Pozos"],
+                            aliases=["Colonia:", "Sector:", "Distrito:", "Supervisor:", "Pozos:"],
+                            style="background-color: #0f172a; color: #ffffff; font-size: 11px; padding: 6px; border-radius: 4px;"
+                        )
+                    ).add_to(mapa_miaa)
+                # -------------------------------------------------------------------
+
                 for _, row in df_mapa_valido.iterrows():
                     es_externo = (
                         bool(row["usuarioExterno"])
@@ -1362,6 +1384,9 @@ with tab_principal:
                         fill_opacity=0.7,
                         popup=popup_obj,
                     ).add_to(mapa_miaa)
+
+                # Añadir control de capas para poder encender/apagar los polígonos
+                folium.LayerControl(position="topleft").add_to(mapa_miaa)
 
                 st_folium(
                     mapa_miaa,
@@ -1660,6 +1685,25 @@ with tab_rutas_diarias:
             mapa_rutas = folium.Map(location=[r_lat_c, r_lon_c], zoom_start=13, tiles=None)
             agregar_capas_base(mapa_rutas)
 
+            # --- 4. INTEGRACIÓN DE LOS POLÍGONOS DE COLONIA EN EL MAPA DE RUTAS ---
+            if gdf_colonias is not None and not gdf_colonias.empty:
+                folium.GeoJson(
+                    gdf_colonias,
+                    name="Polígonos de Colonias",
+                    style_function=lambda x: {
+                        "fillColor": "#38bdf8",
+                        "color": "#00eaff",
+                        "weight": 1.5,
+                        "fillOpacity": 0.08,
+                    },
+                    tooltip=folium.GeoJsonTooltip(
+                        fields=["Col_atl", "Sector", "Distrito", "Supervisor", "Pozos"],
+                        aliases=["Colonia:", "Sector:", "Distrito:", "Supervisor:", "Pozos:"],
+                        style="background-color: #0f172a; color: #ffffff; font-size: 11px; padding: 6px; border-radius: 4px;"
+                    )
+                ).add_to(mapa_rutas)
+            # ---------------------------------------------------------------------
+
             paleta_colores_ext = [
                 "#38bdf8", "#4ade80", "#f59e0b", "#a855f7", "#f43f5e",
                 "#06b6d4", "#84cc16", "#ec4899", "#6366f1", "#14b8a6",
@@ -1759,6 +1803,9 @@ with tab_rutas_diarias:
                                 icon_anchor=(6, 10)
                             )
                             folium.Marker([lat_i, lon_i], popup=popup_obj, tooltip=f"Punto #{orden_i}: {usr}", icon=icon_num).add_to(mapa_rutas)
+
+            # Añadir control de capas al mapa de rutas
+            folium.LayerControl(position="topleft").add_to(mapa_rutas)
 
             st_folium(mapa_rutas, width=None, height=450, key="mapa_rutas_diarias_instaladores", returned_objects=[])
 
@@ -3557,7 +3604,7 @@ with tab_sheets_interno:
         with g_col3:
             with st.container(border=True):
                 st.markdown(
-                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Evolución de Retirados y Sin Medidor</p>",
+                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Evolución de Rompimiento / Retirados y Sin Medidor</p>",
                     unsafe_allow_html=True,
                 )
                 if col_fecha_sheets and col_ret_sheets and col_sin_sheets:
