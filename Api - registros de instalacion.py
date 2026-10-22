@@ -1253,19 +1253,25 @@ with tab_principal:
                         gdf_colonias,
                         name="Polígonos de Colonias",
                         style_function=lambda x: {
-                            "fillColor": "#2980B9",
-                            "color": "#2980B9",
-                            "weight": 1,
+                            "fillColor": "#38bdf8",
+                            "color": "#00eaff",
+                            "weight": 1.5,
                             "fillOpacity": 0.08,
                         },
+                        highlight_function=lambda x: {
+                            "fillColor": "#38bdf8",
+                            "color": "#ffffff",  # El borde se vuelve blanco brillante al pasar el mouse
+                            "weight": 2.5,       # Se engrosa ligeramente el borde
+                            "fillOpacity": 0.35, # Se intensifica el fondo azul para destacarlo claramente
+                        },
                         tooltip=folium.GeoJsonTooltip(
-                        fields=["Col_atl", "Sector", "Distrito"],
-                        aliases=["Colonia:", "Sector:", "Distrito:"],
-                        style=(
-                            "background-color: #0f172a; color: #ffffff; "
-                            "font-size: 11px; padding: 6px; border-radius: 4px;"
+                            fields=["Col_atl", "Sector", "Distrito"],
+                            aliases=["Colonia:", "Sector:", "Distrito:"],
+                            style=(
+                                "background-color: #0f172a; color: #ffffff; "
+                                "font-size: 11px; padding: 6px; border-radius: 4px;"
+                            )
                         )
-                    )
                     ).add_to(mapa_miaa)
                 # -------------------------------------------------------------------
 
@@ -1694,20 +1700,26 @@ with tab_rutas_diarias:
                         gdf_colonias,
                         name="Polígonos de Colonias",
                         style_function=lambda x: {
-                            "fillColor": "#2980B9",
-                            "color": "#2980B9",
-                            "weight": 1,
+                            "fillColor": "#38bdf8",
+                            "color": "#00eaff",
+                            "weight": 1.5,
                             "fillOpacity": 0.08,
                         },
+                        highlight_function=lambda x: {
+                            "fillColor": "#38bdf8",
+                            "color": "#ffffff",  # El borde se vuelve blanco brillante al pasar el mouse
+                            "weight": 2.5,       # Se engrosa ligeramente el borde
+                            "fillOpacity": 0.35, # Se intensifica el fondo azul para destacarlo claramente
+                        },
                         tooltip=folium.GeoJsonTooltip(
-                        fields=["Col_atl", "Sector", "Distrito"],
-                        aliases=["Colonia:", "Sector:", "Distrito:"],
-                        style=(
-                            "background-color: #0f172a; color: #ffffff; "
-                            "font-size: 11px; padding: 6px; border-radius: 4px;"
+                            fields=["Col_atl", "Sector", "Distrito"],
+                            aliases=["Colonia:", "Sector:", "Distrito:"],
+                            style=(
+                                "background-color: #0f172a; color: #ffffff; "
+                                "font-size: 11px; padding: 6px; border-radius: 4px;"
+                            )
                         )
-                    )
-                ).add_to(mapa_rutas)
+                    ).add_to(mapa_rutas)
             # ---------------------------------------------------------------------
 
             paleta_colores_ext = [
