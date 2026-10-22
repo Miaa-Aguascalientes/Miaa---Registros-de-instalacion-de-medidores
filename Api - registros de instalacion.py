@@ -349,13 +349,13 @@ def agregar_capas_base(m):
         max_zoom=20,
     ).add_to(m)
 
-    # Vista Nocturna con CartoDB Dark Matter y tu API key integrada correctamente
+    # Capa de Vista Nocturna con el estilo exacto de tonos oscuros y morados de OpenStreetMap (Andy Allan)
     folium.TileLayer(
-        tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
+        tiles="https://{s}.tile.thunderforest.com/transport-dark/{z}/{x}/{y}.png?apikey=61784d7de93e4d9cbfaeef959c9d5598",
+        attr='&copy; <a href="https://www.thunderforest.com/">Thunderforest</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         name="Vista Nocturna",
-        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains="abcd",
-        max_zoom=20,
+        max_zoom=22,
+        subkeys="abc",
         control=True,
     ).add_to(m)
 
@@ -367,7 +367,7 @@ def agregar_capas_base(m):
         cancel_title="Salir de pantalla completa",
     ).add_to(m)
 
-    # Estilo coherente para los popups
+    # Estilo coherente para los popups en modo oscuro
     css_popups = """
     <style>
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
