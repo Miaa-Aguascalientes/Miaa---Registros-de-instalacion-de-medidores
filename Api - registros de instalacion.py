@@ -349,10 +349,10 @@ def agregar_capas_base(m):
         max_zoom=20,
     ).add_to(m)
 
-    # Capa de Vista Nocturna con el estilo exacto de tonos oscuros y morados de OpenStreetMap (Andy Allan)
+    # Capa de Vista Nocturna utilizando el proveedor oficial de la capa de transporte de OpenStreetMap
     folium.TileLayer(
         tiles="https://{s}.tile.thunderforest.com/transport-dark/{z}/{x}/{y}.png?apikey=61784d7de93e4d9cbfaeef959c9d5598",
-        attr='&copy; <a href="https://www.thunderforest.com/">Thunderforest</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        attr='Maps &copy; <a href="https://www.thunderforest.com/">Thunderforest</a>, Data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         name="Vista Nocturna",
         max_zoom=22,
         subkeys="abc",
@@ -377,7 +377,6 @@ def agregar_capas_base(m):
     </style>
     """
     m.get_root().html.add_child(folium.Element(css_popups))
-
 
 # ==============================================================================
 # SECCIÓN 4: PROCESAMIENTO Y LIMPIEZA INICIAL DE DATOS
