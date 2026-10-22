@@ -349,12 +349,11 @@ def agregar_capas_base(m):
         max_zoom=20,
     ).add_to(m)
 
-    # Capa de Vista Nocturna con estilo moderno tipo Mapbox Dark (Stadia / Carto Dark optimizado)
+    # Vista Nocturna con estilo limpio y definido idéntico a Mapbox Dark (Stadia Alidade Smooth Dark)
     folium.TileLayer(
-        tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
+        tiles="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png",
+        attr='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors',
         name="Vista Nocturna",
-        attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains="abcd",
         max_zoom=20,
         control=True,
     ).add_to(m)
@@ -367,23 +366,16 @@ def agregar_capas_base(m):
         cancel_title="Salir de pantalla completa",
     ).add_to(m)
 
-    # ==============================================================================
-    # INYECCIÓN DE CSS PARA LOGRAR EL ACabADO ELEGANTE TIPO MAPBOX DARK
-    # ==============================================================================
-    css_estilo_mapbox_dark = """
+    # Estilo coherente para los popups
+    css_popups = """
     <style>
-        /* Ajuste fino de contraste y brillo para obtener el tono gris oscuro mate limpio de Mapbox Dark */
-        .leaflet-tile-pane img[src*="cartocdn.com/rastertiles/dark_all"] {
-            filter: brightness(1.25) contrast(1.15);
-        }
-        /* Estilo coherente para los popups en modo oscuro */
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
             background-color: #0f172a !important;
             color: #f8fafc !important;
         }
     </style>
     """
-    m.get_root().html.add_child(folium.Element(css_estilo_mapbox_dark))
+    m.get_root().html.add_child(folium.Element(css_popups))
 
 
 # ==============================================================================
