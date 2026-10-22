@@ -349,7 +349,7 @@ def agregar_capas_base(m):
         max_zoom=20,
     ).add_to(m)
 
-    # Volvemos a usar la capa dark_all que trae la estructura de calles y manzanas integrada
+    # Capa de Vista Nocturna con estilo moderno tipo Mapbox Dark (Stadia / Carto Dark optimizado)
     folium.TileLayer(
         tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
         name="Vista Nocturna",
@@ -368,22 +368,22 @@ def agregar_capas_base(m):
     ).add_to(m)
 
     # ==============================================================================
-    # INYECCIÓN DE CSS PARA ILUMINAR TANTO LAS CALLES COMO LOS TEXTOS EN EL MAPA OSCURO
+    # INYECCIÓN DE CSS PARA LOGRAR EL ACabADO ELEGANTE TIPO MAPBOX DARK
     # ==============================================================================
-    css_calles_y_textos_claros = """
+    css_estilo_mapbox_dark = """
     <style>
-        /* Eleva el brillo y el contraste de la capa oscura para que las líneas de las calles y los textos resalten claramente */
+        /* Ajuste fino de contraste y brillo para obtener el tono gris oscuro mate limpio de Mapbox Dark */
         .leaflet-tile-pane img[src*="cartocdn.com/rastertiles/dark_all"] {
-            filter: brightness(2.2) contrast(1.8) grayscale(30%);
+            filter: brightness(1.25) contrast(1.15);
         }
-        /* Estilo coherente para los popups */
+        /* Estilo coherente para los popups en modo oscuro */
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
             background-color: #0f172a !important;
             color: #f8fafc !important;
         }
     </style>
     """
-    m.get_root().html.add_child(folium.Element(css_calles_y_textos_claros))
+    m.get_root().html.add_child(folium.Element(css_estilo_mapbox_dark))
 
 
 # ==============================================================================
