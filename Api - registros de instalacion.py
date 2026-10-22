@@ -1261,7 +1261,9 @@ with tab_principal:
                         tooltip=folium.GeoJsonTooltip(
                             fields=["Col_atl", "Sector", "Distrito"],
                             aliases=["Colonia:", "Sector:", "Distrito:"],
-                            style="background-color: #0f172a; color: #ffffff; font-size: 11px; padding: 6px; border-radius: 4px;"
+                            style=(
+                            "background-color: #0f172a; color: #ffffff; "
+                            "font-size: 11px; padding: 6px; border-radius: 4px;"
                         )
                     ).add_to(mapa_miaa)
                 # -------------------------------------------------------------------
@@ -1699,8 +1701,10 @@ with tab_rutas_diarias:
                     tooltip=folium.GeoJsonTooltip(
                         fields=["Col_atl", "Sector", "Distrito"],
                         aliases=["Colonia:", "Sector:", "Distrito:"],
-                        style="background-color: #0f172a; color: #ffffff; font-size: 11px; padding: 6px; border-radius: 4px;"
-                    )
+                        style=(
+                            "background-color: #0f172a; color: #ffffff; "
+                            "font-size: 11px; padding: 6px; border-radius: 4px;"
+                        )
                 ).add_to(mapa_rutas)
             # ---------------------------------------------------------------------
 
