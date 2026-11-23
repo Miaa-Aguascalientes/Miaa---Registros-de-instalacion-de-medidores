@@ -1597,16 +1597,12 @@ with tab_principal:
                             f"<b>Información del Servicio</b><br>"
                             f"<b>Nombre:</b> {nombre_col.loc[idx]}<br>"
                             f"<b>Número de Predio:</b> {predio_col.loc[idx]}<br>"
-                            f"<b>Cliente:</b> {cliente_col.loc[idx]}<br>"
                             f"<b>Domicilio:</b> {dom_col.loc[idx]}<br>"
                             f"<b>Colonia:</b> {col_col.loc[idx]}<br>"
                             f"<b>Nivel:</b> {niv_col.loc[idx]}<br>"
-                            f"<b>Giro:</b> {gir_col.loc[idx]}<br>"
                             f"<b>Serie del Medidor:</b> {serie_col.loc[idx]}<br>"
                             f"<b>Fecha de Instalación:</b> {fecha_str_col.loc[idx]}<br>"
-                            f"<b>Hora de Instalación:</b> {hora_str_col.loc[idx]}<br>"
                             f"<b>Lugar de Instalación:</b> {lugar_col.loc[idx]}<br>"
-                            f"<b>Anomalía:</b> {anom_col.loc[idx]}"
                             f"</div>"
                         )
 
@@ -3810,6 +3806,7 @@ with tab_sheets_interno:
         st.warning(
             "No se pudo cargar la información de la hoja 'Instalaciones' del archivo de Google Sheets."
         )
+
 
 
 
