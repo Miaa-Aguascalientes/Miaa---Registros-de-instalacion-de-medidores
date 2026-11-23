@@ -1422,37 +1422,11 @@ with tab_principal:
                 )
                 agregar_capas_base(mapa_miaa)
 
-                # --- CAPA 1: POLÍGONOS DE COLONIAS ---
-                if gdf_colonias is not None and not gdf_colonias.empty:
-                    folium.GeoJson(
-                        gdf_colonias,
-                        name="Polígonos de Colonias",
-                        style_function=lambda x: {
-                            "fillColor": "#2563eb",
-                            "color": "#1d4ed8",
-                            "weight": 1.2,
-                            "fillOpacity": 0.08,
-                        },
-                        highlight_function=lambda x: {
-                            "fillColor": "#3b82f6",
-                            "color": "#0f172a",
-                            "weight": 2.5,
-                            "fillOpacity": 0.28,
-                        },
-                        tooltip=folium.GeoJsonTooltip(
-                            fields=["Col_atl", "Sector", "Distrito"],
-                            aliases=["Colonia:", "Sector:", "Distrito:"],
-                            style=(
-                                "background-color: #ffffff; color: #0f172a; "
-                                "border: 1px solid #cbd5e1; "
-                                "font-size: 11px; padding: 6px; border-radius: 4px;"
-                            )
-                        )
-                    ).add_to(mapa_miaa)
-
-                # --- CAPA 2: POLÍGONOS DE INSTALACIÓN (FID) DE LA PESTAÑA MAPA POLÍGONOS ---
+                # --- CAPA 1 (PRIMERA EN EL MENÚ): POLÍGONOS DE INSTALACIÓN (FID) ---
                 if poligonos_procesados:
-                    fg_poligonos_fid = folium.FeatureGroup(name="Polígonos de Instalación (FID)")
+                    fg_poligonos_fid = folium.FeatureGroup(
+                        name="Polígonos de Instalación (FID)", show=True
+                    )
                     for f_id, datos in poligonos_procesados.items():
                         inst_count = conteo_medidores_instalados.get(f_id, 0)
                         if inst_count == 0:
@@ -1482,6 +1456,39 @@ with tab_principal:
                         ).add_to(fg_poligonos_fid)
                     fg_poligonos_fid.add_to(mapa_miaa)
 
+                # --- CAPA 2 (DESACTIVADA POR DEFECTO): POLÍGONOS DE COLONIAS ---
+                if gdf_colonias is not None and not gdf_colonias.empty:
+                    fg_colonias = folium.FeatureGroup(
+                        name="Polígonos de Colonias", show=False
+                    )
+                    folium.GeoJson(
+                        gdf_colonias,
+                        name="Polígonos de Colonias",
+                        style_function=lambda x: {
+                            "fillColor": "#2563eb",
+                            "color": "#1d4ed8",
+                            "weight": 1.2,
+                            "fillOpacity": 0.08,
+                        },
+                        highlight_function=lambda x: {
+                            "fillColor": "#3b82f6",
+                            "color": "#0f172a",
+                            "weight": 2.5,
+                            "fillOpacity": 0.28,
+                        },
+                        tooltip=folium.GeoJsonTooltip(
+                            fields=["Col_atl", "Sector", "Distrito"],
+                            aliases=["Colonia:", "Sector:", "Distrito:"],
+                            style=(
+                                "background-color: #ffffff; color: #0f172a; "
+                                "border: 1px solid #cbd5e1; "
+                                "font-size: 11px; padding: 6px; border-radius: 4px;"
+                            ),
+                        ),
+                    ).add_to(fg_colonias)
+                    fg_colonias.add_to(mapa_miaa)
+
+                # --- PUNTOS DE INSTALACIONES (EXTERNO VS MIAA) ---
                 for _, row in df_mapa_valido.iterrows():
                     es_externo = (
                         bool(row["usuarioExterno"])
@@ -1510,13 +1517,16 @@ with tab_principal:
                         return default
 
                     nombre = get_clean("nombreCliente")
-                    
+
                     predio = row.get("predio_viv", get_clean(["numeroPredio", "predio"]))
                     if pd.isna(predio) or str(predio).strip() in ["nan", "None", "", "nat"]:
                         predio = get_clean(["numeroPredio", "predio"])
 
                     raw_cliente = get_clean(["cliente", "numeroCliente"])
-                    if pd.notna(raw_cliente) and str(raw_cliente).strip() not in ["nan", "None", "", "nat"]:
+                    if (
+                        pd.notna(raw_cliente)
+                        and str(raw_cliente).strip() not in ["nan", "None", "", "nat"]
+                    ):
                         cliente = str(raw_cliente).split(".")[0]
                     else:
                         cliente = "N/A"
@@ -1526,9 +1536,7 @@ with tab_principal:
                     nivel = get_clean("nivel")
                     giro = get_clean("giro")
                     serie = get_clean(["serieMedidor", "serie"])
-                    lugar_inst = get_clean(
-                        ["tipo_instalacion_nombre", "lugarInstalacion"]
-                    )
+                    lugar_inst = get_clean(["tipo_instalacion_nombre", "lugarInstalacion"])
                     anomalia_str = get_clean(["anomalia_nombre"])
 
                     raw_fecha = row.get("fechaInstalacion", None)
@@ -3787,3 +3795,4 @@ with tab_sheets_interno:
         st.warning(
             "No se pudo cargar la información de la hoja 'Instalaciones' del archivo de Google Sheets."
         )
+
