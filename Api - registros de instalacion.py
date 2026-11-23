@@ -418,6 +418,7 @@ def agregar_capas_base(m):
         tiles="OpenStreetMap",
         name="OpenStreetMap",
         max_zoom=19,
+        show=True,
     ).add_to(m)
 
     folium.TileLayer(
@@ -425,6 +426,7 @@ def agregar_capas_base(m):
         attr="Google Satellite",
         name="Satélite con Calles",
         max_zoom=20,
+        show=False,
     ).add_to(m)
 
     folium.TileLayer(
@@ -433,6 +435,7 @@ def agregar_capas_base(m):
         attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         subdomains="abcd",
         max_zoom=20,
+        show=False,
     ).add_to(m)
 
     Fullscreen(
@@ -3807,5 +3810,6 @@ with tab_sheets_interno:
         st.warning(
             "No se pudo cargar la información de la hoja 'Instalaciones' del archivo de Google Sheets."
         )
+
 
 
