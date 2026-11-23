@@ -1488,126 +1488,138 @@ with tab_principal:
                     ).add_to(fg_colonias)
                     fg_colonias.add_to(mapa_miaa)
 
-                # --- PUNTOS DE INSTALACIONES (EXTERNO VS MIAA) ---
-                for _, row in df_mapa_valido.iterrows():
-                    es_externo = (
-                        bool(row["usuarioExterno"])
-                        if "usuarioExterno" in df_mapa_valido.columns
-                        else False
+                # ================= REEMPLAZA DESDE AQUÍ =================
+                if not df_mapa_valido.empty:
+                    df_pts = df_mapa_valido.copy()
+                    df_pts["lat_f"] = pd.to_numeric(df_pts["latitud"], errors="coerce")
+                    df_pts["lon_f"] = pd.to_numeric(df_pts["longitud"], errors="coerce")
+                    df_pts = df_pts.dropna(subset=["lat_f", "lon_f"])
+
+                    es_ext_serie = (
+                        df_pts["usuarioExterno"].fillna(False).astype(bool)
+                        if "usuarioExterno" in df_pts.columns
+                        else pd.Series(False, index=df_pts.index)
                     )
-                    color_punto = "#d97706" if es_externo else "#9333ea"
 
-                    def get_clean(keys, default=""):
-                        if isinstance(keys, str):
-                            keys = [keys]
-                        for k in keys:
-                            if k in row:
-                                val = row[k]
-                                if (
-                                    pd.notna(val)
-                                    and str(val).strip().lower()
-                                    not in [
-                                        "nan",
-                                        "none",
-                                        "nat",
-                                        "",
-                                    ]
-                                ):
-                                    return str(val).strip()
-                        return default
+                    fg_ext = folium.FeatureGroup(name="Instalaciones Externo", show=True)
+                    fg_miaa = folium.FeatureGroup(name="Instalaciones MIAA", show=True)
 
-                    nombre = get_clean("nombreCliente")
-
-                    predio = row.get("predio_viv", get_clean(["numeroPredio", "predio"]))
-                    if pd.isna(predio) or str(predio).strip() in ["nan", "None", "", "nat"]:
-                        predio = get_clean(["numeroPredio", "predio"])
-
-                    raw_cliente = get_clean(["cliente", "numeroCliente"])
-                    if (
-                        pd.notna(raw_cliente)
-                        and str(raw_cliente).strip() not in ["nan", "None", "", "nat"]
-                    ):
-                        cliente = str(raw_cliente).split(".")[0]
+                    if "fechaInstalacion" in df_pts.columns:
+                        dt_inst = pd.to_datetime(df_pts["fechaInstalacion"], errors="coerce")
+                        fecha_str_col = dt_inst.dt.strftime("%d/%m/%Y").fillna("")
                     else:
-                        cliente = "N/A"
+                        fecha_str_col = pd.Series("", index=df_pts.index)
 
-                    domicilio = get_clean("domicilio")
-                    colonia = get_clean("colonia")
-                    nivel = get_clean("nivel")
-                    giro = get_clean("giro")
-                    serie = get_clean(["serieMedidor", "serie"])
-                    lugar_inst = get_clean(["tipo_instalacion_nombre", "lugarInstalacion"])
-                    anomalia_str = get_clean(["anomalia_nombre"])
+                    if "horaInicio" in df_pts.columns:
+                        hora_raw = df_pts["horaInicio"].fillna("").astype(str).str.strip()
+                        hora_str_col = (
+                            hora_raw.str.split("T")
+                            .str[-1]
+                            .str.split(" ")
+                            .str[-1]
+                            .str[:5]
+                        )
+                    else:
+                        hora_str_col = pd.Series("", index=df_pts.index)
 
-                    raw_fecha = row.get("fechaInstalacion", None)
-                    fecha_inst = ""
-                    if (
-                        pd.notna(raw_fecha)
-                        and str(raw_fecha).strip().lower()
-                        not in [
-                            "nan",
-                            "none",
-                            "nat",
-                            "",
-                        ]
+                    nombre_col = (
+                        df_pts["nombreCliente"].fillna("").astype(str)
+                        if "nombreCliente" in df_pts.columns
+                        else pd.Series("", index=df_pts.index)
+                    )
+                    predio_col = (
+                        df_pts["predio_viv"].fillna("").astype(str)
+                        if "predio_viv" in df_pts.columns
+                        else pd.Series("", index=df_pts.index)
+                    )
+                    col_cli_c = next(
+                        (c for c in ["cliente", "numeroCliente"] if c in df_pts.columns), None
+                    )
+                    cliente_col = (
+                        df_pts[col_cli_c]
+                        .fillna("N/A")
+                        .astype(str)
+                        .str.replace(r"\.0$", "", regex=True)
+                        if col_cli_c
+                        else pd.Series("N/A", index=df_pts.index)
+                    )
+                    dom_col = (
+                        df_pts["domicilio"].fillna("").astype(str)
+                        if "domicilio" in df_pts.columns
+                        else pd.Series("", index=df_pts.index)
+                    )
+                    col_col = (
+                        df_pts["colonia"].fillna("").astype(str)
+                        if "colonia" in df_pts.columns
+                        else pd.Series("", index=df_pts.index)
+                    )
+                    niv_col = (
+                        df_pts["nivel"].fillna("").astype(str)
+                        if "nivel" in df_pts.columns
+                        else pd.Series("", index=df_pts.index)
+                    )
+                    gir_col = (
+                        df_pts["giro"].fillna("").astype(str)
+                        if "giro" in df_pts.columns
+                        else pd.Series("", index=df_pts.index)
+                    )
+                    col_ser_c = next(
+                        (c for c in ["serieMedidor", "serie"] if c in df_pts.columns), None
+                    )
+                    serie_col = (
+                        df_pts[col_ser_c].fillna("").astype(str)
+                        if col_ser_c
+                        else pd.Series("", index=df_pts.index)
+                    )
+                    lugar_col = (
+                        df_pts["tipo_instalacion_nombre"].fillna("").astype(str)
+                        if "tipo_instalacion_nombre" in df_pts.columns
+                        else pd.Series("", index=df_pts.index)
+                    )
+                    anom_col = (
+                        df_pts["anomalia_nombre"].fillna("SIN ANOMALÍA / REGULAR").astype(str)
+                        if "anomalia_nombre" in df_pts.columns
+                        else pd.Series("SIN ANOMALÍA / REGULAR", index=df_pts.index)
+                    )
+
+                    for idx, lat_v, lon_v in zip(
+                        df_pts.index, df_pts["lat_f"].tolist(), df_pts["lon_f"].tolist()
                     ):
-                        dt_obj = pd.to_datetime(raw_fecha, errors="coerce")
-                        if pd.notna(dt_obj):
-                            fecha_inst = dt_obj.strftime("%d/%m/%Y")
-                        else:
-                            fecha_inst = str(raw_fecha).strip()
+                        es_ext = bool(es_ext_serie.loc[idx])
+                        color_punto = "#d97706" if es_ext else "#9333ea"
+                        target_fg = fg_ext if es_ext else fg_miaa
 
-                    raw_hora = row.get("horaInicio", None)
-                    hora_inst = ""
-                    if (
-                        pd.notna(raw_hora)
-                        and str(raw_hora).strip().lower()
-                        not in [
-                            "nan",
-                            "none",
-                            "nat",
-                            "",
-                        ]
-                    ):
-                        hora_str = str(raw_hora).strip()
-                        if "T" in hora_str:
-                            time_part = hora_str.split("T")[1]
-                            hora_inst = time_part[:5]
-                        elif " " in hora_str:
-                            time_part = hora_str.split(" ")[1]
-                            hora_inst = time_part[:5]
-                        else:
-                            hora_inst = hora_str[:5]
+                        info_popup = (
+                            f"<div style='font-size: 11px; line-height: 1.4; color: #0f172a;'>"
+                            f"<b>Información del Servicio</b><br>"
+                            f"<b>Nombre:</b> {nombre_col.loc[idx]}<br>"
+                            f"<b>Número de Predio:</b> {predio_col.loc[idx]}<br>"
+                            f"<b>Cliente:</b> {cliente_col.loc[idx]}<br>"
+                            f"<b>Domicilio:</b> {dom_col.loc[idx]}<br>"
+                            f"<b>Colonia:</b> {col_col.loc[idx]}<br>"
+                            f"<b>Nivel:</b> {niv_col.loc[idx]}<br>"
+                            f"<b>Giro:</b> {gir_col.loc[idx]}<br>"
+                            f"<b>Serie del Medidor:</b> {serie_col.loc[idx]}<br>"
+                            f"<b>Fecha de Instalación:</b> {fecha_str_col.loc[idx]}<br>"
+                            f"<b>Hora de Instalación:</b> {hora_str_col.loc[idx]}<br>"
+                            f"<b>Lugar de Instalación:</b> {lugar_col.loc[idx]}<br>"
+                            f"<b>Anomalía:</b> {anom_col.loc[idx]}"
+                            f"</div>"
+                        )
 
-                    info_popup = f"""
-                    <div style="font-size: 11px; line-height: 1.4; color: #0f172a;">
-                        <b>Información del Servicio</b><br>
-                        <b>Nombre:</b> {nombre}<br>
-                        <b>Número de Predio:</b> {predio}<br>
-                        <b>Cliente:</b> {cliente}<br>
-                        <b>Domicilio:</b> {domicilio}<br>
-                        <b>Colonia:</b> {colonia}<br>
-                        <b>Nivel:</b> {nivel}<br>
-                        <b>Giro:</b> {giro}<br>
-                        <b>Serie del Medidor:</b> {serie}<br>
-                        <b>Fecha de Instalación:</b> {fecha_inst}<br>
-                        <b>Hora de Instalación:</b> {hora_inst}<br>
-                        <b>Lugar de Instalación:</b> {lugar_inst}<br>
-                        <b>Anomalía:</b> {anomalia_str}
-                    </div>
-                    """
+                        folium.CircleMarker(
+                            location=[lat_v, lon_v],
+                            radius=2.5,
+                            color=color_punto,
+                            fill=True,
+                            fill_color=color_punto,
+                            fill_opacity=0.75,
+                            popup=folium.Popup(info_popup, max_width=300),
+                        ).add_to(target_fg)
 
-                    popup_obj = folium.Popup(info_popup, max_width=300)
-
-                    folium.CircleMarker(
-                        location=[float(row["latitud"]), float(row["longitud"])],
-                        radius=2.5,
-                        color=color_punto,
-                        fill=True,
-                        fill_color=color_punto,
-                        fill_opacity=0.75,
-                        popup=popup_obj,
-                    ).add_to(mapa_miaa)
+                    fg_ext.add_to(mapa_miaa)
+                    fg_miaa.add_to(mapa_miaa)
+              
 
                 folium.LayerControl(position="topleft").add_to(mapa_miaa)
 
@@ -3795,4 +3807,5 @@ with tab_sheets_interno:
         st.warning(
             "No se pudo cargar la información de la hoja 'Instalaciones' del archivo de Google Sheets."
         )
+
 
