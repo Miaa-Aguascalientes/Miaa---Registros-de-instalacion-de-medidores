@@ -17,7 +17,7 @@ import streamlit as st
 from streamlit_folium import st_folium
 
 # ==============================================================================
-# SECCIÓN 1: CONFIGURACIÓN GENERAL DE LA PÁGINA Y ESTILOS CSS
+# SECCIÓN 1: CONFIGURACIÓN GENERAL DE LA PÁGINA Y ESTILOS CSS (TEMA CLARO / BLANCO)
 # ==============================================================================
 st.set_page_config(
     page_title="Dashboard Instalación Medidores Inteligentes",
@@ -34,7 +34,14 @@ custom_style = """
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
+    .stApp {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+    }
+
     [data-testid="stSidebar"] {
+        background-color: #f8fafc !important;
+        border-right: 1px solid #e2e8f0 !important;
         min-width: 260px !important;
         max-width: 320px !important;
         transform: none !important;
@@ -43,6 +50,25 @@ custom_style = """
     
     section[data-testid="stSidebar"] {
         display: block !important;
+    }
+
+    [data-testid="stSidebar"] * {
+        color: #0f172a;
+    }
+
+    [data-testid="stSidebar"] .stButton > button {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease;
+    }
+
+    [data-testid="stSidebar"] .stButton > button:hover {
+        background-color: #eff6ff !important;
+        border-color: #2563eb !important;
+        color: #1d4ed8 !important;
     }
     
     [data-testid="collapsedControl"] { display: none !important; }
@@ -60,22 +86,21 @@ custom_style = """
         margin-top: 0px;
         margin-bottom: 8px;
         padding: 5px 0px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 1px solid #e2e8f0;
         width: 100%;
     }
 
     .dashboard-main-title {
         font-size: 1.3rem;
         font-weight: 800;
-        color: #38bdf8;
+        color: #0284c7;
         text-transform: uppercase;
         letter-spacing: 0.8px;
         margin: 0;
-        text-shadow: 0px 2px 15px rgba(56, 189, 248, 0.2);
     }
 
     .dashboard-subtitle-right {
-        color: #94a3b8;
+        color: #475569;
         font-size: 0.85rem;
         font-weight: 500;
         letter-spacing: 0.3px;
@@ -86,17 +111,39 @@ custom_style = """
         margin-top: 5px;
     }
 
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 6px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        background-color: #f8fafc;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        padding: 8px 14px;
+        font-weight: 600;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background-color: #ffffff !important;
+        color: #0284c7 !important;
+        border-color: #cbd5e1 !important;
+        border-bottom: 2px solid #0284c7 !important;
+    }
+
     .metric-card {
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         padding: 8px 12px;
-        border-radius: 8px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 15px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-        transition: all 0.3s ease;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+        transition: all 0.25s ease;
         position: relative;
         overflow: hidden;
         height: 58px;
@@ -104,8 +151,8 @@ custom_style = """
 
     .metric-card:hover {
         transform: translateY(-2px);
-        border-color: rgba(59, 130, 246, 0.5);
-        box-shadow: 0 8px 12px -3px rgba(59, 130, 246, 0.2);
+        border-color: #3b82f6;
+        box-shadow: 0 6px 12px rgba(59, 130, 246, 0.12);
     }
 
     .metric-card::before {
@@ -115,7 +162,7 @@ custom_style = """
         left: -100%;
         width: 100%;
         height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+        background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.06), transparent);
         transition: 0.5s;
     }
 
@@ -142,9 +189,9 @@ custom_style = """
     }
 
     .metric-title {
-        color: #94a3b8;
+        color: #64748b;
         font-size: 10px;
-        font-weight: 600;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         line-height: 1.1;
@@ -154,24 +201,30 @@ custom_style = """
     }
 
     .metric-value {
-        color: #ffffff;
+        color: #0f172a;
         font-size: 17px;
-        font-weight: 700;
+        font-weight: 800;
         line-height: 1.2;
     }
 
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
         border-radius: 12px !important;
         padding: 12px !important;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2) !important;
-        transition: all 0.3s ease;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+        transition: all 0.25s ease;
     }
 
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        border-color: rgba(59, 130, 246, 0.4) !important;
-        box-shadow: 0 8px 12px -3px rgba(59, 130, 246, 0.15) !important;
+        border-color: #93c5fd !important;
+        box-shadow: 0 6px 12px rgba(59, 130, 246, 0.08) !important;
+    }
+
+    div[data-testid="stDataFrame"] {
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 8px !important;
+        background-color: #ffffff !important;
     }
 
     .js-plotly-plot .plotly .main-svg {
@@ -300,8 +353,6 @@ def cargar_usuarios_miaa_conmedidor_db():
         conn_str = f"postgresql+psycopg2://{cfg['user']}:{cfg['password']}@{cfg['host']}:{cfg['port']}/{cfg['database']}"
         engine = create_engine(conn_str)
         
-        # FORZAMOS ST_AsText(geom) PARA QUE LA TABLA MUESTRE "POINT (X Y)"
-        # Y EXTRAEMOS X e Y DIRECTAMENTE DE LA GEOMETRÍA UTM
         query = """
             SELECT *, 
                    ST_AsText(geom) as geom,
@@ -329,6 +380,7 @@ def cargar_usuarios_miaa_conmedidor_db():
         except Exception as ex:
             print(f"Error en respaldo de conexión: {ex}")
             return pd.DataFrame()
+
 
 @st.cache_data(ttl=3600)
 def get_todas_las_colonias():
@@ -376,8 +428,8 @@ def agregar_capas_base(m):
     ).add_to(m)
 
     folium.TileLayer(
-        tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/dark_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
-        name="Vista Nocturna",
+        tiles=f"https://{{s}}.basemaps.cartocdn.com/rastertiles/light_all/{{z}}/{{x}}/{{y}}.png?key={api_key}",
+        name="Vista Clara",
         attr='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         subdomains="abcd",
         max_zoom=20,
@@ -389,19 +441,16 @@ def agregar_capas_base(m):
         cancel_title="Salir de pantalla completa",
     ).add_to(m)
 
-    # ==============================================================================
-    # INYECCIÓN DE CSS PARA OCULTAR LA BARRA DE ATRIBUCIÓN Y ESTILIZAR POPUPS
-    # ==============================================================================
     css_quitar_atribucion = """
     <style>
-        /* Oculta la barra de texto de atribución de Leaflet en la esquina inferior izquierda */
         .leaflet-control-attribution {
             display: none !important;
         }
-        /* Estilo coherente para los popups en modo oscuro */
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-            background-color: #0f172a !important;
-            color: #f8fafc !important;
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12) !important;
         }
     </style>
     """
@@ -443,7 +492,6 @@ df["fecha_dt"] = (
     else pd.NaT
 )
 
-# Garantizar campos para seguimiento por usuario y tipo de personal
 if not df.empty:
     if "usuarioNombre" not in df.columns:
         df["usuarioNombre"] = "NO ESPECIFICADO"
@@ -467,7 +515,6 @@ df["longitud"] = (
     else np.nan
 )
 
-# Cargar polígonos de colonias globalmente para los mapas
 gdf_colonias = get_todas_las_colonias()
 
 # ==============================================================================
@@ -592,12 +639,12 @@ except Exception:
 
 st.markdown(
     f"""
-    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0;">
         <div style="width: 180px;"></div>
         <div style="flex-grow: 1; text-align: center;">
-            <h1 style="color: white; font-size: 26px; margin: 0; font-weight: bold;">DASHBOARD INSTALACIÓN MEDIDORES INTELIGENTES</h1>
+            <h1 style="color: #0f172a; font-size: 26px; margin: 0; font-weight: 800;">DASHBOARD INSTALACIÓN MEDIDORES INTELIGENTES</h1>
         </div>
-        <div style="width: 180px; text-align: right; color: #a0a0a0; font-size: 14px;">
+        <div style="width: 180px; text-align: right; color: #475569; font-size: 14px; font-weight: 500;">
             Actualizado al: {fecha_actual_str}
         </div>
     </div>
@@ -853,7 +900,7 @@ with tab_principal:
         st.markdown(
             f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-bullseye"></i></div>
+                    <div class="metric-icon-box" style="color: #0284c7;"><i class="fa-solid fa-bullseye"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Meta Total</div>
                         <div class="metric-value">{meta_total:,}</div>
@@ -867,7 +914,7 @@ with tab_principal:
         st.markdown(
             f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #4ade80;"><i class="fa-solid fa-circle-check"></i></div>
+                    <div class="metric-icon-box" style="color: #16a34a;"><i class="fa-solid fa-circle-check"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Instalados</div>
                         <div class="metric-value">{total_instalados:,}</div>
@@ -881,7 +928,7 @@ with tab_principal:
         st.markdown(
             f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #f59e0b;"><i class="fa-solid fa-hard-hat"></i></div>
+                    <div class="metric-icon-box" style="color: #d97706;"><i class="fa-solid fa-hard-hat"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Instalados Externo</div>
                         <div class="metric-value">{total_externo:,}</div>
@@ -895,7 +942,7 @@ with tab_principal:
         st.markdown(
             f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #a855f7;"><i class="fa-solid fa-building-user"></i></div>
+                    <div class="metric-icon-box" style="color: #9333ea;"><i class="fa-solid fa-building-user"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Instalados MIAA</div>
                         <div class="metric-value">{total_miaa:,}</div>
@@ -909,7 +956,7 @@ with tab_principal:
         st.markdown(
             f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #f43f5e;"><i class="fa-solid fa-chart-pie"></i></div>
+                    <div class="metric-icon-box" style="color: #e11d48;"><i class="fa-solid fa-chart-pie"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">% Avance</div>
                         <div class="metric-value">{porc_avance}%</div>
@@ -928,7 +975,7 @@ with tab_principal:
         st.markdown(
             f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #94a3b8;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="metric-icon-box" style="color: #64748b;"><i class="fa-solid fa-triangle-exclamation"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Sin Coordenadas</div>
                         <div class="metric-value">{sin_coords:,}</div>
@@ -945,7 +992,7 @@ with tab_principal:
     with col_g1:
         with st.container(border=True):
             st.markdown(
-                "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día</p>",
+                "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Instalaciones por Día</p>",
                 unsafe_allow_html=True,
             )
             if (
@@ -963,7 +1010,7 @@ with tab_principal:
                     x="fecha_dia",
                     y="size",
                     text="size",
-                    color_discrete_sequence=["#3b82f6"],
+                    color_discrete_sequence=["#2563eb"],
                 )
             else:
                 fig_dia = px.bar(
@@ -971,18 +1018,20 @@ with tab_principal:
                     x="Aviso",
                     y="Valor",
                     text="Valor",
+                    color_discrete_sequence=["#2563eb"],
                 )
 
-            fig_dia.update_traces(textposition="outside", textfont_size=10)
+            fig_dia.update_traces(textposition="outside", textfont_size=10, textfont_color="#0f172a")
             fig_dia.update_layout(
                 plot_bgcolor="rgba(0,0,0,0)",
                 paper_bgcolor="rgba(0,0,0,0)",
-                font_color="#ffffff",
+                font_color="#0f172a",
                 margin=dict(t=25, b=5, l=5, r=5),
                 height=230,
                 xaxis_title=None,
                 yaxis_title=None,
-                yaxis=dict(range=[0, 500]),
+                xaxis=dict(showgrid=False, linecolor="#cbd5e1"),
+                yaxis=dict(range=[0, 500], gridcolor="#e2e8f0"),
             )
             st.plotly_chart(
                 fig_dia, use_container_width=True, key="dash_prin_instalaciones_dia"
@@ -991,7 +1040,7 @@ with tab_principal:
     with col_g2:
         with st.container(border=True):
             st.markdown(
-                "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Tipo de Instalación</p>",
+                "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Distribución por Tipo de Instalación</p>",
                 unsafe_allow_html=True,
             )
             if not df_filtrado.empty and "tipo_instalacion_nombre" in df_filtrado.columns:
@@ -1001,11 +1050,11 @@ with tab_principal:
                 df_tipo_inst.columns = ["Tipo", "Cantidad"]
 
                 colores_pie = [
-                    "#38bdf8",
-                    "#4ade80",
-                    "#f59e0b",
-                    "#a855f7",
-                    "#f43f5e",
+                    "#0284c7",
+                    "#16a34a",
+                    "#d97706",
+                    "#9333ea",
+                    "#e11d48",
                     "#64748b",
                 ]
 
@@ -1018,7 +1067,7 @@ with tab_principal:
                         textinfo="value+percent",
                         texttemplate="%{value} (%{percent})",
                         textposition="outside",
-                        textfont=dict(color="#ffffff", size=9),
+                        textfont=dict(color="#0f172a", size=9),
                         marker=dict(colors=colores_pie),
                         hovertemplate=(
                             "<b>%{label}</b><br>Cantidad: %{value:,}<br>Porcentaje:"
@@ -1034,7 +1083,7 @@ with tab_principal:
             fig_pie.update_layout(
                 plot_bgcolor="rgba(0,0,0,0)",
                 paper_bgcolor="rgba(0,0,0,0)",
-                font_color="#ffffff",
+                font_color="#0f172a",
                 margin=dict(t=25, b=25, l=10, r=130),
                 height=230,
                 showlegend=True,
@@ -1044,7 +1093,7 @@ with tab_principal:
                     y=0.5,
                     xanchor="left",
                     x=1.02,
-                    font=dict(size=9),
+                    font=dict(size=9, color="#0f172a"),
                 ),
             )
             st.plotly_chart(
@@ -1054,7 +1103,7 @@ with tab_principal:
     with col_g3:
         with st.container(border=True):
             st.markdown(
-                "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Cuadro vs Registro</p>",
+                "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Cuadro vs Registro</p>",
                 unsafe_allow_html=True,
             )
             if not df_filtrado.empty and "tipo_instalacion_nombre" in df_filtrado.columns:
@@ -1086,9 +1135,9 @@ with tab_principal:
                         else f"{tot_cr:,}"
                     )
 
-                    color_cr_map = {"CUADRO": "#0066cc", "REGISTRO": "#e83e8c"}
+                    color_cr_map = {"CUADRO": "#1d4ed8", "REGISTRO": "#db2777"}
                     colores_cr = [
-                        color_cr_map.get(t, "#3b82f6") for t in df_counts_cr["Tipo"]
+                        color_cr_map.get(t, "#2563eb") for t in df_counts_cr["Tipo"]
                     ]
 
                     fig_cr = go.Figure(
@@ -1097,6 +1146,7 @@ with tab_principal:
                             values=df_counts_cr["Cantidad"],
                             hole=0.6,
                             textinfo="value+percent",
+                            textfont=dict(color="#0f172a", size=10),
                             marker=dict(colors=colores_cr),
                         )
                     )
@@ -1108,18 +1158,18 @@ with tab_principal:
                                 x=0.5,
                                 y=0.5,
                                 font_size=16,
-                                font_color="white",
+                                font_color="#0f172a",
                                 font_weight="bold",
                                 showarrow=False,
                             )
                         ],
                         plot_bgcolor="rgba(0,0,0,0)",
                         paper_bgcolor="rgba(0,0,0,0)",
-                        font_color="#ffffff",
+                        font_color="#0f172a",
                         margin=dict(t=5, b=5, l=5, r=5),
                         height=230,
                         showlegend=True,
-                        legend=dict(orientation="h", y=-0.2, font=dict(size=9)),
+                        legend=dict(orientation="h", y=-0.2, font=dict(size=9, color="#0f172a")),
                     )
                 else:
                     fig_cr = go.Figure(
@@ -1128,7 +1178,7 @@ with tab_principal:
                     fig_cr.update_layout(
                         plot_bgcolor="rgba(0,0,0,0)",
                         paper_bgcolor="rgba(0,0,0,0)",
-                        font_color="#ffffff",
+                        font_color="#0f172a",
                         height=230,
                     )
             else:
@@ -1136,7 +1186,7 @@ with tab_principal:
                 fig_cr.update_layout(
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)",
-                    font_color="#ffffff",
+                    font_color="#0f172a",
                     height=230,
                 )
 
@@ -1149,7 +1199,7 @@ with tab_principal:
     with col_inf1:
         with st.container(border=True):
             st.markdown(
-                "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Eficiencia por Colonia y Polígono</p>",
+                "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Eficiencia por Colonia y Polígono</p>",
                 unsafe_allow_html=True,
             )
             if not df_eficiencia.empty:
@@ -1165,7 +1215,7 @@ with tab_principal:
     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
     with st.container(border=True):
         st.markdown(
-            "<p style='font-size:14px; font-weight:bold; margin-bottom:6px;'>📍 Listado General de Instalaciones de Medidores</p>",
+            "<p style='font-size:14px; font-weight:bold; margin-bottom:6px; color:#0f172a;'>📍 Listado General de Instalaciones de Medidores</p>",
             unsafe_allow_html=True,
         )
 
@@ -1203,7 +1253,6 @@ with tab_principal:
             else:
                 df_todos_inst["Num_Cliente"] = "0"
 
-            # BARRA DE BÚSQUEDA
             busqueda_global_inst = st.text_input(
                 "Buscar en cualquier registro (Predio, Cliente, Serie, Domicilio, etc.)",
                 placeholder="Ej. 502934-1, VAZQUEZ, 222608...",
@@ -1226,11 +1275,10 @@ with tab_principal:
         with col_map_h:
             with st.container(border=True):
                 st.markdown(
-                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones (Externo vs MIAA)</p>",
+                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Mapa de Instalaciones (Externo vs MIAA)</p>",
                     unsafe_allow_html=True,
                 )
 
-                # EL MAPA AHORA SÍ LEE EL FILTRADO GLOBAL QUE ESTÁ ARRIBA
                 df_fuente_mapa = df_filtrado_global if not df_filtrado_global.empty else df_filtrado
 
                 df_mapa_valido = (
@@ -1249,33 +1297,32 @@ with tab_principal:
                 )
                 agregar_capas_base(mapa_miaa)
 
-                # --- 3. INTEGRACIÓN DE LOS POLÍGONOS DE COLONIA EN EL MAPA GENERAL ---
                 if gdf_colonias is not None and not gdf_colonias.empty:
                     folium.GeoJson(
                         gdf_colonias,
                         name="Polígonos de Colonias",
                         style_function=lambda x: {
-                            "fillColor": "#2980B9",
-                            "color": "#2980B9",
-                            "weight": 1,
+                            "fillColor": "#2563eb",
+                            "color": "#1d4ed8",
+                            "weight": 1.2,
                             "fillOpacity": 0.08,
                         },
                         highlight_function=lambda x: {
-                            "fillColor": "#38bdf8",
-                            "color": "#ffffff",  # El borde se vuelve blanco brillante al pasar el mouse
-                            "weight": 2.5,       # Se engrosa ligeramente el borde
-                            "fillOpacity": 0.35, # Se intensifica el fondo azul para destacarlo claramente
+                            "fillColor": "#3b82f6",
+                            "color": "#0f172a",
+                            "weight": 2.5,
+                            "fillOpacity": 0.28,
                         },
                         tooltip=folium.GeoJsonTooltip(
                             fields=["Col_atl", "Sector", "Distrito"],
                             aliases=["Colonia:", "Sector:", "Distrito:"],
                             style=(
-                                "background-color: #0f172a; color: #ffffff; "
+                                "background-color: #ffffff; color: #0f172a; "
+                                "border: 1px solid #cbd5e1; "
                                 "font-size: 11px; padding: 6px; border-radius: 4px;"
                             )
                         )
                     ).add_to(mapa_miaa)
-                # -------------------------------------------------------------------
 
                 for _, row in df_mapa_valido.iterrows():
                     es_externo = (
@@ -1283,7 +1330,7 @@ with tab_principal:
                         if "usuarioExterno" in df_mapa_valido.columns
                         else False
                     )
-                    color_punto = "#f59e0b" if es_externo else "#a855f7"
+                    color_punto = "#d97706" if es_externo else "#9333ea"
 
                     def get_clean(keys, default=""):
                         if isinstance(keys, str):
@@ -1367,7 +1414,7 @@ with tab_principal:
                             hora_inst = hora_str[:5]
 
                     info_popup = f"""
-                    <div style="font-size: 11px; line-height: 1.4; color: #ffffff;">
+                    <div style="font-size: 11px; line-height: 1.4; color: #0f172a;">
                         <b>Información del Servicio</b><br>
                         <b>Nombre:</b> {nombre}<br>
                         <b>Número de Predio:</b> {predio}<br>
@@ -1392,11 +1439,10 @@ with tab_principal:
                         color=color_punto,
                         fill=True,
                         fill_color=color_punto,
-                        fill_opacity=0.7,
+                        fill_opacity=0.75,
                         popup=popup_obj,
                     ).add_to(mapa_miaa)
 
-                # Añadir control de capas para poder encender/apagar los polígonos
                 folium.LayerControl(position="topleft").add_to(mapa_miaa)
 
                 st_folium(
@@ -1410,7 +1456,7 @@ with tab_principal:
         with col_graf_h:
             with st.container(border=True):
                 st.markdown(
-                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Mes</p>",
+                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Instalaciones por Mes</p>",
                     unsafe_allow_html=True,
                 )
 
@@ -1450,7 +1496,7 @@ with tab_principal:
                 else:
                     df_mes = pd.DataFrame({"Mes": ["Sin datos"], "Cantidad": [0]})
 
-                colores_barras = ["#1e3a8a", "#3b82f6"] * ((len(df_mes) // 2) + 1)
+                colores_barras = ["#1e40af", "#3b82f6"] * ((len(df_mes) // 2) + 1)
                 max_cant = df_mes["Cantidad"].max() if not df_mes.empty else 10
 
                 fig_mes_h = px.bar(
@@ -1463,11 +1509,11 @@ with tab_principal:
                     color_discrete_sequence=colores_barras,
                 )
 
-                fig_mes_h.update_traces(textposition="outside", textfont_size=10)
+                fig_mes_h.update_traces(textposition="outside", textfont_size=10, textfont_color="#0f172a")
                 fig_mes_h.update_layout(
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)",
-                    font_color="#ffffff",
+                    font_color="#0f172a",
                     margin=dict(t=2, b=2, l=5, r=40),
                     height=130,
                     xaxis=dict(
@@ -1479,7 +1525,7 @@ with tab_principal:
                     yaxis=dict(
                         showgrid=False,
                         title=None,
-                        tickfont=dict(size=10),
+                        tickfont=dict(size=10, color="#0f172a"),
                         categoryorder="array",
                         categoryarray=df_mes["Mes"].tolist(),
                     ),
@@ -1491,7 +1537,7 @@ with tab_principal:
 
             with st.container(border=True):
                 st.markdown(
-                    "<p style='font-size:12px; margin-bottom:8px; font-weight:bold;'>Total de Anomalías</p>",
+                    "<p style='font-size:12px; margin-bottom:8px; font-weight:bold; color:#0f172a;'>Total de Anomalías</p>",
                     unsafe_allow_html=True,
                 )
                 total_anomalias_actual = (
@@ -1507,8 +1553,8 @@ with tab_principal:
                 st.markdown(
                     f"""
                             <div style="display: flex; align-items: center; justify-content: center; gap: 20px; padding: 32px 0;">
-                                <div style="font-size: 38px; color: #f43f5e;"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                                <div style="font-size: 36px; font-weight: bold; color: #ffffff;">{total_anomalias_actual:,}</div>
+                                <div style="font-size: 38px; color: #e11d48;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                                <div style="font-size: 36px; font-weight: bold; color: #0f172a;">{total_anomalias_actual:,}</div>
                             </div>
                         """,
                     unsafe_allow_html=True,
@@ -1533,7 +1579,7 @@ with tab_principal:
                     key="select_pagina_registros",
                 )
             with col_pag2:
-                st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 10 por hoja</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #0284c7; font-weight: bold;'>Mostrando 10 por hoja</div>", unsafe_allow_html=True)
 
             inicio_idx = (pagina_actual - 1) * TAMANO_PAGINA
             fin_idx = inicio_idx + TAMANO_PAGINA
@@ -1584,7 +1630,7 @@ with tab_principal:
 # ------------------------------------------------------------------------------
 with tab_rutas_diarias:
     st.markdown(
-        "<p style='font-size:16px; font-weight:bold; margin-bottom:5px;'>🛣️ Seguimiento Diario de Rutas e Instalaciones por Personal</p>",
+        "<p style='font-size:16px; font-weight:bold; margin-bottom:5px; color:#0f172a;'>🛣️ Seguimiento Diario de Rutas e Instalaciones por Personal</p>",
         unsafe_allow_html=True,
     )
 
@@ -1598,7 +1644,7 @@ with tab_rutas_diarias:
         max_fecha_ruta = datetime.date.today()
 
     with st.container(border=True):
-        st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>🔍 Filtros de Fecha y Tipo de Personal</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:8px; color:#0f172a;'>🔍 Filtros de Fecha y Tipo de Personal</p>", unsafe_allow_html=True)
         col_r1, col_r2 = st.columns([1.2, 1])
 
         with col_r1:
@@ -1623,9 +1669,6 @@ with tab_rutas_diarias:
         elif tipo_personal_sel == "Externo":
             df_rutas_dia = df_rutas_dia[df_rutas_dia["usuarioExterno"]]
 
-    # ==============================================================================
-    # EXPANDER CON LISTBOX DE CHECKBOXES PARA FILTRAR INSTALADORES (SIN BOTONES)
-    # ==============================================================================
     usuarios_disponibles = sorted(df_rutas_dia["usuarioNombre"].unique().tolist()) if not df_rutas_dia.empty else []
 
     with st.expander("👷‍♂️ Filtrar y Seleccionar Instaladores en el Mapa", expanded=False):
@@ -1666,13 +1709,13 @@ with tab_rutas_diarias:
 
     rk1, rk2, rk3, rk4 = st.columns(4)
     with rk1:
-        st.markdown(f"""<div class="metric-card"><div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-route"></i></div><div class="metric-content"><div class="metric-title">Instalaciones del Día</div><div class="metric-value">{tot_inst_ruta:,}</div></div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div class="metric-card"><div class="metric-icon-box" style="color: #0284c7;"><i class="fa-solid fa-route"></i></div><div class="metric-content"><div class="metric-title">Instalaciones del Día</div><div class="metric-value">{tot_inst_ruta:,}</div></div></div>""", unsafe_allow_html=True)
     with rk2:
-        st.markdown(f"""<div class="metric-card"><div class="metric-icon-box" style="color: #4ade80;"><i class="fa-solid fa-user-check"></i></div><div class="metric-content"><div class="metric-title">Instaladores Activos</div><div class="metric-value">{tot_instaladores_act:,}</div></div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div class="metric-card"><div class="metric-icon-box" style="color: #16a34a;"><i class="fa-solid fa-user-check"></i></div><div class="metric-content"><div class="metric-title">Instaladores Activos</div><div class="metric-value">{tot_instaladores_act:,}</div></div></div>""", unsafe_allow_html=True)
     with rk3:
-        st.markdown(f"""<div class="metric-card"><div class="metric-icon-box" style="color: #f59e0b;"><i class="fa-solid fa-calculator"></i></div><div class="metric-content"><div class="metric-title">Prom. por Instalador</div><div class="metric-value">{prom_inst_persona}</div></div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div class="metric-card"><div class="metric-icon-box" style="color: #d97706;"><i class="fa-solid fa-calculator"></i></div><div class="metric-content"><div class="metric-title">Prom. por Instalador</div><div class="metric-value">{prom_inst_persona}</div></div></div>""", unsafe_allow_html=True)
     with rk4:
-        st.markdown(f"""<div class="metric-card"><div class="metric-icon-box" style="color: #a855f7;"><i class="fa-solid fa-clock"></i></div><div class="metric-content"><div class="metric-title">Jornada Detectada</div><div class="metric-value">{rango_horario_str}</div></div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div class="metric-card"><div class="metric-icon-box" style="color: #9333ea;"><i class="fa-solid fa-clock"></i></div><div class="metric-content"><div class="metric-title">Jornada Detectada</div><div class="metric-value">{rango_horario_str}</div></div></div>""", unsafe_allow_html=True)
 
     st.markdown("<div style='margin-bottom: 12px;'></div>", unsafe_allow_html=True)
 
@@ -1681,7 +1724,7 @@ with tab_rutas_diarias:
     with col_m_ruta:
         with st.container(border=True):
             st.markdown(
-                f"<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>🗺️ Mapa de Rutas Diarias por Personal ({fecha_sel_rutas.strftime('%d/%m/%Y') if fecha_sel_rutas else ''})</p>",
+                f"<p style='font-size:13px; font-weight:bold; margin-bottom:4px; color:#0f172a;'>🗺️ Mapa de Rutas Diarias por Personal ({fecha_sel_rutas.strftime('%d/%m/%Y') if fecha_sel_rutas else ''})</p>",
                 unsafe_allow_html=True,
             )
 
@@ -1696,39 +1739,38 @@ with tab_rutas_diarias:
             mapa_rutas = folium.Map(location=[r_lat_c, r_lon_c], zoom_start=13, tiles=None)
             agregar_capas_base(mapa_rutas)
 
-            # --- 4. INTEGRACIÓN DE LOS POLÍGONOS DE COLONIA EN EL MAPA DE RUTAS ---
             if gdf_colonias is not None and not gdf_colonias.empty:
-                    folium.GeoJson(
-                        gdf_colonias,
-                        name="Polígonos de Colonias",
-                        style_function=lambda x: {
-                            "fillColor": "#2980B9",
-                            "color": "#2980B9",
-                            "weight": 1,
-                            "fillOpacity": 0.08,
-                        },
-                        highlight_function=lambda x: {
-                            "fillColor": "#38bdf8",
-                            "color": "#ffffff",  # El borde se vuelve blanco brillante al pasar el mouse
-                            "weight": 2.5,       # Se engrosa ligeramente el borde
-                            "fillOpacity": 0.35, # Se intensifica el fondo azul para destacarlo claramente
-                        },
-                        tooltip=folium.GeoJsonTooltip(
-                            fields=["Col_atl", "Sector", "Distrito"],
-                            aliases=["Colonia:", "Sector:", "Distrito:"],
-                            style=(
-                                "background-color: #0f172a; color: #ffffff; "
-                                "font-size: 11px; padding: 6px; border-radius: 4px;"
-                            )
+                folium.GeoJson(
+                    gdf_colonias,
+                    name="Polígonos de Colonias",
+                    style_function=lambda x: {
+                        "fillColor": "#2563eb",
+                        "color": "#1d4ed8",
+                        "weight": 1.2,
+                        "fillOpacity": 0.08,
+                    },
+                    highlight_function=lambda x: {
+                        "fillColor": "#3b82f6",
+                        "color": "#0f172a",
+                        "weight": 2.5,
+                        "fillOpacity": 0.28,
+                    },
+                    tooltip=folium.GeoJsonTooltip(
+                        fields=["Col_atl", "Sector", "Distrito"],
+                        aliases=["Colonia:", "Sector:", "Distrito:"],
+                        style=(
+                            "background-color: #ffffff; color: #0f172a; "
+                            "border: 1px solid #cbd5e1; "
+                            "font-size: 11px; padding: 6px; border-radius: 4px;"
                         )
-                    ).add_to(mapa_rutas)
-            # ---------------------------------------------------------------------
+                    )
+                ).add_to(mapa_rutas)
 
             paleta_colores_ext = [
-                "#38bdf8", "#4ade80", "#f59e0b", "#a855f7", "#f43f5e",
-                "#06b6d4", "#84cc16", "#ec4899", "#6366f1", "#14b8a6",
-                "#ff7043", "#ab47bc", "#26a69a", "#d4e157", "#ffa726",
-                "#78909c", "#8d6e63", "#26c6da", "#9ccc65", "#ffca28"
+                "#0284c7", "#16a34a", "#d97706", "#9333ea", "#e11d48",
+                "#0891b2", "#65a30d", "#db2777", "#4f46e5", "#0d9488",
+                "#ea580c", "#7e22ce", "#059669", "#ca8a04", "#c026d3",
+                "#475569", "#9a3412", "#0369a1", "#15803d", "#b45309"
             ]
             usuarios_unicos_mapa = df_mapa_ruta["usuarioNombre"].unique().tolist() if not df_mapa_ruta.empty else []
             mapa_color_usuario = {usr: paleta_colores_ext[i % len(paleta_colores_ext)] for i, usr in enumerate(usuarios_unicos_mapa)}
@@ -1742,7 +1784,7 @@ with tab_rutas_diarias:
                     puntos_linea.append([float(row_r["latitud"]), float(row_r["longitud"])])
 
                 if len(puntos_linea) > 1:
-                    folium.PolyLine(puntos_linea, color=c_usr, weight=2.5, opacity=0.4, tooltip=f"Ruta de {usr}").add_to(mapa_rutas)
+                    folium.PolyLine(puntos_linea, color=c_usr, weight=2.5, opacity=0.45, tooltip=f"Ruta de {usr}").add_to(mapa_rutas)
                     AntPath(locations=puntos_linea, color=c_usr, pulse_color="#ffffff", weight=4, opacity=0.9, dash_array=[15, 25], delay=800, symbol="▶", tooltip=f"Recorrido: {usr}").add_to(mapa_rutas)
 
                 for orden_i, (_, row_r) in enumerate(df_usr.iterrows(), start=1):
@@ -1779,7 +1821,7 @@ with tab_rutas_diarias:
                     tiene_anomalia = not es_normal
 
                     popup_html = f"""
-                    <div style="font-size: 11px; line-height: 1.4; color: #ffffff; min-width: 180px;">
+                    <div style="font-size: 11px; line-height: 1.4; color: #0f172a; min-width: 180px;">
                         <b>📍 Detalle de Instalación (#{orden_i})</b><br>
                         <b>Instalador:</b> {nombre_usr}<br>
                         <b>Hora:</b> {hora_r}<br>
@@ -1796,14 +1838,14 @@ with tab_rutas_diarias:
 
                     if orden_i == 1:
                         icon_inicio = folium.DivIcon(
-                            html=f'''<div style="display: flex; align-items: center; gap: 4px;"><div style="background-color: #10b981; width: 22px; height: 22px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"><i class="fa-solid fa-play" style="color: white; font-size: 9px;"></i></div><span style="background: rgba(15,23,42,0.85); color: #10b981; padding: 1px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);">{orden_i}</span></div>''',
+                            html=f'''<div style="display: flex; align-items: center; gap: 4px;"><div style="background-color: #16a34a; width: 22px; height: 22px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="fa-solid fa-play" style="color: white; font-size: 9px;"></i></div><span style="background: rgba(255,255,255,0.95); color: #15803d; padding: 1px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid #cbd5e1;">{orden_i}</span></div>''',
                             icon_size=(50, 24),
                             icon_anchor=(11, 12)
                         )
                         folium.Marker([lat_i, lon_i], popup=popup_obj, tooltip=f"Inicio Ruta #{orden_i}: {usr}", icon=icon_inicio).add_to(mapa_rutas)
                     elif orden_i == len(df_usr):
                         icon_fin = folium.DivIcon(
-                            html=f'''<div style="display: flex; align-items: center; gap: 4px;"><div style="background-color: #f43f5e; width: 22px; height: 22px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.4);"><i class="fa-solid fa-flag-checkered" style="color: white; font-size: 9px;"></i></div><span style="background: rgba(15,23,42,0.85); color: #f43f5e; padding: 1px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);">{orden_i}</span></div>''',
+                            html=f'''<div style="display: flex; align-items: center; gap: 4px;"><div style="background-color: #e11d48; width: 22px; height: 22px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"><i class="fa-solid fa-flag-checkered" style="color: white; font-size: 9px;"></i></div><span style="background: rgba(255,255,255,0.95); color: #be123c; padding: 1px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid #cbd5e1;">{orden_i}</span></div>''',
                             icon_size=(50, 24),
                             icon_anchor=(11, 12)
                         )
@@ -1811,47 +1853,45 @@ with tab_rutas_diarias:
                     else:
                         if tiene_anomalia:
                             icon_anomalia = folium.DivIcon(
-                                html=f'''<div style="display: flex; align-items: center; gap: 4px;"><div style="background-color: #eab308; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.5);"><i class="fa-solid fa-triangle-exclamation" style="color: #000000; font-size: 8px;"></i></div><span style="background: rgba(15,23,42,0.85); color: #eab308; padding: 1px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);">{orden_i}</span></div>''',
+                                html=f'''<div style="display: flex; align-items: center; gap: 4px;"><div style="background-color: #eab308; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #ffffff; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"><i class="fa-solid fa-triangle-exclamation" style="color: #0f172a; font-size: 8px;"></i></div><span style="background: rgba(255,255,255,0.95); color: #b45309; padding: 1px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid #cbd5e1;">{orden_i}</span></div>''',
                                 icon_size=(50, 22),
                                 icon_anchor=(10, 11)
                             )
                             folium.Marker([lat_i, lon_i], popup=popup_obj, tooltip=f"⚠️ Anomalía #{orden_i} ({usr}): {anomalia_r}", icon=icon_anomalia).add_to(mapa_rutas)
                         else:
                             icon_num = folium.DivIcon(
-                                html=f'''<div style="display: flex; align-items: center; gap: 4px;"><div style="background-color: {c_usr}; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div><span style="background: rgba(15,23,42,0.85); color: #ffffff; padding: 1px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid rgba(255,255,255,0.2);">{orden_i}</span></div>''',
+                                html=f'''<div style="display: flex; align-items: center; gap: 4px;"><div style="background-color: {c_usr}; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.35);"></div><span style="background: rgba(255,255,255,0.95); color: #0f172a; padding: 1px 5px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid #cbd5e1;">{orden_i}</span></div>''',
                                 icon_size=(45, 20),
                                 icon_anchor=(6, 10)
                             )
                             folium.Marker([lat_i, lon_i], popup=popup_obj, tooltip=f"Punto #{orden_i}: {usr}", icon=icon_num).add_to(mapa_rutas)
 
-            # Añadir control de capas al mapa de rutas
             folium.LayerControl(position="topleft").add_to(mapa_rutas)
 
             st_folium(mapa_rutas, width=None, height=450, key="mapa_rutas_diarias_instaladores", returned_objects=[])
 
-            # LEYENDA INFERIOR DENTRO DEL RECUADRO DEL MAPA
             st.markdown(
                 """
-                <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 4px; padding-top: 4px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 11px; color: #cbd5e1; flex-wrap: wrap;">
+                <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 4px; padding-top: 4px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #334155; flex-wrap: wrap;">
                     <div style="display: flex; align-items: center; gap: 4px;">
-                        <div style="background-color: #10b981; width: 12px; height: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <div style="background-color: #16a34a; width: 12px; height: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                             <i class="fa-solid fa-play" style="color: white; font-size: 5px;"></i>
                         </div>
                         <span><b>Inicio (#1)</b></span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 4px;">
-                        <div style="background-color: #f43f5e; width: 12px; height: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                        <div style="background-color: #e11d48; width: 12px; height: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                             <i class="fa-solid fa-flag-checkered" style="color: white; font-size: 5px;"></i>
                         </div>
                         <span><b>Meta / Fin</b></span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 4px;">
-                        <div style="background-color: #3b82f6; width: 8px; height: 8px; border-radius: 50%; border: 1px solid white;"></div>
+                        <div style="background-color: #2563eb; width: 8px; height: 8px; border-radius: 50%; border: 1px solid #0f172a;"></div>
                         <span><b>Secuencia numérica</b></span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 4px;">
                         <div style="background-color: #eab308; width: 12px; height: 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <i class="fa-solid fa-triangle-exclamation" style="color: black; font-size: 5px;"></i>
+                            <i class="fa-solid fa-triangle-exclamation" style="color: #0f172a; font-size: 5px;"></i>
                         </div>
                         <span><b>Anomalía</b></span>
                     </div>
@@ -1862,35 +1902,25 @@ with tab_rutas_diarias:
 
     with col_t_ruta:
         with st.container(border=True):
-            st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:4px;'>📊 Resumen de Instalaciones por Usuario</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:13px; font-weight:bold; margin-bottom:4px; color:#0f172a;'>📊 Resumen de Instalaciones por Usuario</p>", unsafe_allow_html=True)
 
             if not df_rutas_filtrada.empty:
-                # ------------------------------------------------------------------
-                # CÁLCULO DE DISTANCIA ESPACIAL Y EFICIENCIA DE RUTA (CON VALIDACIÓN DE COORDENADAS)
-                # ------------------------------------------------------------------
                 def evaluar_eficiencia_usuario(df_sub):
-                    # Filtrar únicamente registros que SÍ tengan coordenadas válidas
                     df_geo = df_sub.dropna(subset=["latitud", "longitud"]).copy()
-                    
-                    # Convertir a numérico por si vienen como strings sucios
                     df_geo["latitud"] = pd.to_numeric(df_geo["latitud"], errors="coerce")
                     df_geo["longitud"] = pd.to_numeric(df_geo["longitud"], errors="coerce")
                     df_geo = df_geo.dropna(subset=["latitud", "longitud"])
 
-                    # Si no hay coordenadas geográficas registradas para este instalador
                     if df_geo.empty:
                         return "Sin registro de puntos"
 
-                    # Si solo tiene 1 o 2 puntos geográficos, no hay ruta suficiente para evaluar trazo
                     if len(df_geo) <= 2:
                         return "Alta (Óptima)"
 
                     df_orden = df_geo.sort_values("fecha_dt")
-
                     lats = df_orden["latitud"].to_numpy()
                     lons = df_orden["longitud"].to_numpy()
 
-                    # Fórmula de Haversine en metros
                     R = 6371000.0
                     phi = np.radians(lats)
                     lam = np.radians(lons)
@@ -1944,16 +1974,16 @@ with tab_rutas_diarias:
                     orientation="h", 
                     text="Total", 
                     color="Tipo Personal", 
-                    color_discrete_map={"Externo": "#f59e0b", "Interno MIAA": "#10b981"}
+                    color_discrete_map={"Externo": "#d97706", "Interno MIAA": "#16a34a"}
                 )
-                fig_usr_bar.update_traces(textposition="outside", textfont_size=9)
+                fig_usr_bar.update_traces(textposition="outside", textfont_size=9, textfont_color="#0f172a")
                 fig_usr_bar.update_layout(
                     plot_bgcolor="rgba(0,0,0,0)", 
                     paper_bgcolor="rgba(0,0,0,0)", 
-                    font_color="#ffffff", 
+                    font_color="#0f172a", 
                     margin=dict(t=25, b=10, l=5, r=15), 
                     height=245, 
-                    xaxis=dict(showgrid=False, title=None), 
+                    xaxis=dict(showgrid=True, gridcolor="#e2e8f0", title=None), 
                     yaxis=dict(showgrid=False, title=None, categoryorder="total ascending"), 
                     legend=dict(
                         orientation="h", 
@@ -1961,6 +1991,7 @@ with tab_rutas_diarias:
                         y=1.05, 
                         xanchor="left", 
                         x=0,
+                        font=dict(color="#0f172a"),
                         title=dict(text="")
                     )
                 )
@@ -1974,14 +2005,13 @@ with tab_rutas_diarias:
     st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
     with st.container(border=True):
         st.markdown(
-            "<p style='font-size:14px; font-weight:bold; margin-bottom:6px;'>📑 Detalle Cronológico de Instalaciones de la Ruta</p>",
+            "<p style='font-size:14px; font-weight:bold; margin-bottom:6px; color:#0f172a;'>📑 Detalle Cronológico de Instalaciones de la Ruta</p>",
             unsafe_allow_html=True,
         )
 
         if not df_rutas_filtrada.empty:
             df_cronologico = df_rutas_filtrada.copy()
             
-            # CÁLCULO DEL NÚMERO DE PUNTO POR INSTALADOR EN ORDEN CRONOLÓGICO ASCENDENTE
             df_cronologico = df_cronologico.sort_values(by=["usuarioNombre", "fecha_dt"], ascending=[True, True])
             df_cronologico["#"] = df_cronologico.groupby("usuarioNombre").cumcount() + 1
             
@@ -2004,7 +2034,6 @@ with tab_rutas_diarias:
             df_cronologico["Latitud"] = pd.to_numeric(df_cronologico["latitud"], errors="coerce")
             df_cronologico["Longitud"] = pd.to_numeric(df_cronologico["longitud"], errors="coerce")
 
-            # REORDENAMOS LA TABLA PARA MOSTRAR PRIMERO LA COLUMNA `#` SEGUIDA DE `Hora`
             df_tabla_final_cron = df_cronologico[[
                 "#", "Hora", "Instalador", "Personal", "Cliente", "Predio", 
                 "Domicilio", "Colonia", "Serie", "Lugar", "Anomalía", 
@@ -2028,7 +2057,7 @@ with tab_rutas_diarias:
 # ------------------------------------------------------------------------------
 with tab_anomalias:
     st.markdown(
-        "<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>⚠️ Análisis Completo de Anomalías en Instalaciones</p>",
+        "<p style='font-size:16px; font-weight:bold; margin-bottom:10px; color:#0f172a;'>⚠️ Análisis Completo de Anomalías en Instalaciones</p>",
         unsafe_allow_html=True,
     )
 
@@ -2058,7 +2087,7 @@ with tab_anomalias:
         st.markdown(
             f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #f43f5e;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="metric-icon-box" style="color: #e11d48;"><i class="fa-solid fa-triangle-exclamation"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Total con Anomalía</div>
                         <div class="metric-value">{total_anomalias_reg:,}</div>
@@ -2071,7 +2100,7 @@ with tab_anomalias:
         st.markdown(
             f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #f59e0b;"><i class="fa-solid fa-list-check"></i></div>
+                    <div class="metric-icon-box" style="color: #d97706;"><i class="fa-solid fa-list-check"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Tipos de Anomalías</div>
                         <div class="metric-value">{tipos_unicos_anomalias:,}</div>
@@ -2084,7 +2113,7 @@ with tab_anomalias:
         st.markdown(
             f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #a855f7;"><i class="fa-solid fa-percent"></i></div>
+                    <div class="metric-icon-box" style="color: #9333ea;"><i class="fa-solid fa-percent"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">% Incidencia</div>
                         <div class="metric-value">{pct_anomalias}%</div>
@@ -2097,7 +2126,7 @@ with tab_anomalias:
         st.markdown(
             f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-clipboard-check"></i></div>
+                    <div class="metric-icon-box" style="color: #0284c7;"><i class="fa-solid fa-clipboard-check"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Instalaciones Regulares</div>
                         <div class="metric-value">{(total_registros_filtrados - total_anomalias_reg):,}</div>
@@ -2114,7 +2143,7 @@ with tab_anomalias:
     with col_anom_g1:
         with st.container(border=True):
             st.markdown(
-                "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Tipo de Anomalía</p>",
+                "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Distribución por Tipo de Anomalía</p>",
                 unsafe_allow_html=True,
             )
             if not df_con_anomalia.empty:
@@ -2132,14 +2161,14 @@ with tab_anomalias:
                     color="Anomalía",
                     color_discrete_sequence=px.colors.qualitative.Bold,
                 )
-                fig_anom_bar.update_traces(textposition="outside", textfont_size=10)
+                fig_anom_bar.update_traces(textposition="outside", textfont_size=10, textfont_color="#0f172a")
                 fig_anom_bar.update_layout(
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)",
-                    font_color="#ffffff",
+                    font_color="#0f172a",
                     margin=dict(t=10, b=10, l=10, r=30),
                     height=270,
-                    xaxis=dict(showgrid=True, title=None),
+                    xaxis=dict(showgrid=True, gridcolor="#e2e8f0", title=None),
                     yaxis=dict(
                         showgrid=False, title=None, categoryorder="total ascending"
                     ),
@@ -2154,7 +2183,7 @@ with tab_anomalias:
     with col_anom_g2:
         with st.container(border=True):
             st.markdown(
-                "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Proporción: Con Anomalía vs Regular</p>",
+                "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Proporción: Con Anomalía vs Regular</p>",
                 unsafe_allow_html=True,
             )
             if total_registros_filtrados > 0:
@@ -2173,19 +2202,19 @@ with tab_anomalias:
                     hole=0.5,
                     color="Estado",
                     color_discrete_map={
-                        "Con Anomalía": "#f43f5e",
-                        "Regular / Sin Anomalía": "#3b82f6",
+                        "Con Anomalía": "#e11d48",
+                        "Regular / Sin Anomalía": "#2563eb",
                     },
                 )
-                fig_prop_pie.update_traces(textinfo="value+percent", textfont=dict(size=11))
+                fig_prop_pie.update_traces(textinfo="value+percent", textfont=dict(size=11, color="#0f172a"))
                 fig_prop_pie.update_layout(
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)",
-                    font_color="#ffffff",
+                    font_color="#0f172a",
                     margin=dict(t=10, b=10, l=10, r=10),
                     height=270,
                     showlegend=True,
-                    legend=dict(orientation="h", y=-0.2, font=dict(size=9)),
+                    legend=dict(orientation="h", y=-0.2, font=dict(size=9, color="#0f172a")),
                 )
                 st.plotly_chart(
                     fig_prop_pie, use_container_width=True, key="anomalias_prop_pie"
@@ -2194,7 +2223,7 @@ with tab_anomalias:
                 st.info("Sin datos para mostrar proporción.")
 
     st.markdown(
-        "<p style='font-size:14px; font-weight:bold; margin-top:20px; margin-bottom:8px;'>📋 Detalle de Registros con Anomalías Detectadas</p>",
+        "<p style='font-size:14px; font-weight:bold; margin-top:20px; margin-bottom:8px; color:#0f172a;'>📋 Detalle de Registros con Anomalías Detectadas</p>",
         unsafe_allow_html=True,
     )
     if not df_con_anomalia.empty:
@@ -2357,7 +2386,7 @@ with tab_poligonos:
     with col_c_izq:
         with st.container(border=True):
             st.markdown(
-                "<p style='font-size:12px; font-weight:bold; margin-bottom:4px;'>Seleccionar Polígonos (FID)</p>",
+                "<p style='font-size:12px; font-weight:bold; margin-bottom:4px; color:#0f172a;'>Seleccionar Polígonos (FID)</p>",
                 unsafe_allow_html=True,
             )
 
@@ -2395,7 +2424,7 @@ with tab_poligonos:
     with col_c_centro:
         with st.container(border=True):
             st.markdown(
-                "<p style='font-size:12px; font-weight:bold; margin-bottom:2px;'>Mapa de Polígonos de Instalación</p>",
+                "<p style='font-size:12px; font-weight:bold; margin-bottom:2px; color:#0f172a;'>Mapa de Polígonos de Instalación</p>",
                 unsafe_allow_html=True,
             )
 
@@ -2444,7 +2473,7 @@ with tab_poligonos:
                 get_polygon="polygon",
                 get_elevation="elevation",
                 get_fill_color="color",
-                get_line_color=[255, 255, 255, 140],
+                get_line_color=[15, 23, 42, 160],
                 line_width_min_pixels=1,
                 extruded=True,
                 pickable=True,
@@ -2452,6 +2481,7 @@ with tab_poligonos:
             )
 
             r = pdk.Deck(
+                map_style="light",
                 layers=[layer],
                 initial_view_state=pdk.ViewState(
                     latitude=m_p_lat, longitude=m_p_lon, zoom=11.5, pitch=45, bearing=0
@@ -2463,8 +2493,9 @@ with tab_poligonos:
                         " {instalados}<br/>Medidores DB: {medidores_db}"
                     ),
                     "style": {
-                        "backgroundColor": "rgba(15, 23, 42, 0.95)",
-                        "color": "white",
+                        "backgroundColor": "rgba(255, 255, 255, 0.98)",
+                        "color": "#0f172a",
+                        "border": "1px solid #cbd5e1",
                         "fontSize": "11px",
                         "padding": "6px",
                         "borderRadius": "4px",
@@ -2477,13 +2508,13 @@ with tab_poligonos:
     with col_c_der:
         with st.container(border=True):
             st.markdown(
-                "<p style='font-size:14px; font-weight:bold; margin-bottom:8px;'>Resumen por Sector</p>",
+                "<p style='font-size:14px; font-weight:bold; margin-bottom:8px; color:#0f172a;'>Resumen por Sector</p>",
                 unsafe_allow_html=True,
             )
 
             st.markdown(
                 """
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #cbd5e1; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 6px; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #334155; font-weight: bold; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; margin-bottom: 8px;">
                     <div style="width: 25%;">Sector</div>
                     <div style="width: 25%; text-align: center;">Medidores (BD)</div>
                     <div style="width: 25%; text-align: center;">Instalados (API)</div>
@@ -2548,23 +2579,23 @@ with tab_poligonos:
                         s_avance_cap = min(s_avance, 100.0)
 
                         dot_color = (
-                            "#22c55e"
+                            "#16a34a"
                             if s_avance >= 80.0
-                            else ("#ef4444" if s_avance <= 40.0 else "#eab308")
+                            else ("#dc2626" if s_avance <= 40.0 else "#ca8a04")
                         )
 
                         st.markdown(
                             f"""
-                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">
-                                <div style="width: 25%; display: flex; align-items: center; gap: 8px; color: white; font-weight: bold; font-size: 14px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
+                                <div style="width: 25%; display: flex; align-items: center; gap: 8px; color: #0f172a; font-weight: bold; font-size: 14px;">
                                     <span style="width: 10px; height: 10px; background-color: {dot_color}; border-radius: 50%; display: inline-block;"></span>
                                     {s_nombre}
                                 </div>
-                                <div style="width: 25%; color: #cbd5e1; text-align: center; font-weight: 600; font-size: 13px;">{s_med_db:,}</div>
-                                <div style="width: 25%; color: #ffffff; text-align: center; font-weight: bold; font-size: 13px;">{s_med_instalados:,}</div>
+                                <div style="width: 25%; color: #475569; text-align: center; font-weight: 600; font-size: 13px;">{s_med_db:,}</div>
+                                <div style="width: 25%; color: #0f172a; text-align: center; font-weight: bold; font-size: 13px;">{s_med_instalados:,}</div>
                                 <div style="width: 25%; text-align: right;">
-                                    <div style="font-size: 12px; color: white; font-weight: bold; margin-bottom: 3px;">{s_avance}%</div>
-                                    <div style="background-color: rgba(255,255,255,0.12); border-radius: 4px; width: 100%; height: 8px; overflow: hidden;">
+                                    <div style="font-size: 12px; color: #0f172a; font-weight: bold; margin-bottom: 3px;">{s_avance}%</div>
+                                    <div style="background-color: #e2e8f0; border-radius: 4px; width: 100%; height: 8px; overflow: hidden;">
                                         <div style="background-color: {dot_color}; width: {s_avance_cap}%; height: 100%; border-radius: 4px;"></div>
                                     </div>
                                 </div>
@@ -2577,7 +2608,7 @@ with tab_poligonos:
 
     with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Detalle de Polígonos de Instalación y Conteo de Medidores</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Detalle de Polígonos de Instalación y Conteo de Medidores</p>",
             unsafe_allow_html=True,
         )
 
@@ -2635,11 +2666,11 @@ with tab_poligonos:
 # ------------------------------------------------------------------------------
 with tab_personal:
     st.markdown(
-        "<p style='font-size:16px; font-weight:bold; margin-bottom:5px;'>👥 Resumen General de Instalaciones por Tipo de Personal</p>",
+        "<p style='font-size:16px; font-weight:bold; margin-bottom:5px; color:#0f172a;'>👥 Resumen General de Instalaciones por Tipo de Personal</p>",
         unsafe_allow_html=True,
     )
     st.markdown(
-        "<p style='font-size:13px; color: #94a3b8; margin-bottom:15px;'>Comparativa y desglose operacional entre Personal Externo y Personal Interno MIAA.</p>",
+        "<p style='font-size:13px; color: #475569; margin-bottom:15px;'>Comparativa y desglose operacional entre Personal Externo y Personal Interno MIAA.</p>",
         unsafe_allow_html=True,
     )
 
@@ -2663,7 +2694,7 @@ with tab_personal:
             st.markdown(
                 f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #f59e0b;"><i class="fa-solid fa-hard-hat"></i></div>
+                    <div class="metric-icon-box" style="color: #d97706;"><i class="fa-solid fa-hard-hat"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Total Instalados (Externo)</div>
                         <div class="metric-value">{ext_total:,}</div>
@@ -2676,7 +2707,7 @@ with tab_personal:
             st.markdown(
                 f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-map-location-dot"></i></div>
+                    <div class="metric-icon-box" style="color: #0284c7;"><i class="fa-solid fa-map-location-dot"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Colonias Atendidas</div>
                         <div class="metric-value">{ext_colonias:,}</div>
@@ -2689,7 +2720,7 @@ with tab_personal:
             st.markdown(
                 f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #94a3b8;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="metric-icon-box" style="color: #64748b;"><i class="fa-solid fa-triangle-exclamation"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Sin Coordenadas</div>
                         <div class="metric-value">{ext_sin_coord:,}</div>
@@ -2705,7 +2736,7 @@ with tab_personal:
         with col_ex_left:
             with st.container(border=True):
                 st.markdown(
-                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día (Externo)</p>",
+                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Instalaciones por Día (Externo)</p>",
                     unsafe_allow_html=True,
                 )
                 if (
@@ -2724,7 +2755,7 @@ with tab_personal:
                         x="fecha_dia",
                         y="size",
                         text="size",
-                        color_discrete_sequence=["#f59e0b"],
+                        color_discrete_sequence=["#d97706"],
                     )
                 else:
                     fig_ext_dia = px.bar(
@@ -2732,17 +2763,19 @@ with tab_personal:
                         x="Aviso",
                         y="Valor",
                         text="Valor",
+                        color_discrete_sequence=["#d97706"],
                     )
 
-                fig_ext_dia.update_traces(textposition="outside", textfont_size=10)
+                fig_ext_dia.update_traces(textposition="outside", textfont_size=10, textfont_color="#0f172a")
                 fig_ext_dia.update_layout(
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)",
-                    font_color="#ffffff",
+                    font_color="#0f172a",
                     margin=dict(t=30, b=5, l=5, r=5),
                     height=210,
                     xaxis_title=None,
                     yaxis_title=None,
+                    yaxis=dict(gridcolor="#e2e8f0"),
                 )
                 st.plotly_chart(
                     fig_ext_dia, use_container_width=True, key="ext_instalaciones_dia"
@@ -2750,7 +2783,7 @@ with tab_personal:
 
             with st.container(border=True):
                 st.markdown(
-                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Nivel Tarifario (Externo)</p>",
+                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Distribución por Nivel Tarifario (Externo)</p>",
                     unsafe_allow_html=True,
                 )
                 if not df_externo.empty and "nivel" in df_externo.columns:
@@ -2766,7 +2799,7 @@ with tab_personal:
                         color="Nivel",
                         color_discrete_sequence=px.colors.qualitative.Safe,
                     )
-                    fig_ext_niv.update_traces(textposition="outside", textfont_size=10)
+                    fig_ext_niv.update_traces(textposition="outside", textfont_size=10, textfont_color="#0f172a")
                 else:
                     fig_ext_niv = px.bar(
                         pd.DataFrame({"Nivel": ["Sin datos"], "Cantidad": [0]}),
@@ -2778,11 +2811,12 @@ with tab_personal:
                 fig_ext_niv.update_layout(
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)",
-                    font_color="#ffffff",
+                    font_color="#0f172a",
                     margin=dict(t=30, b=5, l=5, r=5),
                     height=210,
                     xaxis_title=None,
                     yaxis_title=None,
+                    yaxis=dict(gridcolor="#e2e8f0"),
                     showlegend=False,
                 )
                 st.plotly_chart(
@@ -2792,7 +2826,7 @@ with tab_personal:
         with col_ex_right:
             with st.container(border=True):
                 st.markdown(
-                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones - Personal Externo</p>",
+                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Mapa de Instalaciones - Personal Externo</p>",
                     unsafe_allow_html=True,
                 )
                 df_ext_map = (
@@ -2818,10 +2852,10 @@ with tab_personal:
                     folium.CircleMarker(
                         location=[float(row["latitud"]), float(row["longitud"])],
                         radius=2.5,
-                        color="#f59e0b",
+                        color="#d97706",
                         fill=True,
-                        fill_color="#f59e0b",
-                        fill_opacity=0.7,
+                        fill_color="#d97706",
+                        fill_opacity=0.75,
                     ).add_to(mapa_ext)
 
                 st_folium(
@@ -2833,7 +2867,7 @@ with tab_personal:
                 )
 
         st.markdown(
-            "<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal Externo</p>",
+            "<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px; color:#0f172a;'>Tabla de Registros - Personal Externo</p>",
             unsafe_allow_html=True,
         )
         df_tabla_ext = df_externo.copy()
@@ -2883,7 +2917,7 @@ with tab_personal:
                 with col_p1:
                     pag_ext_act = st.selectbox("Hoja / Página (Externo)", options=list(range(1, tot_pag_ext + 1)), format_func=lambda x: f"Hoja {x} de {tot_pag_ext} (Registros {(x-1)*tam_pag_ext + 1} al {min(x*tam_pag_ext, total_reg_ext)})", key="pag_ext_sel")
                 with col_p2:
-                    st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 10 por hoja</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #0284c7; font-weight: bold;'>Mostrando 10 por hoja</div>", unsafe_allow_html=True)
 
                 i_ini = (pag_ext_act - 1) * tam_pag_ext
                 i_fin = i_ini + tam_pag_ext
@@ -2911,7 +2945,7 @@ with tab_personal:
             st.markdown(
                 f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #10b981;"><i class="fa-solid fa-building-user"></i></div>
+                    <div class="metric-icon-box" style="color: #16a34a;"><i class="fa-solid fa-building-user"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Total Instalados (MIAA)</div>
                         <div class="metric-value">{miaa_total:,}</div>
@@ -2924,7 +2958,7 @@ with tab_personal:
             st.markdown(
                 f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-map-location-dot"></i></div>
+                    <div class="metric-icon-box" style="color: #0284c7;"><i class="fa-solid fa-map-location-dot"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Colonias Atendidas</div>
                         <div class="metric-value">{miaa_colonias:,}</div>
@@ -2937,7 +2971,7 @@ with tab_personal:
             st.markdown(
                 f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #94a3b8;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="metric-icon-box" style="color: #64748b;"><i class="fa-solid fa-triangle-exclamation"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Sin Coordenadas</div>
                         <div class="metric-value">{miaa_sin_coord:,}</div>
@@ -2953,7 +2987,7 @@ with tab_personal:
         with col_mi_left:
             with st.container(border=True):
                 st.markdown(
-                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día (MIAA)</p>",
+                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Instalaciones por Día (MIAA)</p>",
                     unsafe_allow_html=True,
                 )
                 if (
@@ -2972,7 +3006,7 @@ with tab_personal:
                         x="fecha_dia",
                         y="size",
                         text="size",
-                        color_discrete_sequence=["#10b981"],
+                        color_discrete_sequence=["#16a34a"],
                     )
                 else:
                     fig_miaa_dia = px.bar(
@@ -2980,17 +3014,19 @@ with tab_personal:
                         x="Aviso",
                         y="Valor",
                         text="Valor",
+                        color_discrete_sequence=["#16a34a"],
                     )
 
-                fig_miaa_dia.update_traces(textposition="outside", textfont_size=10)
+                fig_miaa_dia.update_traces(textposition="outside", textfont_size=10, textfont_color="#0f172a")
                 fig_miaa_dia.update_layout(
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)",
-                    font_color="#ffffff",
+                    font_color="#0f172a",
                     margin=dict(t=30, b=5, l=5, r=5),
                     height=210,
                     xaxis_title=None,
                     yaxis_title=None,
+                    yaxis=dict(gridcolor="#e2e8f0"),
                 )
                 st.plotly_chart(
                     fig_miaa_dia, use_container_width=True, key="grafico_miaa_dia_unico"
@@ -2998,7 +3034,7 @@ with tab_personal:
 
             with st.container(border=True):
                 st.markdown(
-                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Distribución por Nivel Tarifario (MIAA)</p>",
+                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Distribución por Nivel Tarifario (MIAA)</p>",
                     unsafe_allow_html=True,
                 )
                 if not df_miaa_pers.empty and "nivel" in df_miaa_pers.columns:
@@ -3015,9 +3051,9 @@ with tab_personal:
                         y="Cantidad",
                         text="Cantidad",
                         color="Nivel",
-                        color_discrete_sequence=px.colors.qualitative.Pastel,
+                        color_discrete_sequence=px.colors.qualitative.Set2,
                     )
-                    fig_miaa_niv.update_traces(textposition="outside", textfont_size=10)
+                    fig_miaa_niv.update_traces(textposition="outside", textfont_size=10, textfont_color="#0f172a")
                 else:
                     fig_miaa_niv = px.bar(
                         pd.DataFrame({"Nivel": ["Sin datos"], "Cantidad": [0]}),
@@ -3029,11 +3065,12 @@ with tab_personal:
                 fig_miaa_niv.update_layout(
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)",
-                    font_color="#ffffff",
+                    font_color="#0f172a",
                     margin=dict(t=30, b=5, l=5, r=5),
                     height=210,
                     xaxis_title=None,
                     yaxis_title=None,
+                    yaxis=dict(gridcolor="#e2e8f0"),
                     showlegend=False,
                 )
                 st.plotly_chart(
@@ -3043,7 +3080,7 @@ with tab_personal:
         with col_mi_right:
             with st.container(border=True):
                 st.markdown(
-                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Mapa de Instalaciones - Personal MIAA</p>",
+                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Mapa de Instalaciones - Personal MIAA</p>",
                     unsafe_allow_html=True,
                 )
                 df_miaa_map = (
@@ -3071,10 +3108,10 @@ with tab_personal:
                     folium.CircleMarker(
                         location=[float(row["latitud"]), float(row["longitud"])],
                         radius=2.5,
-                        color="#10b981",
+                        color="#16a34a",
                         fill=True,
-                        fill_color="#10b981",
-                        fill_opacity=0.7,
+                        fill_color="#16a34a",
+                        fill_opacity=0.75,
                     ).add_to(mapa_miaa_pers)
 
                 st_folium(
@@ -3086,7 +3123,7 @@ with tab_personal:
                 )
 
         st.markdown(
-            "<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px;'>Tabla de Registros - Personal MIAA</p>",
+            "<p style='font-size:14px; font-weight:bold; margin-top:15px; margin-bottom:5px; color:#0f172a;'>Tabla de Registros - Personal MIAA</p>",
             unsafe_allow_html=True,
         )
         df_tabla_miaa = df_miaa_pers.copy()
@@ -3136,7 +3173,7 @@ with tab_personal:
                 with col_m1:
                     pag_miaa_act = st.selectbox("Hoja / Página (MIAA)", options=list(range(1, tot_pag_miaa + 1)), format_func=lambda x: f"Hoja {x} de {tot_pag_miaa} (Registros {(x-1)*tam_pag_miaa + 1} al {min(x*tam_pag_miaa, total_reg_miaa)})", key="pag_miaa_sel")
                 with col_m2:
-                    st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 10 por hoja</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #0284c7; font-weight: bold;'>Mostrando 10 por hoja</div>", unsafe_allow_html=True)
 
                 i_ini_m = (pag_miaa_act - 1) * tam_pag_miaa
                 i_fin_m = i_ini_m + tam_pag_miaa
@@ -3154,7 +3191,6 @@ from pyproj import Transformer
 df_usuarios_miaa_medidor = cargar_usuarios_miaa_conmedidor_db()
 
 if not df_usuarios_miaa_medidor.empty and "utm_x" in df_usuarios_miaa_medidor.columns:
-    # Transformador oficial de UTM Zona 13N (EPSG:32613) a WGS84 (EPSG:4326)
     transformer = Transformer.from_crs("EPSG:32613", "EPSG:4326", always_xy=True)
     
     lats, lons = [], []
@@ -3162,7 +3198,6 @@ if not df_usuarios_miaa_medidor.empty and "utm_x" in df_usuarios_miaa_medidor.co
         try:
             x = float(row["utm_x"])
             y = float(row["utm_y"])
-            # Proyectar de metros a grados decimales exactos
             lon_deg, lat_deg = transformer.transform(x, y)
             lats.append(lat_deg)
             lons.append(lon_deg)
@@ -3181,13 +3216,13 @@ else:
 # ------------------------------------------------------------------------------
 with tab_tabla:
     st.markdown(
-        "<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📋 Registros de la Tabla: usuarios_miaa_conmedidor</p>",
+        "<p style='font-size:16px; font-weight:bold; margin-bottom:10px; color:#0f172a;'>📋 Registros de la Tabla: usuarios_miaa_conmedidor</p>",
         unsafe_allow_html=True,
     )
 
     with st.container(border=True):
         st.markdown(
-            "<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>🔍 Filtros de Búsqueda Global en toda la Base de Datos</p>",
+            "<p style='font-size:13px; font-weight:bold; margin-bottom:8px; color:#0f172a;'>🔍 Filtros de Búsqueda Global en toda la Base de Datos</p>",
             unsafe_allow_html=True,
         )
         col_f1, col_f2, col_f3 = st.columns(3)
@@ -3250,7 +3285,7 @@ with tab_tabla:
         st.markdown(
             f"""
             <div class="metric-card">
-                <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-table-list"></i></div>
+                <div class="metric-icon-box" style="color: #0284c7;"><i class="fa-solid fa-table-list"></i></div>
                 <div class="metric-content">
                     <div class="metric-title">Total Registros (1 y 2)</div>
                     <div class="metric-value">{total_registros_tabla:,}</div>
@@ -3264,7 +3299,7 @@ with tab_tabla:
         st.markdown(
             f"""
             <div class="metric-card">
-                <div class="metric-icon-box" style="color: #eab308;"><i class="fa-solid fa-circle-dot"></i></div>
+                <div class="metric-icon-box" style="color: #ca8a04;"><i class="fa-solid fa-circle-dot"></i></div>
                 <div class="metric-content">
                     <div class="metric-title">Etapa 1</div>
                     <div class="metric-value">{total_etapa_1:,}</div>
@@ -3278,7 +3313,7 @@ with tab_tabla:
         st.markdown(
             f"""
             <div class="metric-card">
-                <div class="metric-icon-box" style="color: #22c55e;"><i class="fa-solid fa-circle-dot"></i></div>
+                <div class="metric-icon-box" style="color: #16a34a;"><i class="fa-solid fa-circle-dot"></i></div>
                 <div class="metric-content">
                     <div class="metric-title">Etapa 2</div>
                     <div class="metric-value">{total_etapa_2:,}</div>
@@ -3292,7 +3327,7 @@ with tab_tabla:
 
     with st.container(border=True):
         st.markdown(
-            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>🗺️ Mapa de Registros — 🟡 Etapa 1 (Amarillo) | 🟢 Etapa 2 (Verde)</p>",
+            "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>🗺️ Mapa de Registros — 🟡 Etapa 1 (Amarillo) | 🟢 Etapa 2 (Verde)</p>",
             unsafe_allow_html=True,
         )
 
@@ -3313,33 +3348,32 @@ with tab_tabla:
         mapa_tabla_tab = folium.Map(location=[m_lat_t, m_lon_t], zoom_start=12, tiles=None)
         agregar_capas_base(mapa_tabla_tab)
 
-        # --- INTEGRACIÓN DE LOS POLÍGONOS DE COLONIA EN ESTE MAPA ---
         if gdf_colonias is not None and not gdf_colonias.empty:
             folium.GeoJson(
                 gdf_colonias,
                 name="Polígonos de Colonias",
                 style_function=lambda x: {
-                    "fillColor": "#2980B9",
-                    "color": "#2980B9",
-                    "weight": 1,
+                    "fillColor": "#2563eb",
+                    "color": "#1d4ed8",
+                    "weight": 1.2,
                     "fillOpacity": 0.08,
                 },
                 highlight_function=lambda x: {
-                    "fillColor": "#38bdf8",
-                    "color": "#ffffff",
+                    "fillColor": "#3b82f6",
+                    "color": "#0f172a",
                     "weight": 2.5,
-                    "fillOpacity": 0.35,
+                    "fillOpacity": 0.28,
                 },
                 tooltip=folium.GeoJsonTooltip(
                     fields=["Col_atl", "Sector", "Distrito"],
                     aliases=["Colonia:", "Sector:", "Distrito:"],
                     style=(
-                        "background-color: #0f172a; color: #ffffff; "
+                        "background-color: #ffffff; color: #0f172a; "
+                        "border: 1px solid #cbd5e1; "
                         "font-size: 11px; padding: 6px; border-radius: 4px;"
                     )
                 )
             ).add_to(mapa_tabla_tab)
-        # -----------------------------------------------------------
 
         for _, row in df_mapa_tabla.iterrows():
             try:
@@ -3354,7 +3388,7 @@ with tab_tabla:
             if etapa_val in ["1", "etapa 1"]:
                 color_punto = "#eab308"
             else:
-                color_punto = "#22c55e"
+                color_punto = "#16a34a"
 
             nombre = str(row.get("Nombre", "N/A"))
             predio_val = str(row.get("Predio_Viv", "N/A"))
@@ -3364,7 +3398,7 @@ with tab_tabla:
             etapa_txt = str(row.get("etapa", "N/A"))
 
             popup_html = f"""
-            <div style="font-size: 11px; line-height: 1.4; color: #ffffff;">
+            <div style="font-size: 11px; line-height: 1.4; color: #0f172a;">
                 <b>Cliente:</b> {nombre}<br>
                 <b>Predio:</b> {predio_val}<br>
                 <b>Serie:</b> {serie_val}<br>
@@ -3406,7 +3440,7 @@ with tab_tabla:
                 key="select_pagina_bd_completa",
             )
         with col_p_bd2:
-            st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #38bdf8; font-weight: bold;'>Mostrando 10 por hoja</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='margin-top: 28px; font-size: 13px; color: #0284c7; font-weight: bold;'>Mostrando 10 por hoja</div>", unsafe_allow_html=True)
 
         inicio_idx_bd = (pagina_actual_bd - 1) * TAMANO_PAGINA_BD
         fin_idx_bd = inicio_idx_bd + TAMANO_PAGINA_BD
@@ -3423,7 +3457,7 @@ with tab_tabla:
 # ------------------------------------------------------------------------------
 with tab_sheets_interno:
     st.markdown(
-        "<p style='font-size:16px; font-weight:bold; margin-bottom:10px;'>📑 Registro de Instalaciones Interno (Google Sheets)</p>",
+        "<p style='font-size:16px; font-weight:bold; margin-bottom:10px; color:#0f172a;'>📑 Registro de Instalaciones Interno (Google Sheets)</p>",
         unsafe_allow_html=True,
     )
 
@@ -3477,7 +3511,7 @@ with tab_sheets_interno:
             st.markdown(
                 f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #38bdf8;"><i class="fa-solid fa-gauge"></i></div>
+                    <div class="metric-icon-box" style="color: #0284c7;"><i class="fa-solid fa-gauge"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Medidores Instalados</div>
                         <div class="metric-value">{total_medidores_sheets:,}</div>
@@ -3491,7 +3525,7 @@ with tab_sheets_interno:
             st.markdown(
                 f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #4ade80;"><i class="fa-solid fa-chart-line"></i></div>
+                    <div class="metric-icon-box" style="color: #16a34a;"><i class="fa-solid fa-chart-line"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Promedio Diario</div>
                         <div class="metric-value">{promedio_diario:,.1f}</div>
@@ -3505,7 +3539,7 @@ with tab_sheets_interno:
             st.markdown(
                 f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #f59e0b;"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                    <div class="metric-icon-box" style="color: #d97706;"><i class="fa-solid fa-arrow-trend-up"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Máximo en un Día</div>
                         <div class="metric-value">{max_diario:,}</div>
@@ -3519,7 +3553,7 @@ with tab_sheets_interno:
             st.markdown(
                 f"""
                 <div class="metric-card">
-                    <div class="metric-icon-box" style="color: #f43f5e;"><i class="fa-solid fa-arrow-trend-down"></i></div>
+                    <div class="metric-icon-box" style="color: #e11d48;"><i class="fa-solid fa-arrow-trend-down"></i></div>
                     <div class="metric-content">
                         <div class="metric-title">Mínimo en un Día</div>
                         <div class="metric-value">{min_diario:,}</div>
@@ -3533,7 +3567,7 @@ with tab_sheets_interno:
 
         with st.container(border=True):
             st.markdown(
-                "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Día</p>",
+                "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Instalaciones por Día</p>",
                 unsafe_allow_html=True,
             )
             if col_fecha_sheets and col_inst_sheets:
@@ -3542,17 +3576,18 @@ with tab_sheets_interno:
                     x=col_fecha_sheets,
                     y=col_inst_sheets,
                     text=col_inst_sheets,
-                    color_discrete_sequence=["#3b82f6"],
+                    color_discrete_sequence=["#2563eb"],
                 )
-                fig_bar_inst.update_traces(textposition="outside", textfont_size=10)
+                fig_bar_inst.update_traces(textposition="outside", textfont_size=10, textfont_color="#0f172a")
                 fig_bar_inst.update_layout(
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)",
-                    font_color="#ffffff",
+                    font_color="#0f172a",
                     margin=dict(t=20, b=5, l=5, r=5),
                     height=300,
                     xaxis_title=None,
                     yaxis_title=None,
+                    yaxis=dict(gridcolor="#e2e8f0"),
                 )
                 st.plotly_chart(
                     fig_bar_inst, use_container_width=True, key="sheets_inst_dia"
@@ -3565,7 +3600,7 @@ with tab_sheets_interno:
         with g_col1:
             with st.container(border=True):
                 st.markdown(
-                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Instalaciones por Mes</p>",
+                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Instalaciones por Mes</p>",
                     unsafe_allow_html=True,
                 )
                 if not df_sheets_interno["_fecha_dt_sheets"].isna().all() and col_inst_sheets:
@@ -3587,7 +3622,7 @@ with tab_sheets_interno:
                     )
                     df_mes_group = df_mes_group.sort_values(by="Periodo", ascending=True)
 
-                    colores_barras_mes = ["#1e3a8a", "#3b82f6"] * ((len(df_mes_group) // 2) + 1)
+                    colores_barras_mes = ["#1e40af", "#3b82f6"] * ((len(df_mes_group) // 2) + 1)
                     max_cant_mes = df_mes_group["Cantidad"].max() if not df_mes_group.empty else 10
 
                     fig_mes_h_sheets = px.bar(
@@ -3599,15 +3634,15 @@ with tab_sheets_interno:
                         color="Mes",
                         color_discrete_sequence=colores_barras_mes,
                     )
-                    fig_mes_h_sheets.update_traces(textposition="outside", textfont_size=10)
+                    fig_mes_h_sheets.update_traces(textposition="outside", textfont_size=10, textfont_color="#0f172a")
                     fig_mes_h_sheets.update_layout(
                         plot_bgcolor="rgba(0,0,0,0)",
                         paper_bgcolor="rgba(0,0,0,0)",
-                        font_color="#ffffff",
+                        font_color="#0f172a",
                         margin=dict(t=10, b=5, l=5, r=30),
                         height=280,
                         xaxis=dict(showgrid=False, showticklabels=False, title=None, range=[0, max_cant_mes * 1.25]),
-                        yaxis=dict(showgrid=False, title=None, tickfont=dict(size=10), categoryorder="array", categoryarray=df_mes_group["Mes"].tolist()),
+                        yaxis=dict(showgrid=False, title=None, tickfont=dict(size=10, color="#0f172a"), categoryorder="array", categoryarray=df_mes_group["Mes"].tolist()),
                         showlegend=False,
                     )
                     st.plotly_chart(fig_mes_h_sheets, use_container_width=True, key="sheets_instalaciones_mes")
@@ -3617,7 +3652,7 @@ with tab_sheets_interno:
         with g_col2:
             with st.container(border=True):
                 st.markdown(
-                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Medidores en Cuadro vs Registro</p>",
+                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Medidores en Cuadro vs Registro</p>",
                     unsafe_allow_html=True,
                 )
                 if col_cuadro_sheets and col_reg_sheets:
@@ -3634,16 +3669,16 @@ with tab_sheets_interno:
                         values="Cantidad",
                         hole=0.5,
                         color="Tipo",
-                        color_discrete_map={"Cuadro": "#0066cc", "Registro": "#e83e8c"},
+                        color_discrete_map={"Cuadro": "#1d4ed8", "Registro": "#db2777"},
                     )
-                    fig_pie_cr.update_traces(textinfo="value+percent", textfont=dict(size=11))
+                    fig_pie_cr.update_traces(textinfo="value+percent", textfont=dict(size=11, color="#0f172a"))
                     fig_pie_cr.update_layout(
                         plot_bgcolor="rgba(0,0,0,0)",
                         paper_bgcolor="rgba(0,0,0,0)",
-                        font_color="#ffffff",
+                        font_color="#0f172a",
                         margin=dict(t=20, b=5, l=5, r=5),
                         height=280,
-                        legend=dict(orientation="h", y=-0.1, x=0),
+                        legend=dict(orientation="h", y=-0.1, x=0, font=dict(color="#0f172a")),
                     )
                     st.plotly_chart(
                         fig_pie_cr, use_container_width=True, key="sheets_pie_cuadro_reg"
@@ -3652,7 +3687,7 @@ with tab_sheets_interno:
         with g_col3:
             with st.container(border=True):
                 st.markdown(
-                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold;'>Evolución de Rompimiento / Retirados y Sin Medidor</p>",
+                    "<p style='font-size:12px; margin-bottom:4px; font-weight:bold; color:#0f172a;'>Evolución de Rompimiento / Retirados y Sin Medidor</p>",
                     unsafe_allow_html=True,
                 )
                 if col_fecha_sheets and col_ret_sheets and col_sin_sheets:
@@ -3662,8 +3697,8 @@ with tab_sheets_interno:
                         y=[col_ret_sheets, col_sin_sheets],
                         barmode="group",
                         color_discrete_map={
-                            col_ret_sheets: "#f59e0b",
-                            col_sin_sheets: "#f43f5e",
+                            col_ret_sheets: "#d97706",
+                            col_sin_sheets: "#e11d48",
                         },
                     )
                     fig_ret_sin.for_each_trace(lambda t: t.update(name="Retirados" if t.name == col_ret_sheets else "Sin Medidor"))
@@ -3671,12 +3706,13 @@ with tab_sheets_interno:
                     fig_ret_sin.update_layout(
                         plot_bgcolor="rgba(0,0,0,0)",
                         paper_bgcolor="rgba(0,0,0,0)",
-                        font_color="#ffffff",
+                        font_color="#0f172a",
                         margin=dict(t=20, b=5, l=5, r=5),
                         height=280,
                         xaxis_title=None,
                         yaxis_title=None,
-                        legend=dict(orientation="h", y=1.1, x=0),
+                        yaxis=dict(gridcolor="#e2e8f0"),
+                        legend=dict(orientation="h", y=1.1, x=0, font=dict(color="#0f172a")),
                     )
                     st.plotly_chart(
                         fig_ret_sin, use_container_width=True, key="sheets_retirados_sin"
@@ -3688,7 +3724,7 @@ with tab_sheets_interno:
 
         with st.container(border=True):
             st.markdown(
-                "<p style='font-size:13px; font-weight:bold; margin-bottom:8px;'>📋 Tabla de Datos - Google Sheets (Instalaciones)</p>",
+                "<p style='font-size:13px; font-weight:bold; margin-bottom:8px; color:#0f172a;'>📋 Tabla de Datos - Google Sheets (Instalaciones)</p>",
                 unsafe_allow_html=True,
             )
 
