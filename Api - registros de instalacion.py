@@ -869,6 +869,120 @@ else:
     )
 
 # ==============================================================================
+# SECCIÓN 6.5: PROCESAMIENTO GLOBAL DE POLÍGONOS DE INSTALACIÓN (FID)
+# ==============================================================================
+poligonos_procesados = {}
+shapely_polygons = {}
+lat_acumuladas, lon_acumuladas = [], []
+
+if not df_poligonos.empty:
+    raw_fids_sucios = df_poligonos["FID"].dropna().unique().tolist()
+    try:
+        raw_fids = sorted(raw_fids_sucios, key=lambda x: float(x))
+    except Exception:
+        raw_fids = sorted(raw_fids_sucios, key=str)
+
+    tot_poligonos_val = len(raw_fids)
+    fids_disponibles = [
+        (
+            str(int(float(f)))
+            if str(f).replace(".", "", 1).isdigit()
+            else str(f)
+        )
+        for f in raw_fids
+    ]
+
+    for raw_fid in raw_fids:
+        fid_str = (
+            str(int(float(raw_fid)))
+            if str(raw_fid).replace(".", "", 1).isdigit()
+            else str(raw_fid)
+        )
+        df_pol_sel = df_poligonos[
+            df_poligonos["FID"].astype(str).str.contains(fid_str)
+        ]
+
+        coordenadas_poligono = []
+        df_ordenado = df_pol_sel.sort_values(by="Orden_inst", ascending=True)
+        sec_comercial = (
+            df_pol_sel["Sector_comercial"].iloc[0]
+            if "Sector_comercial" in df_pol_sel.columns
+            else "N/A"
+        )
+        area_val = (
+            df_pol_sel["Area_km2"].iloc[0]
+            if "Area_km2" in df_pol_sel.columns
+            else 0
+        )
+        med_val = (
+            df_pol_sel["Medidores"].iloc[0]
+            if "Medidores" in df_pol_sel.columns
+            else 0
+        )
+
+        for _, r_vertice in df_ordenado.iterrows():
+            c_val = r_vertice["coord"]
+            if pd.isna(c_val):
+                continue
+            c_str = str(c_val).strip()
+            for char in ["[", "]", '"', "'", "POINT", "POLYGON"]:
+                c_str = c_str.replace(char, "")
+            pares = [p.strip() for p in c_str.split(",") if p.strip()]
+
+            if len(pares) >= 2 and len(pares) % 2 == 0:
+                for i in range(0, len(pares), 2):
+                    try:
+                        p1, p2 = float(pares[i]), float(pares[i + 1])
+                        lat, lon = (p2, p1) if abs(p1) > abs(p2) else (p1, p2)
+                        coordenadas_poligono.append([lat, lon])
+                        lat_acumuladas.append(lat)
+                        lon_acumuladas.append(lon)
+                    except Exception:
+                        pass
+
+        if coordenadas_poligono:
+            poligonos_procesados[fid_str] = {
+                "fid": fid_str,
+                "coordenadas": coordenadas_poligono,
+                "sector": sec_comercial,
+                "area": area_val,
+                "medidores_db": med_val,
+                "vertis": len(coordenadas_poligono),
+            }
+            try:
+                poly_geom = Polygon(coordenadas_poligono)
+                if not poly_geom.is_valid:
+                    poly_geom = poly_geom.buffer(0)
+                shapely_polygons[fid_str] = poly_geom
+            except Exception:
+                pass
+else:
+    raw_fids = []
+    fids_disponibles = []
+    tot_poligonos_val = 0
+
+conteo_medidores_instalados = {f_id: 0 for f_id in fids_disponibles}
+if (
+    shapely_polygons
+    and not df_filtrado.empty
+    and "latitud" in df_filtrado.columns
+):
+    try:
+        for _, row_m in df_filtrado.dropna(
+            subset=["latitud", "longitud"]
+        ).iterrows():
+            pt = Point(row_m["latitud"], row_m["longitud"])
+            for f_id, poly in shapely_polygons.items():
+                if poly.contains(pt):
+                    conteo_medidores_instalados[f_id] += 1
+                    break
+    except Exception:
+        pass
+
+counts_list = list(conteo_medidores_instalados.values())
+max_inst_val = max(counts_list) if counts_list and max(counts_list) > 0 else 1
+
+# ==============================================================================
 # SECCIÓN 7: ESTRUCTURA DE PESTAÑAS PRINCIPALES
 # ==============================================================================
 
@@ -1297,6 +1411,7 @@ with tab_principal:
                 )
                 agregar_capas_base(mapa_miaa)
 
+                # --- CAPA 1: POLÍGONOS DE COLONIAS ---
                 if gdf_colonias is not None and not gdf_colonias.empty:
                     folium.GeoJson(
                         gdf_colonias,
@@ -1323,6 +1438,38 @@ with tab_principal:
                             )
                         )
                     ).add_to(mapa_miaa)
+
+                # --- CAPA 2: POLÍGONOS DE INSTALACIÓN (FID) DE LA PESTAÑA MAPA POLÍGONOS ---
+                if poligonos_procesados:
+                    fg_poligonos_fid = folium.FeatureGroup(name="Polígonos de Instalación (FID)")
+                    for f_id, datos in poligonos_procesados.items():
+                        inst_count = conteo_medidores_instalados.get(f_id, 0)
+                        if inst_count == 0:
+                            color_hex = "#ef4444"
+                        elif inst_count >= max_inst_val * 0.5:
+                            color_hex = "#22c55e"
+                        else:
+                            color_hex = "#eab308"
+
+                        tooltip_pol_html = (
+                            f"<div style='font-size: 11px; color: #0f172a;'>"
+                            f"<b>Polígono FID: {f_id}</b><br/>"
+                            f"Sector: {datos['sector']}<br/>"
+                            f"Medidores Instalados: {inst_count:,}<br/>"
+                            f"Medidores DB: {int(datos['medidores_db']):,}"
+                            f"</div>"
+                        )
+
+                        folium.Polygon(
+                            locations=datos["coordenadas"],
+                            color="#0f172a",
+                            weight=1.5,
+                            fill=True,
+                            fill_color=color_hex,
+                            fill_opacity=0.35,
+                            tooltip=folium.Tooltip(tooltip_pol_html),
+                        ).add_to(fg_poligonos_fid)
+                    fg_poligonos_fid.add_to(mapa_miaa)
 
                 for _, row in df_mapa_valido.iterrows():
                     es_externo = (
@@ -2267,120 +2414,7 @@ with tab_anomalias:
 # ------------------------------------------------------------------------------
 # SECCIÓN 11 PESTAÑA: MAPA DE POLÍGONOS DE INSTALACIÓN
 # ------------------------------------------------------------------------------
-script_poligonos_procesados = {}
-shapely_polygons = {}
-lat_acumuladas, lon_acumuladas = [], []
-
 with tab_poligonos:
-    if not df_poligonos.empty:
-        raw_fids_sucios = df_poligonos["FID"].dropna().unique().tolist()
-        try:
-            raw_fids = sorted(raw_fids_sucios, key=lambda x: float(x))
-        except:
-            raw_fids = sorted(raw_fids_sucios, key=str)
-
-        tot_poligonos_val = len(raw_fids)
-        fids_disponibles = [
-            (
-                str(int(float(f)))
-                if str(f).replace(".", "", 1).isdigit()
-                else str(f)
-            )
-            for f in raw_fids
-        ]
-    else:
-        raw_fids = []
-        fids_disponibles = []
-        tot_poligonos_val = 0
-
-    poligonos_procesados = {}
-    if not df_poligonos.empty:
-        for raw_fid in raw_fids:
-            fid_str = (
-                str(int(float(raw_fid)))
-                if str(raw_fid).replace(".", "", 1).isdigit()
-                else str(raw_fid)
-            )
-            df_pol_sel = df_poligonos[
-                df_poligonos["FID"].astype(str).str.contains(fid_str)
-            ]
-
-            coordenadas_poligono = []
-            df_ordenado = df_pol_sel.sort_values(by="Orden_inst", ascending=True)
-            sec_comercial = (
-                df_pol_sel["Sector_comercial"].iloc[0]
-                if "Sector_comercial" in df_pol_sel.columns
-                else "N/A"
-            )
-            area_val = (
-                df_pol_sel["Area_km2"].iloc[0]
-                if "Area_km2" in df_pol_sel.columns
-                else 0
-            )
-            med_val = (
-                df_pol_sel["Medidores"].iloc[0]
-                if "Medidores" in df_pol_sel.columns
-                else 0
-            )
-
-            for _, r_vertice in df_ordenado.iterrows():
-                c_val = r_vertice["coord"]
-                if pd.isna(c_val):
-                    continue
-                c_str = str(c_val).strip()
-                for char in ["[", "]", '"', "'", "POINT", "POLYGON"]:
-                    c_str = c_str.replace(char, "")
-                pares = [p.strip() for p in c_str.split(",") if p.strip()]
-
-                if len(pares) >= 2 and len(pares) % 2 == 0:
-                    for i in range(0, len(pares), 2):
-                        try:
-                            p1, p2 = float(pares[i]), float(pares[i + 1])
-                            lat, lon = (p2, p1) if abs(p1) > abs(p2) else (p1, p2)
-                            coordenadas_poligono.append([lat, lon])
-                            lat_acumuladas.append(lat)
-                            lon_acumuladas.append(lon)
-                        except:
-                            pass
-
-            if coordenadas_poligono:
-                poligonos_procesados[fid_str] = {
-                    "fid": fid_str,
-                    "coordenadas": coordenadas_poligono,
-                    "sector": sec_comercial,
-                    "area": area_val,
-                    "medidores_db": med_val,
-                    "vertis": len(coordenadas_poligono),
-                }
-                try:
-                    poly_geom = Polygon(coordenadas_poligono)
-                    if not poly_geom.is_valid:
-                        poly_geom = poly_geom.buffer(0)
-                    shapely_polygons[fid_str] = poly_geom
-                except:
-                    pass
-
-    conteo_medidores_instalados = {f_id: 0 for f_id in fids_disponibles}
-    if (
-        shapely_polygons
-        and not df_filtrado.empty
-        and "latitud" in df_filtrado.columns
-    ):
-        try:
-            for _, row_m in df_filtrado.dropna(
-                subset=["latitud", "longitud"]
-            ).iterrows():
-                pt = Point(row_m["latitud"], row_m["longitud"])
-                for f_id, poly in shapely_polygons.items():
-                    if poly.contains(pt):
-                        conteo_medidores_instalados[f_id] += 1
-                        break
-        except:
-            pass
-
-    counts_list = list(conteo_medidores_instalados.values())
-    max_inst_val = max(counts_list) if counts_list and max(counts_list) > 0 else 1
-
     col_c_izq, col_c_centro, col_c_der = st.columns([0.22, 0.52, 0.26])
 
     with col_c_izq:
@@ -2623,7 +2657,7 @@ with tab_poligonos:
 
                 try:
                     fid_val = int(float(datos.get("fid")))
-                except:
+                except Exception:
                     fid_val = datos.get("fid")
 
                 resumen_poligonos.append({
@@ -3201,7 +3235,7 @@ if not df_usuarios_miaa_medidor.empty and "utm_x" in df_usuarios_miaa_medidor.co
             lon_deg, lat_deg = transformer.transform(x, y)
             lats.append(lat_deg)
             lons.append(lon_deg)
-        except:
+        except Exception:
             lats.append(np.nan)
             lons.append(np.nan)
             
@@ -3381,7 +3415,7 @@ with tab_tabla:
                 lon_val = float(row["lon_calc"])
                 if pd.isna(lat_val) or pd.isna(lon_val):
                     continue
-            except:
+            except Exception:
                 continue
 
             etapa_val = str(row.get("etapa", "")).strip().lower()
