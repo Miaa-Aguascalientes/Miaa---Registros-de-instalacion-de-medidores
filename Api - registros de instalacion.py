@@ -457,6 +457,17 @@ def agregar_capas_base(m):
     m.get_root().html.add_child(folium.Element(css_quitar_atribucion))
 
 
+def render_st_folium_seguro(mapa_obj, width=700, height=320, key="mapa_default"):
+    return st_folium(
+        mapa_obj,
+        width=width,
+        height=height,
+        use_container_width=True,
+        key=key,
+        returned_objects=[],
+    )
+
+
 # ==============================================================================
 # SECCIÓN 4: PROCESAMIENTO Y LIMPIEZA INICIAL DE DATOS
 # ==============================================================================
@@ -1401,8 +1412,8 @@ with tab_principal:
                     else pd.DataFrame()
                 )
                 if not df_mapa_valido.empty:
-                    map_lat = df_mapa_valido["latitud"].mean()
-                    map_lon = df_mapa_valido["longitud"].mean()
+                    map_lat = float(df_mapa_valido["latitud"].mean())
+                    map_lon = float(df_mapa_valido["longitud"].mean())
                 else:
                     map_lat, map_lon = lat_centro, lon_centro
 
@@ -1592,12 +1603,12 @@ with tab_principal:
 
                 folium.LayerControl(position="topleft").add_to(mapa_miaa)
 
-                st_folium(
+                mapa_key_dinamica = f"mapa_estatico_instalaciones_{len(df_mapa_valido)}_{hash(busqueda_global_inst)}"
+                render_st_folium_seguro(
                     mapa_miaa,
-                    width=None,
+                    width=700,
                     height=320,
-                    key="mapa_estatico_instalaciones",
-                    returned_objects=[],
+                    key=mapa_key_dinamica,
                 )
 
         with col_graf_h:
@@ -1878,8 +1889,8 @@ with tab_rutas_diarias:
             df_mapa_ruta = df_rutas_filtrada.dropna(subset=["latitud", "longitud"]).sort_values("fecha_dt").copy() if not df_rutas_filtrada.empty else pd.DataFrame()
 
             if not df_mapa_ruta.empty:
-                r_lat_c = df_mapa_ruta["latitud"].mean()
-                r_lon_c = df_mapa_ruta["longitud"].mean()
+                r_lat_c = float(df_mapa_ruta["latitud"].mean())
+                r_lon_c = float(df_mapa_ruta["longitud"].mean())
             else:
                 r_lat_c, r_lon_c = lat_centro, lon_centro
 
@@ -2015,7 +2026,8 @@ with tab_rutas_diarias:
 
             folium.LayerControl(position="topleft").add_to(mapa_rutas)
 
-            st_folium(mapa_rutas, width=None, height=450, key="mapa_rutas_diarias_instaladores", returned_objects=[])
+            key_mapa_rutas = f"mapa_rutas_diarias_{fecha_sel_rutas}_{tipo_personal_sel}_{len(df_mapa_ruta)}"
+            render_st_folium_seguro(mapa_rutas, width=750, height=450, key=key_mapa_rutas)
 
             st.markdown(
                 """
@@ -2869,12 +2881,12 @@ with tab_personal:
                     else pd.DataFrame()
                 )
                 m_lat = (
-                    df_ext_map["latitud"].mean()
+                    float(df_ext_map["latitud"].mean())
                     if not df_ext_map.empty
                     else lat_centro
                 )
                 m_lon = (
-                    df_ext_map["longitud"].mean()
+                    float(df_ext_map["longitud"].mean())
                     if not df_ext_map.empty
                     else lon_centro
                 )
@@ -2892,12 +2904,11 @@ with tab_personal:
                         fill_opacity=0.75,
                     ).add_to(mapa_ext)
 
-                st_folium(
+                render_st_folium_seguro(
                     mapa_ext,
-                    width=None,
+                    width=700,
                     height=460,
-                    key="mapa_externo_unificado",
-                    returned_objects=[],
+                    key=f"mapa_externo_unificado_{len(df_ext_map)}",
                 )
 
         st.markdown(
@@ -3123,12 +3134,12 @@ with tab_personal:
                     else pd.DataFrame()
                 )
                 mm_lat = (
-                    df_miaa_map["latitud"].mean()
+                    float(df_miaa_map["latitud"].mean())
                     if not df_miaa_map.empty
                     else lat_centro
                 )
                 mm_lon = (
-                    df_miaa_map["longitud"].mean()
+                    float(df_miaa_map["longitud"].mean())
                     if not df_miaa_map.empty
                     else lon_centro
                 )
@@ -3148,12 +3159,11 @@ with tab_personal:
                         fill_opacity=0.75,
                     ).add_to(mapa_miaa_pers)
 
-                st_folium(
+                render_st_folium_seguro(
                     mapa_miaa_pers,
-                    width=None,
+                    width=700,
                     height=460,
-                    key="mapa_miaa_personal_unificado",
-                    returned_objects=[],
+                    key=f"mapa_miaa_personal_unificado_{len(df_miaa_map)}",
                 )
 
         st.markdown(
@@ -3379,7 +3389,7 @@ with tab_tabla:
         else:
             m_lat_t, m_lon_t = 21.8853, -102.2916
 
-        mapa_tabla_tab = folium.Map(location=[m_lat_t, m_lon_t], zoom_start=12, tiles=None)
+        mapa_tabla_tab = folium.Map(location=[float(m_lat_t), float(m_lon_t)], zoom_start=12, tiles=None)
         agregar_capas_base(mapa_tabla_tab)
 
         if gdf_colonias is not None and not gdf_colonias.empty:
@@ -3451,12 +3461,11 @@ with tab_tabla:
                 popup=folium.Popup(popup_html, max_width=250),
             ).add_to(mapa_tabla_tab)
 
-        st_folium(
+        render_st_folium_seguro(
             mapa_tabla_tab,
-            width=None,
+            width=700,
             height=350,
-            key="mapa_usuarios_miaa_conmedidor_geom_final",
-            returned_objects=[],
+            key=f"mapa_usuarios_miaa_conmedidor_geom_final_{len(df_mapa_tabla)}",
         )
 
     st.markdown("<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True)
