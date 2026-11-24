@@ -49,15 +49,17 @@ THEME = (
         "border_soft": "#162232",
         "border_hover": "#00d4ff",
         "tab_bg": "#081421",
-        "tab_text": "#94a3b8",
+        "tab_text": "#cbd5e1",
         "tab_active_bg": "#0b1a29",
         "tab_active_text": "#00d4ff",
-        "tab_active_border": "#1e3a5f",
+        "tab_active_border": "#00d4ff",
         "card_bg": "#0b1a29",
         "card_shadow": "0 4px 12px rgba(0, 0, 0, 0.45)",
         "card_hover_shadow": "0 8px 18px rgba(0, 212, 255, 0.14)",
         "card_shine": "rgba(0, 212, 255, 0.07)",
         "table_bg": "#0b1a29",
+        "input_bg": "#0b1a29",
+        "input_border": "#1e3a5f",
         "plotly_template": "plotly_dark",
         "plotly_font": "#f1f5f9",
         "plotly_grid": "#1e293b",
@@ -96,15 +98,17 @@ THEME = (
         "border_soft": "#f1f5f9",
         "border_hover": "#93c5fd",
         "tab_bg": "#f8fafc",
-        "tab_text": "#475569",
+        "tab_text": "#334155",
         "tab_active_bg": "#ffffff",
         "tab_active_text": "#0284c7",
-        "tab_active_border": "#cbd5e1",
+        "tab_active_border": "#0284c7",
         "card_bg": "#ffffff",
         "card_shadow": "0 2px 6px rgba(15, 23, 42, 0.05)",
         "card_hover_shadow": "0 6px 12px rgba(59, 130, 246, 0.12)",
         "card_shine": "rgba(59, 130, 246, 0.06)",
         "table_bg": "#ffffff",
+        "input_bg": "#ffffff",
+        "input_border": "#cbd5e1",
         "plotly_template": "plotly_white",
         "plotly_font": "#0f172a",
         "plotly_grid": "#e2e8f0",
@@ -126,6 +130,17 @@ THEME = (
         "pol_hi_line": "#0f172a",
         "pol_hi_fill": "#3b82f6",
     }
+)
+
+dataframe_dark_filter_css = (
+    """
+    div[data-testid="stDataFrame"] canvas,
+    div[data-testid="stDataFrame"] .dvn-scroller {
+        filter: invert(0.93) hue-rotate(180deg) contrast(1.04) !important;
+    }
+    """
+    if ES_OSCURO
+    else ""
 )
 
 custom_style = f"""
@@ -154,8 +169,13 @@ custom_style = f"""
         display: block !important;
     }}
 
-    [data-testid="stSidebar"] * {{
-        color: {THEME["text"]};
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3 {{
+        color: {THEME["text"]} !important;
     }}
 
     .stButton > button {{
@@ -171,6 +191,52 @@ custom_style = f"""
         background-color: {THEME["btn_hover_bg"]} !important;
         border-color: {THEME["btn_hover_border"]} !important;
         color: {THEME["btn_hover_text"]} !important;
+    }}
+
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="input"] > div,
+    input[type="text"],
+    input[type="number"] {{
+        background-color: {THEME["input_bg"]} !important;
+        color: {THEME["text"]} !important;
+        border-color: {THEME["input_border"]} !important;
+    }}
+
+    div[data-baseweb="select"] span,
+    div[data-baseweb="select"] svg,
+    div[data-baseweb="input"] input {{
+        color: {THEME["text"]} !important;
+        fill: {THEME["text"]} !important;
+    }}
+
+    ul[data-baseweb="menu"],
+    div[data-baseweb="popover"] > div {{
+        background-color: {THEME["card_bg"]} !important;
+        color: {THEME["text"]} !important;
+        border: 1px solid {THEME["border"]} !important;
+    }}
+
+    ul[data-baseweb="menu"] li {{
+        background-color: {THEME["card_bg"]} !important;
+        color: {THEME["text"]} !important;
+    }}
+
+    ul[data-baseweb="menu"] li:hover {{
+        background-color: {THEME["btn_hover_bg"]} !important;
+        color: {THEME["tab_active_text"]} !important;
+    }}
+
+    div[data-testid="stAlert"] {{
+        background-color: {THEME["card_bg"]} !important;
+        color: {THEME["text"]} !important;
+        border: 1px solid {THEME["border"]} !important;
+        border-radius: 8px !important;
+    }}
+
+    div[data-testid="stAlert"] p,
+    div[data-testid="stAlert"] span,
+    div[data-testid="stAlert"] div {{
+        color: {THEME["text"]} !important;
     }}
 
     [data-testid="collapsedControl"] {{ display: none !important; }}
@@ -237,16 +303,36 @@ custom_style = f"""
     .stTabs [data-baseweb="tab-list"] {{
         gap: 6px;
         border-bottom: 1px solid {THEME["border"]};
+        background-color: transparent !important;
     }}
 
     .stTabs [data-baseweb="tab"] {{
-        background-color: {THEME["tab_bg"]};
-        color: {THEME["tab_text"]};
-        border: 1px solid {THEME["border"]};
-        border-bottom: none;
-        border-radius: 8px 8px 0 0;
-        padding: 8px 14px;
-        font-weight: 600;
+        background-color: {THEME["tab_bg"]} !important;
+        color: {THEME["tab_text"]} !important;
+        border: 1px solid {THEME["border"]} !important;
+        border-bottom: none !important;
+        border-radius: 8px 8px 0 0 !important;
+        padding: 8px 14px !important;
+        font-weight: 600 !important;
+        opacity: 1 !important;
+    }}
+
+    .stTabs [data-baseweb="tab"] p,
+    .stTabs [data-baseweb="tab"] span,
+    .stTabs [data-baseweb="tab"] div {{
+        color: {THEME["tab_text"]} !important;
+        opacity: 1 !important;
+    }}
+
+    .stTabs [data-baseweb="tab"]:hover {{
+        background-color: {THEME["btn_hover_bg"]} !important;
+        color: {THEME["tab_active_text"]} !important;
+    }}
+
+    .stTabs [data-baseweb="tab"]:hover p,
+    .stTabs [data-baseweb="tab"]:hover span,
+    .stTabs [data-baseweb="tab"]:hover div {{
+        color: {THEME["tab_active_text"]} !important;
     }}
 
     .stTabs [aria-selected="true"] {{
@@ -254,6 +340,13 @@ custom_style = f"""
         color: {THEME["tab_active_text"]} !important;
         border-color: {THEME["tab_active_border"]} !important;
         border-bottom: 2px solid {THEME["tab_active_text"]} !important;
+    }}
+
+    .stTabs [aria-selected="true"] p,
+    .stTabs [aria-selected="true"] span,
+    .stTabs [aria-selected="true"] div {{
+        color: {THEME["tab_active_text"]} !important;
+        font-weight: 700 !important;
     }}
 
     .metric-card {{
@@ -348,7 +441,10 @@ custom_style = f"""
         border: 1px solid {THEME["border"]} !important;
         border-radius: 8px !important;
         background-color: {THEME["table_bg"]} !important;
+        overflow: hidden !important;
     }}
+
+    {dataframe_dark_filter_css}
 
     .js-plotly-plot .plotly .main-svg {{
         background: transparent !important;
