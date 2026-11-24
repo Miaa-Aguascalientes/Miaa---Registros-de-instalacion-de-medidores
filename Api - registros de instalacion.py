@@ -226,7 +226,9 @@ custom_style = f"""
         color: {THEME["tab_active_text"]} !important;
     }}
 
-    div[data-testid="stAlert"] {{
+    div[data-testid="stAlert"],
+    div[data-testid="stAlertContainer"],
+    div[role="alert"] {{
         background-color: {THEME["card_bg"]} !important;
         color: {THEME["text"]} !important;
         border: 1px solid {THEME["border"]} !important;
@@ -235,7 +237,13 @@ custom_style = f"""
 
     div[data-testid="stAlert"] p,
     div[data-testid="stAlert"] span,
-    div[data-testid="stAlert"] div {{
+    div[data-testid="stAlert"] div,
+    div[data-testid="stAlertContainer"] p,
+    div[data-testid="stAlertContainer"] span,
+    div[data-testid="stAlertContainer"] div,
+    div[role="alert"] p,
+    div[role="alert"] span,
+    div[role="alert"] div {{
         color: {THEME["text"]} !important;
     }}
 
@@ -1032,9 +1040,51 @@ if st.sidebar.button("🔄 Reconectar API", use_container_width=True):
 api_conectada = st.session_state.get("datos_instalaciones") is not None
 
 if api_conectada:
-    st.sidebar.success("API Conectada Correctamente", icon="🟢")
+    st.sidebar.markdown(
+        f"""
+        <div style="
+            background-color: {THEME['card_bg']};
+            color: {THEME['text']};
+            border: 1px solid #16a34a;
+            border-left: 4px solid #22c55e;
+            border-radius: 8px;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: {THEME['card_shadow']};
+        ">
+            <span style="color: #22c55e; font-size: 14px;">●</span>
+            <span>API Conectada Correctamente</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 else:
-    st.sidebar.error("Error de Conexión con la API", icon="🔴")
+    st.sidebar.markdown(
+        f"""
+        <div style="
+            background-color: {THEME['card_bg']};
+            color: {THEME['text']};
+            border: 1px solid #dc2626;
+            border-left: 4px solid #ef4444;
+            border-radius: 8px;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: {THEME['card_shadow']};
+        ">
+            <span style="color: #ef4444; font-size: 14px;">●</span>
+            <span>Error de Conexión con la API</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("Periodo de Fechas")
