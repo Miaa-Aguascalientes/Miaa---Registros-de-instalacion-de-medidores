@@ -304,16 +304,20 @@ custom_style = f"""
         color: {THEME["text"]};
     }}
 
+    div[data-testid="stTabs"],
     .stTabs {{
         margin-top: 5px;
     }}
 
+    div[data-testid="stTabs"] div[data-baseweb="tab-list"],
     .stTabs [data-baseweb="tab-list"] {{
         gap: 6px;
-        border-bottom: 1px solid {THEME["border"]};
+        border-bottom: 1px solid {THEME["border"]} !important;
         background-color: transparent !important;
     }}
 
+    div[data-testid="stTabs"] button[role="tab"],
+    div[data-testid="stTabs"] button[data-baseweb="tab"],
     .stTabs [data-baseweb="tab"] {{
         background-color: {THEME["tab_bg"]} !important;
         color: {THEME["tab_text"]} !important;
@@ -325,24 +329,28 @@ custom_style = f"""
         opacity: 1 !important;
     }}
 
-    .stTabs [data-baseweb="tab"] p,
-    .stTabs [data-baseweb="tab"] span,
-    .stTabs [data-baseweb="tab"] div {{
+    div[data-testid="stTabs"] button[role="tab"] *,
+    div[data-testid="stTabs"] button[data-baseweb="tab"] *,
+    .stTabs [data-baseweb="tab"] * {{
         color: {THEME["tab_text"]} !important;
         opacity: 1 !important;
     }}
 
+    div[data-testid="stTabs"] button[role="tab"]:hover,
+    div[data-testid="stTabs"] button[data-baseweb="tab"]:hover,
     .stTabs [data-baseweb="tab"]:hover {{
         background-color: {THEME["btn_hover_bg"]} !important;
         color: {THEME["tab_active_text"]} !important;
     }}
 
-    .stTabs [data-baseweb="tab"]:hover p,
-    .stTabs [data-baseweb="tab"]:hover span,
-    .stTabs [data-baseweb="tab"]:hover div {{
+    div[data-testid="stTabs"] button[role="tab"]:hover *,
+    div[data-testid="stTabs"] button[data-baseweb="tab"]:hover *,
+    .stTabs [data-baseweb="tab"]:hover * {{
         color: {THEME["tab_active_text"]} !important;
     }}
 
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
+    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"],
     .stTabs [aria-selected="true"] {{
         background-color: {THEME["tab_active_bg"]} !important;
         color: {THEME["tab_active_text"]} !important;
@@ -350,9 +358,9 @@ custom_style = f"""
         border-bottom: 2px solid {THEME["tab_active_text"]} !important;
     }}
 
-    .stTabs [aria-selected="true"] p,
-    .stTabs [aria-selected="true"] span,
-    .stTabs [aria-selected="true"] div {{
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] *,
+    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] *,
+    .stTabs [aria-selected="true"] * {{
         color: {THEME["tab_active_text"]} !important;
         font-weight: 700 !important;
     }}
