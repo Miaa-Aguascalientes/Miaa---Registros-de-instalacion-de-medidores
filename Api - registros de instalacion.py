@@ -683,6 +683,32 @@ def construir_df_principal(raw_data):
     return df_base
 
 
+@st.cache_data(ttl=600, show_spinner=False)
+def calcular_conteo_por_fid(fids_tuple, coords_tuple, poligonos_coords_tuple):
+    conteo = {f_id: 0 for f_id in fids_tuple}
+    if not poligonos_coords_tuple or not coords_tuple:
+        return conteo
+
+    polys = []
+    for f_id, coords in poligonos_coords_tuple:
+        try:
+            poly_geom = Polygon(coords)
+            if not poly_geom.is_valid:
+                poly_geom = poly_geom.buffer(0)
+            polys.append((f_id, poly_geom, poly_geom.bounds))
+        except Exception:
+            pass
+
+    for lat_v, lon_v in coords_tuple:
+        pt = Point(float(lat_v), float(lon_v))
+        for f_id, poly, (minx, miny, maxx, maxy) in polys:
+            if minx <= lat_v <= maxx and miny <= lon_v <= maxy:
+                if poly.contains(pt):
+                    conteo[f_id] += 1
+                    break
+    return conteo
+
+
 def filtrar_por_texto(df_in, texto_busqueda):
     if df_in.empty or not texto_busqueda:
         return df_in
@@ -882,10 +908,18 @@ logo_url = "https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978
 st.sidebar.image(logo_url, use_container_width=True)
 st.sidebar.markdown("---")
 
+
+def alternar_tema():
+    st.session_state["tema_oscuro"] = not st.session_state.get("tema_oscuro", False)
+
+
 texto_btn_tema = "☀️ Cambiar a Tema Claro" if ES_OSCURO else "🌙 Cambiar a Tema Oscuro"
-if st.sidebar.button(texto_btn_tema, use_container_width=True, key="btn_toggle_tema"):
-    st.session_state["tema_oscuro"] = not st.session_state["tema_oscuro"]
-    st.rerun()
+st.sidebar.button(
+    texto_btn_tema,
+    use_container_width=True,
+    key="btn_toggle_tema",
+    on_click=alternar_tema,
+)
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("Estado de Conexión API")
@@ -1053,8 +1087,8 @@ else:
 # SECCIÓN 6.5: PROCESAMIENTO GLOBAL DE POLÍGONOS DE INSTALACIÓN (FID)
 # ==============================================================================
 poligonos_procesados = {}
-shapely_polygons = {}
 lat_acumuladas, lon_acumuladas = [], []
+poligonos_coords_list = []
 
 if not df_poligonos.empty:
     raw_fids_sucios = df_poligonos["FID"].dropna().unique().tolist()
@@ -1126,32 +1160,25 @@ if not df_poligonos.empty:
                 "medidores_db": med_val,
                 "vertis": len(coordenadas_poligono),
             }
-            try:
-                poly_geom = Polygon(coordenadas_poligono)
-                if not poly_geom.is_valid:
-                    poly_geom = poly_geom.buffer(0)
-                shapely_polygons[fid_str] = poly_geom
-            except Exception:
-                pass
+            poligonos_coords_list.append((fid_str, tuple((c[0], c[1]) for c in coordenadas_poligono)))
 else:
     raw_fids = []
     fids_disponibles = []
     tot_poligonos_val = 0
 
-conteo_medidores_instalados = {f_id: 0 for f_id in fids_disponibles}
 if (
-    shapely_polygons
+    poligonos_coords_list
     and not df_filtrado.empty
     and "latitud" in df_filtrado.columns
     and "longitud" in df_filtrado.columns
 ):
-    pts_coords = df_filtrado[["latitud", "longitud"]].dropna().to_numpy()
-    for lat_v, lon_v in pts_coords:
-        pt = Point(float(lat_v), float(lon_v))
-        for f_id, poly in shapely_polygons.items():
-            if poly.contains(pt):
-                conteo_medidores_instalados[f_id] += 1
-                break
+    pts_arr = df_filtrado[["latitud", "longitud"]].dropna().to_numpy()
+    coords_tuple = tuple((float(a), float(b)) for a, b in pts_arr)
+    conteo_medidores_instalados = calcular_conteo_por_fid(
+        tuple(fids_disponibles), coords_tuple, tuple(poligonos_coords_list)
+    )
+else:
+    conteo_medidores_instalados = {f_id: 0 for f_id in fids_disponibles}
 
 counts_list = list(conteo_medidores_instalados.values())
 max_inst_val = max(counts_list) if counts_list and max(counts_list) > 0 else 1
@@ -1357,7 +1384,12 @@ with tab_principal:
                             hole=0.6,
                             textinfo="value+percent",
                             textfont=dict(color=THEME["plotly_font"], size=10),
-                            marker=dict(colors=["#00d4ff" if ES_OSCURO else "#1d4ed8", "#f43f5e" if ES_OSCURO else "#db2777"]),
+                            marker=dict(
+                                colors=[
+                                    "#00d4ff" if ES_OSCURO else "#1d4ed8",
+                                    "#f43f5e" if ES_OSCURO else "#db2777",
+                                ]
+                            ),
                         )
                     )
                     aplicar_estilo_plotly(
