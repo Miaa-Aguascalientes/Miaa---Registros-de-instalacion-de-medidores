@@ -424,67 +424,7 @@ custom_style = f"""
         background: transparent !important;
     }}
 
-    /* Barra de pestañas con radio horizontal: color azul garantizado en ambos temas */
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"],
-    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] {{
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 6px;
-        border-bottom: 1px solid {THEME["border"]} !important;
-        padding-bottom: 4px;
-        margin-top: 5px;
-    }}
-
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label,
-    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label {{
-        background-color: var(--tab-bg-color) !important;
-        border: 1px solid {THEME["border"]} !important;
-        border-radius: 8px 8px 0 0 !important;
-        padding: 6px 12px !important;
-        margin: 0 !important;
-        cursor: pointer;
-    }}
-
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label > div:first-child,
-    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {{
-        display: none !important;
-    }}
-
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label,
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label *,
-    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label,
-    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label * {{
-        color: {AZUL_TEXTO} !important;
-        -webkit-text-fill-color: {AZUL_TEXTO} !important;
-        opacity: 1 !important;
-        font-weight: 600 !important;
-    }}
-
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label:hover,
-    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover {{
-        background-color: var(--tab-bg-hover) !important;
-    }}
-
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label[data-checked="true"],
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label:has(input:checked),
-    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label[data-checked="true"],
-    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) {{
-        background-color: var(--tab-bg-active) !important;
-        border-color: {THEME["tab_active_border"]} !important;
-        border-bottom: 2px solid {AZUL_TEXTO} !important;
-    }}
-
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label[data-checked="true"] *,
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label:has(input:checked) *,
-    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label[data-checked="true"] *,
-    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) * {{
-        color: {AZUL_TEXTO} !important;
-        -webkit-text-fill-color: {AZUL_TEXTO} !important;
-        font-weight: 700 !important;
-    }}
-
-    /* Sub-pestañas (st.tabs) dentro de Personal */
+    /* Texto de todas las pestañas st.tabs en color azul */
     div[data-testid="stTabs"],
     .stTabs {{
         margin-top: 5px;
@@ -510,13 +450,32 @@ custom_style = f"""
         font-weight: 600 !important;
     }}
 
-    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"],
-    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"] *,
-    div[data-testid="stTabs"] [data-baseweb="tab-list"] [data-testid="stTab"] button,
-    div[data-testid="stTabs"] [data-baseweb="tab-list"] [data-testid="stTab"] button * {{
+    div[data-testid="stTabs"] button[data-baseweb="tab"],
+    div[data-testid="stTabs"] button[data-baseweb="tab"] *,
+    div[data-testid="stTabs"] button[role="tab"],
+    div[data-testid="stTabs"] button[role="tab"] *,
+    div[data-testid="stTabs"] [data-testid="stTab"] > button,
+    div[data-testid="stTabs"] [data-testid="stTab"] > button *,
+    .stTabs [data-baseweb="tab"],
+    .stTabs [data-baseweb="tab"] * {{
         color: {AZUL_TEXTO} !important;
         -webkit-text-fill-color: {AZUL_TEXTO} !important;
         opacity: 1 !important;
+    }}
+
+    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"],
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {{
+        background-color: var(--tab-bg-active) !important;
+        border-color: {THEME["tab_active_border"]} !important;
+        border-bottom: 2px solid {AZUL_TEXTO} !important;
+        font-weight: 700 !important;
+    }}
+
+    div[data-testid="stTabs"] button[data-baseweb="tab"]:hover,
+    div[data-testid="stTabs"] button[role="tab"]:hover,
+    .stTabs [data-baseweb="tab"]:hover {{
+        background-color: var(--tab-bg-hover) !important;
     }}
     </style>
 """
@@ -1394,7 +1353,15 @@ max_inst_val = max(counts_list) if counts_list and max(counts_list) > 0 else 1
 # SECCIÓN 7: ESTRUCTURA DE PESTAÑAS PRINCIPALES
 # ==============================================================================
 
-OPCIONES_PESTANAS = [
+(
+    tab_principal,
+    tab_rutas_diarias,
+    tab_poligonos,
+    tab_personal,
+    tab_anomalias,
+    tab_tabla,
+    tab_sheets_interno,
+) = st.tabs([
     "📊 Dashboard Principal",
     "🛣️ Seguimiento Diario por Usuario / Ruta",
     "🗺️ Mapa Polígonos",
@@ -1402,21 +1369,12 @@ OPCIONES_PESTANAS = [
     "⚠️ Análisis de Anomalías",
     "📋 Tabla Base de Datos Completa",
     "📑 Registro de instalaciones interno",
-]
-
-st.markdown('<span class="pestanas-azules-miaa" style="display:none;"></span>', unsafe_allow_html=True)
-pestana_activa = st.radio(
-    "Navegación principal",
-    options=OPCIONES_PESTANAS,
-    horizontal=True,
-    label_visibility="collapsed",
-    key="navegacion_pestana_principal",
-)
+])
 
 # ------------------------------------------------------------------------------
 # SECCIÓN 8 PESTAÑA: DASHBOARD PRINCIPAL
 # ------------------------------------------------------------------------------
-if pestana_activa == "📊 Dashboard Principal":
+with tab_principal:
     sin_coords = (
         int(df_filtrado["latitud"].isna().sum())
         if not df_filtrado.empty and "latitud" in df_filtrado.columns
@@ -2052,7 +2010,7 @@ if pestana_activa == "📊 Dashboard Principal":
 # ------------------------------------------------------------------------------
 # SECCIÓN 9.2 PESTAÑA: SEGUIMIENTO DIARIO DE RUTAS E INSTALADORES
 # ------------------------------------------------------------------------------
-if pestana_activa == "🛣️ Seguimiento Diario por Usuario / Ruta":
+with tab_rutas_diarias:
     st.markdown(
         "<p class='section-title-xl' style='margin-bottom:5px;'>🛣️ Seguimiento Diario de Rutas e Instalaciones por Personal</p>",
         unsafe_allow_html=True,
@@ -2557,7 +2515,7 @@ if pestana_activa == "🛣️ Seguimiento Diario por Usuario / Ruta":
 # ------------------------------------------------------------------------------
 # SECCIÓN 10 PESTAÑA: ANÁLISIS DE ANOMALÍAS
 # ------------------------------------------------------------------------------
-if pestana_activa == "⚠️ Análisis de Anomalías":
+with tab_anomalias:
     st.markdown(
         "<p class='section-title-xl'>⚠️ Análisis Completo de Anomalías en Instalaciones</p>",
         unsafe_allow_html=True,
@@ -2721,7 +2679,7 @@ if pestana_activa == "⚠️ Análisis de Anomalías":
 # ------------------------------------------------------------------------------
 # SECCIÓN 11 PESTAÑA: MAPA DE POLÍGONOS DE INSTALACIÓN
 # ------------------------------------------------------------------------------
-if pestana_activa == "🗺️ Mapa Polígonos":
+with tab_poligonos:
     col_c_izq, col_c_centro, col_c_der = st.columns([0.22, 0.52, 0.26])
 
     with col_c_izq:
@@ -2965,7 +2923,7 @@ if pestana_activa == "🗺️ Mapa Polígonos":
 # ------------------------------------------------------------------------------
 # SECCIÓN 12 PESTAÑA: PERSONAL (EXTERNO Y MIAA)
 # ------------------------------------------------------------------------------
-if pestana_activa == "👥 Personal (Externo y MIAA)":
+with tab_personal:
     st.markdown(
         "<p class='section-title-xl' style='margin-bottom:5px;'>👥 Resumen General de Instalaciones por Tipo de Personal</p>",
         unsafe_allow_html=True,
@@ -3404,7 +3362,7 @@ if pestana_activa == "👥 Personal (Externo y MIAA)":
 # ------------------------------------------------------------------------------
 # SECCIÓN 13 Y 14 PESTAÑA: TABLA BASE DE DATOS COMPLETA (PG VECTORIZADO)
 # ------------------------------------------------------------------------------
-if pestana_activa == "📋 Tabla Base de Datos Completa":
+with tab_tabla:
     df_usuarios_miaa_medidor = cargar_usuarios_miaa_conmedidor_db()
 
     st.markdown(
@@ -3616,7 +3574,7 @@ if pestana_activa == "📋 Tabla Base de Datos Completa":
 # ------------------------------------------------------------------------------
 # SECCIÓN 15 PESTAÑA: REGISTRO DE INSTALACIONES INTERNO (Google Sheets)
 # ------------------------------------------------------------------------------
-if pestana_activa == "📑 Registro de instalaciones interno":
+with tab_sheets_interno:
     df_sheets_interno = cargar_google_sheets_interno()
 
     st.markdown(
