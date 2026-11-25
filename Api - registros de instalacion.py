@@ -146,6 +146,55 @@ dataframe_dark_filter_css = (
 )
 
 custom_style = f"""
+/* Barra de pestañas con radio horizontal: color azul garantizado en ambos temas */
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] {{
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 6px;
+        border-bottom: 1px solid {THEME["border"]} !important;
+        padding-bottom: 4px;
+        margin-top: 5px;
+    }}
+
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label {{
+        background-color: var(--tab-bg-color) !important;
+        border: 1px solid {THEME["border"]} !important;
+        border-radius: 8px 8px 0 0 !important;
+        padding: 6px 12px !important;
+        margin: 0 !important;
+        cursor: pointer;
+    }}
+
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label > div:first-child {{
+        display: none !important;
+    }}
+
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label,
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label * {{
+        color: {AZUL_TEXTO} !important;
+        -webkit-text-fill-color: {AZUL_TEXTO} !important;
+        opacity: 1 !important;
+        font-weight: 600 !important;
+    }}
+
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label:hover {{
+        background-color: var(--tab-bg-hover) !important;
+    }}
+
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label[data-checked="true"],
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label:has(input:checked) {{
+        background-color: var(--tab-bg-active) !important;
+        border-color: {THEME["tab_active_border"]} !important;
+        border-bottom: 2px solid {AZUL_TEXTO} !important;
+    }}
+
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label[data-checked="true"] *,
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label:has(input:checked) * {{
+        color: {AZUL_TEXTO} !important;
+        -webkit-text-fill-color: {AZUL_TEXTO} !important;
+        font-weight: 700 !important;
+    }}
     <style>
     @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
 
@@ -1410,15 +1459,7 @@ max_inst_val = max(counts_list) if counts_list and max(counts_list) > 0 else 1
 # SECCIÓN 7: ESTRUCTURA DE PESTAÑAS PRINCIPALES
 # ==============================================================================
 
-(
-    tab_principal,
-    tab_rutas_diarias,
-    tab_poligonos,
-    tab_personal,
-    tab_anomalias,
-    tab_tabla,
-    tab_sheets_interno,
-) = st.tabs([
+OPCIONES_PESTANAS = [
     "📊 Dashboard Principal",
     "🛣️ Seguimiento Diario por Usuario / Ruta",
     "🗺️ Mapa Polígonos",
@@ -1426,7 +1467,17 @@ max_inst_val = max(counts_list) if counts_list and max(counts_list) > 0 else 1
     "⚠️ Análisis de Anomalías",
     "📋 Tabla Base de Datos Completa",
     "📑 Registro de instalaciones interno",
-])
+]
+
+st.markdown('<div class="pestanas-azules-miaa">', unsafe_allow_html=True)
+pestana_activa = st.radio(
+    "Navegación principal",
+    options=OPCIONES_PESTANAS,
+    horizontal=True,
+    label_visibility="collapsed",
+    key="navegacion_pestana_principal",
+)
+st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
 # SECCIÓN 8 PESTAÑA: DASHBOARD PRINCIPAL
