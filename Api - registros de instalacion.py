@@ -16,7 +16,6 @@ from shapely.geometry import Point, Polygon
 from sqlalchemy import create_engine
 import streamlit as st
 from streamlit_folium import st_folium
-import streamlit.components.v1 as components
 
 # ==============================================================================
 # SECCIÓN 1: CONFIGURACIÓN GENERAL, ESTADO DE TEMA Y ESTILOS CSS DINÁMICOS
@@ -146,55 +145,6 @@ dataframe_dark_filter_css = (
 )
 
 custom_style = f"""
-/* Barra de pestañas con radio horizontal: color azul garantizado en ambos temas */
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] {{
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 6px;
-        border-bottom: 1px solid {THEME["border"]} !important;
-        padding-bottom: 4px;
-        margin-top: 5px;
-    }}
-
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label {{
-        background-color: var(--tab-bg-color) !important;
-        border: 1px solid {THEME["border"]} !important;
-        border-radius: 8px 8px 0 0 !important;
-        padding: 6px 12px !important;
-        margin: 0 !important;
-        cursor: pointer;
-    }}
-
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label > div:first-child {{
-        display: none !important;
-    }}
-
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label,
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label * {{
-        color: {AZUL_TEXTO} !important;
-        -webkit-text-fill-color: {AZUL_TEXTO} !important;
-        opacity: 1 !important;
-        font-weight: 600 !important;
-    }}
-
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label:hover {{
-        background-color: var(--tab-bg-hover) !important;
-    }}
-
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label[data-checked="true"],
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label:has(input:checked) {{
-        background-color: var(--tab-bg-active) !important;
-        border-color: {THEME["tab_active_border"]} !important;
-        border-bottom: 2px solid {AZUL_TEXTO} !important;
-    }}
-
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label[data-checked="true"] *,
-    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label:has(input:checked) * {{
-        color: {AZUL_TEXTO} !important;
-        -webkit-text-fill-color: {AZUL_TEXTO} !important;
-        font-weight: 700 !important;
-    }}
     <style>
     @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
 
@@ -474,7 +424,67 @@ custom_style = f"""
         background: transparent !important;
     }}
 
-    /* Pestañas: estructura, bordes, hover, activa y forzado de color en todos los estados */
+    /* Barra de pestañas con radio horizontal: color azul garantizado en ambos temas */
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"],
+    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] {{
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 6px;
+        border-bottom: 1px solid {THEME["border"]} !important;
+        padding-bottom: 4px;
+        margin-top: 5px;
+    }}
+
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label,
+    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label {{
+        background-color: var(--tab-bg-color) !important;
+        border: 1px solid {THEME["border"]} !important;
+        border-radius: 8px 8px 0 0 !important;
+        padding: 6px 12px !important;
+        margin: 0 !important;
+        cursor: pointer;
+    }}
+
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label > div:first-child,
+    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {{
+        display: none !important;
+    }}
+
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label,
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label *,
+    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label,
+    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label * {{
+        color: {AZUL_TEXTO} !important;
+        -webkit-text-fill-color: {AZUL_TEXTO} !important;
+        opacity: 1 !important;
+        font-weight: 600 !important;
+    }}
+
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label:hover,
+    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover {{
+        background-color: var(--tab-bg-hover) !important;
+    }}
+
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label[data-checked="true"],
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label:has(input:checked),
+    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label[data-checked="true"],
+    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) {{
+        background-color: var(--tab-bg-active) !important;
+        border-color: {THEME["tab_active_border"]} !important;
+        border-bottom: 2px solid {AZUL_TEXTO} !important;
+    }}
+
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label[data-checked="true"] *,
+    div[data-testid="stRadio"].pestanas-azules-miaa > div[role="radiogroup"] > label:has(input:checked) *,
+    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label[data-checked="true"] *,
+    div[data-testid="stMarkdown"]:has(.pestanas-azules-miaa) + div[data-testid="stRadio"] > div[role="radiogroup"] > label:has(input:checked) * {{
+        color: {AZUL_TEXTO} !important;
+        -webkit-text-fill-color: {AZUL_TEXTO} !important;
+        font-weight: 700 !important;
+    }}
+
+    /* Sub-pestañas (st.tabs) dentro de Personal */
     div[data-testid="stTabs"],
     .stTabs {{
         margin-top: 5px;
@@ -500,92 +510,17 @@ custom_style = f"""
         font-weight: 600 !important;
     }}
 
-    div[data-testid="stTabs"] button[data-baseweb="tab"]:hover,
-    div[data-testid="stTabs"] button[role="tab"]:hover,
-    .stTabs [data-baseweb="tab"]:hover {{
-        background-color: var(--tab-bg-hover) !important;
-    }}
-
-    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"],
-    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
-    .stTabs [aria-selected="true"] {{
-        background-color: var(--tab-bg-active) !important;
-        border-color: {THEME["tab_active_border"]} !important;
-        border-bottom: 2px solid {AZUL_TEXTO} !important;
-    }}
-
     div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"],
-    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"] p,
-    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"] span,
-    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"] div,
+    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"] *,
     div[data-testid="stTabs"] [data-baseweb="tab-list"] [data-testid="stTab"] button,
-    div[data-testid="stTabs"] [data-baseweb="tab-list"] [data-testid="stTab"] button p,
-    div[data-testid="stTabs"] [data-baseweb="tab-list"] [data-testid="stTab"] button span,
-    div[data-testid="stTabs"] [data-baseweb="tab-list"] [data-testid="stTab"] button div {{
+    div[data-testid="stTabs"] [data-baseweb="tab-list"] [data-testid="stTab"] button * {{
         color: {AZUL_TEXTO} !important;
         -webkit-text-fill-color: {AZUL_TEXTO} !important;
-        opacity: 1 !important;
-    }}
-
-    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"],
-    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p,
-    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] span,
-    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] div {{
-        color: {AZUL_TEXTO} !important;
-        -webkit-text-fill-color: {AZUL_TEXTO} !important;
-        font-weight: 700 !important;
         opacity: 1 !important;
     }}
     </style>
 """
 st.markdown(custom_style, unsafe_allow_html=True)
-
-import streamlit.components.v1 as components
-components.html(
-    f"""
-    <script>
-    (function() {{
-        const colorAzul = "{AZUL_TEXTO}";
-        let doc = null;
-        try {{
-            doc = window.parent && window.parent.document ? window.parent.document : document;
-            // Prueba rápida de acceso al DOM padre
-            void doc.body;
-        }} catch (e) {{
-            doc = document;
-        }}
-
-        function aplicarAzulPestanas() {{
-            if (!doc) return;
-            const tabs = doc.querySelectorAll('button[data-baseweb="tab"], button[role="tab"], [data-testid="stTab"] button');
-            tabs.forEach((tab) => {{
-                tab.style.setProperty("color", colorAzul, "important");
-                tab.style.setProperty("-webkit-text-fill-color", colorAzul, "important");
-                tab.style.setProperty("opacity", "1", "important");
-
-                const hijos = tab.querySelectorAll("*");
-                hijos.forEach((el) => {{
-                    el.style.setProperty("color", colorAzul, "important");
-                    el.style.setProperty("-webkit-text-fill-color", colorAzul, "important");
-                    el.style.setProperty("opacity", "1", "important");
-                }});
-            }});
-        }}
-
-        aplicarAzulPestanas();
-
-        if (doc && doc.body) {{
-            const observer = new MutationObserver(() => {{
-                aplicarAzulPestanas();
-            }});
-            observer.observe(doc.body, {{ childList: true, subtree: true, attributes: true }});
-        }}
-    }})();
-    </script>
-    """,
-    height=0,
-    width=0,
-)
 
 
 def aplicar_estilo_plotly(fig, **kwargs):
@@ -1469,7 +1404,7 @@ OPCIONES_PESTANAS = [
     "📑 Registro de instalaciones interno",
 ]
 
-st.markdown('<div class="pestanas-azules-miaa">', unsafe_allow_html=True)
+st.markdown('<span class="pestanas-azules-miaa" style="display:none;"></span>', unsafe_allow_html=True)
 pestana_activa = st.radio(
     "Navegación principal",
     options=OPCIONES_PESTANAS,
@@ -1477,12 +1412,11 @@ pestana_activa = st.radio(
     label_visibility="collapsed",
     key="navegacion_pestana_principal",
 )
-st.markdown("</div>", unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
 # SECCIÓN 8 PESTAÑA: DASHBOARD PRINCIPAL
 # ------------------------------------------------------------------------------
-with tab_principal:
+if pestana_activa == "📊 Dashboard Principal":
     sin_coords = (
         int(df_filtrado["latitud"].isna().sum())
         if not df_filtrado.empty and "latitud" in df_filtrado.columns
@@ -2118,7 +2052,7 @@ with tab_principal:
 # ------------------------------------------------------------------------------
 # SECCIÓN 9.2 PESTAÑA: SEGUIMIENTO DIARIO DE RUTAS E INSTALADORES
 # ------------------------------------------------------------------------------
-with tab_rutas_diarias:
+if pestana_activa == "🛣️ Seguimiento Diario por Usuario / Ruta":
     st.markdown(
         "<p class='section-title-xl' style='margin-bottom:5px;'>🛣️ Seguimiento Diario de Rutas e Instalaciones por Personal</p>",
         unsafe_allow_html=True,
@@ -2245,6 +2179,8 @@ with tab_rutas_diarias:
             df_mapa_ruta = (
                 df_rutas_filtrada.dropna(subset=["latitud", "longitud"]).sort_values("fecha_dt")
                 if not df_rutas_filtrada.empty
+                and "latitud" in df_rutas_filtrada.columns
+                and "longitud" in df_rutas_filtrada.columns
                 else df_rutas_filtrada.iloc[0:0]
             )
 
@@ -2621,7 +2557,7 @@ with tab_rutas_diarias:
 # ------------------------------------------------------------------------------
 # SECCIÓN 10 PESTAÑA: ANÁLISIS DE ANOMALÍAS
 # ------------------------------------------------------------------------------
-with tab_anomalias:
+if pestana_activa == "⚠️ Análisis de Anomalías":
     st.markdown(
         "<p class='section-title-xl'>⚠️ Análisis Completo de Anomalías en Instalaciones</p>",
         unsafe_allow_html=True,
@@ -2785,7 +2721,7 @@ with tab_anomalias:
 # ------------------------------------------------------------------------------
 # SECCIÓN 11 PESTAÑA: MAPA DE POLÍGONOS DE INSTALACIÓN
 # ------------------------------------------------------------------------------
-with tab_poligonos:
+if pestana_activa == "🗺️ Mapa Polígonos":
     col_c_izq, col_c_centro, col_c_der = st.columns([0.22, 0.52, 0.26])
 
     with col_c_izq:
@@ -3029,7 +2965,7 @@ with tab_poligonos:
 # ------------------------------------------------------------------------------
 # SECCIÓN 12 PESTAÑA: PERSONAL (EXTERNO Y MIAA)
 # ------------------------------------------------------------------------------
-with tab_personal:
+if pestana_activa == "👥 Personal (Externo y MIAA)":
     st.markdown(
         "<p class='section-title-xl' style='margin-bottom:5px;'>👥 Resumen General de Instalaciones por Tipo de Personal</p>",
         unsafe_allow_html=True,
@@ -3172,8 +3108,12 @@ with tab_personal:
                 )
                 df_ext_map = (
                     df_externo.dropna(subset=["latitud", "longitud"])
-                    if not df_externo.empty and "latitud" in df_externo.columns
-                    else df_externo.iloc[0:0]
+                    if (
+                        not df_externo.empty
+                        and "latitud" in df_externo.columns
+                        and "longitud" in df_externo.columns
+                    )
+                    else pd.DataFrame(columns=["latitud", "longitud"])
                 )
                 m_lat = float(df_ext_map["latitud"].mean()) if not df_ext_map.empty else lat_centro
                 m_lon = float(df_ext_map["longitud"].mean()) if not df_ext_map.empty else lon_centro
@@ -3181,12 +3121,13 @@ with tab_personal:
                 mapa_ext = folium.Map(location=[m_lat, m_lon], zoom_start=12, tiles=None, prefer_canvas=True)
                 agregar_capas_base(mapa_ext)
 
-                color_ext_pt = "#f59e0b" if ES_OSCURO else "#d97706"
-                for lat_v, lon_v in zip(df_ext_map["latitud"].to_numpy(), df_ext_map["longitud"].to_numpy()):
-                    folium.CircleMarker(
-                        location=[float(lat_v), float(lon_v)],
-                        radius=2.5, color=color_ext_pt, fill=True, fill_color=color_ext_pt, fill_opacity=0.75,
-                    ).add_to(mapa_ext)
+                if not df_ext_map.empty:
+                    color_ext_pt = "#f59e0b" if ES_OSCURO else "#d97706"
+                    for lat_v, lon_v in zip(df_ext_map["latitud"].to_numpy(), df_ext_map["longitud"].to_numpy()):
+                        folium.CircleMarker(
+                            location=[float(lat_v), float(lon_v)],
+                            radius=2.5, color=color_ext_pt, fill=True, fill_color=color_ext_pt, fill_opacity=0.75,
+                        ).add_to(mapa_ext)
 
                 folium.LayerControl(position="topleft").add_to(mapa_ext)
                 render_st_folium_seguro(
@@ -3379,8 +3320,12 @@ with tab_personal:
                 )
                 df_miaa_map = (
                     df_miaa_pers.dropna(subset=["latitud", "longitud"])
-                    if not df_miaa_pers.empty and "latitud" in df_miaa_pers.columns
-                    else df_miaa_pers.iloc[0:0]
+                    if (
+                        not df_miaa_pers.empty
+                        and "latitud" in df_miaa_pers.columns
+                        and "longitud" in df_miaa_pers.columns
+                    )
+                    else pd.DataFrame(columns=["latitud", "longitud"])
                 )
                 mm_lat = float(df_miaa_map["latitud"].mean()) if not df_miaa_map.empty else lat_centro
                 mm_lon = float(df_miaa_map["longitud"].mean()) if not df_miaa_map.empty else lon_centro
@@ -3388,12 +3333,13 @@ with tab_personal:
                 mapa_miaa_pers = folium.Map(location=[mm_lat, mm_lon], zoom_start=12, tiles=None, prefer_canvas=True)
                 agregar_capas_base(mapa_miaa_pers)
 
-                color_miaa_pt = "#22c55e" if ES_OSCURO else "#16a34a"
-                for lat_v, lon_v in zip(df_miaa_map["latitud"].to_numpy(), df_miaa_map["longitud"].to_numpy()):
-                    folium.CircleMarker(
-                        location=[float(lat_v), float(lon_v)],
-                        radius=2.5, color=color_miaa_pt, fill=True, fill_color=color_miaa_pt, fill_opacity=0.75,
-                    ).add_to(mapa_miaa_pers)
+                if not df_miaa_map.empty:
+                    color_miaa_pt = "#22c55e" if ES_OSCURO else "#16a34a"
+                    for lat_v, lon_v in zip(df_miaa_map["latitud"].to_numpy(), df_miaa_map["longitud"].to_numpy()):
+                        folium.CircleMarker(
+                            location=[float(lat_v), float(lon_v)],
+                            radius=2.5, color=color_miaa_pt, fill=True, fill_color=color_miaa_pt, fill_opacity=0.75,
+                        ).add_to(mapa_miaa_pers)
 
                 folium.LayerControl(position="topleft").add_to(mapa_miaa_pers)
                 render_st_folium_seguro(
@@ -3458,7 +3404,7 @@ with tab_personal:
 # ------------------------------------------------------------------------------
 # SECCIÓN 13 Y 14 PESTAÑA: TABLA BASE DE DATOS COMPLETA (PG VECTORIZADO)
 # ------------------------------------------------------------------------------
-with tab_tabla:
+if pestana_activa == "📋 Tabla Base de Datos Completa":
     df_usuarios_miaa_medidor = cargar_usuarios_miaa_conmedidor_db()
 
     st.markdown(
@@ -3670,7 +3616,7 @@ with tab_tabla:
 # ------------------------------------------------------------------------------
 # SECCIÓN 15 PESTAÑA: REGISTRO DE INSTALACIONES INTERNO (Google Sheets)
 # ------------------------------------------------------------------------------
-with tab_sheets_interno:
+if pestana_activa == "📑 Registro de instalaciones interno":
     df_sheets_interno = cargar_google_sheets_interno()
 
     st.markdown(
