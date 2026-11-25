@@ -464,21 +464,23 @@ custom_style = f"""
         border-bottom: 2px solid {AZUL_TEXTO} !important;
     }}
 
-    .stApp [data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"],
-    .stApp [data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"] *,
-    .stApp [data-testid="stTabs"] [data-testid="stTab"] button,
-    .stApp [data-testid="stTabs"] [data-testid="stTab"] button *,
-    .stApp .stTabs [data-baseweb="tab"],
-    .stApp .stTabs [data-baseweb="tab"] *,
-    .stApp [data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"][aria-selected="false"],
-    .stApp [data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"][aria-selected="false"] * {{
+    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"],
+    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"] p,
+    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"] span,
+    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"] div,
+    div[data-testid="stTabs"] [data-baseweb="tab-list"] [data-testid="stTab"] button,
+    div[data-testid="stTabs"] [data-baseweb="tab-list"] [data-testid="stTab"] button p,
+    div[data-testid="stTabs"] [data-baseweb="tab-list"] [data-testid="stTab"] button span,
+    div[data-testid="stTabs"] [data-baseweb="tab-list"] [data-testid="stTab"] button div {{
         color: {AZUL_TEXTO} !important;
         -webkit-text-fill-color: {AZUL_TEXTO} !important;
         opacity: 1 !important;
     }}
 
-    .stApp [data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"][aria-selected="true"],
-    .stApp [data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"][aria-selected="true"] * {{
+    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"],
+    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] p,
+    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] span,
+    div[data-testid="stTabs"] [data-baseweb="tab-list"] button[data-baseweb="tab"][aria-selected="true"] div {{
         color: {AZUL_TEXTO} !important;
         -webkit-text-fill-color: {AZUL_TEXTO} !important;
         font-weight: 700 !important;
