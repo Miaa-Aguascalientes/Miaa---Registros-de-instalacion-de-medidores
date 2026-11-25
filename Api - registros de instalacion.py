@@ -401,21 +401,24 @@ custom_style = f"""
     }}
 
     /* Etiquetas específicas adaptadas a ambos temas */
-    .marcador-azul-electrico {{
+    .marcador-azul-electrico {
         display: none !important;
-    }}
+    }
+
+    div[data-testid="stTextInput"]:has(.marcador-azul-electrico) label,
+    div[data-testid="stTextInput"]:has(.marcador-azul-electrico) label *,
     div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) + div[data-testid="stTextInput"] label,
     div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) + div[data-testid="stTextInput"] label *,
+    div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) ~ div[data-testid="stTextInput"] label,
+    div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) ~ div[data-testid="stTextInput"] label *,
+    div[data-testid="stSelectbox"]:has(.marcador-azul-electrico) label,
+    div[data-testid="stSelectbox"]:has(.marcador-azul-electrico) label *,
     div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) + div[data-testid="stSelectbox"] label,
-    div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) + div[data-testid="stSelectbox"] label *,
-    .marcador-azul-electrico + div[data-testid="stTextInput"] label,
-    .marcador-azul-electrico + div[data-testid="stTextInput"] label *,
-    .marcador-azul-electrico + div[data-testid="stSelectbox"] label,
-    .marcador-azul-electrico + div[data-testid="stSelectbox"] label * {{
+    div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) + div[data-testid="stSelectbox"] label * {
         color: {AZUL_TEXTO} !important;
         -webkit-text-fill-color: {AZUL_TEXTO} !important;
         font-weight: 700 !important;
-    }}
+    }
 
     .metric-card {{
         background: {THEME["card_bg"]};
