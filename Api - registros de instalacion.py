@@ -328,7 +328,7 @@ custom_style = f"""
 
     div[data-testid="stTabs"] button[data-baseweb="tab"],
     div[data-testid="stTabs"] button[role="tab"],
-    div[data-testid="stTabs"] [data-testid="stTab"] button,
+    div[data-testid="stTabs"] [data-testid="stTab"] > button,
     .stTabs [data-baseweb="tab"] {{
         background-color: var(--tab-bg-color) !important;
         color: {AZUL_TEXTO} !important;
@@ -341,37 +341,26 @@ custom_style = f"""
         opacity: 1 !important;
     }}
 
-    div[data-testid="stTabs"] button[data-baseweb="tab"] p,
-    div[data-testid="stTabs"] button[data-baseweb="tab"] span,
-    div[data-testid="stTabs"] button[data-baseweb="tab"] div,
-    div[data-testid="stTabs"] button[role="tab"] p,
-    div[data-testid="stTabs"] button[role="tab"] span,
-    div[data-testid="stTabs"] button[role="tab"] div,
-    .stTabs [data-baseweb="tab"] p,
-    .stTabs [data-baseweb="tab"] span,
-    .stTabs [data-baseweb="tab"] div {{
+    div[data-testid="stTabs"] button[data-baseweb="tab"],
+    div[data-testid="stTabs"] button[data-baseweb="tab"] *,
+    div[data-testid="stTabs"] button[role="tab"],
+    div[data-testid="stTabs"] button[role="tab"] *,
+    div[data-testid="stTabs"] [data-testid="stTab"] button,
+    div[data-testid="stTabs"] [data-testid="stTab"] button *,
+    .stTabs [data-baseweb="tab"],
+    .stTabs [data-baseweb="tab"] * {{
         color: {AZUL_TEXTO} !important;
         -webkit-text-fill-color: {AZUL_TEXTO} !important;
         opacity: 1 !important;
     }}
 
     div[data-testid="stTabs"] button[data-baseweb="tab"]:hover,
+    div[data-testid="stTabs"] button[data-baseweb="tab"]:hover *,
     div[data-testid="stTabs"] button[role="tab"]:hover,
-    .stTabs [data-baseweb="tab"]:hover {{
+    div[data-testid="stTabs"] button[role="tab"]:hover *,
+    .stTabs [data-baseweb="tab"]:hover,
+    .stTabs [data-baseweb="tab"]:hover * {{
         background-color: var(--tab-bg-hover) !important;
-        color: {AZUL_TEXTO} !important;
-        -webkit-text-fill-color: {AZUL_TEXTO} !important;
-    }}
-
-    div[data-testid="stTabs"] button[data-baseweb="tab"]:hover p,
-    div[data-testid="stTabs"] button[data-baseweb="tab"]:hover span,
-    div[data-testid="stTabs"] button[data-baseweb="tab"]:hover div,
-    div[data-testid="stTabs"] button[role="tab"]:hover p,
-    div[data-testid="stTabs"] button[role="tab"]:hover span,
-    div[data-testid="stTabs"] button[role="tab"]:hover div,
-    .stTabs [data-baseweb="tab"]:hover p,
-    .stTabs [data-baseweb="tab"]:hover span,
-    .stTabs [data-baseweb="tab"]:hover div {{
         color: {AZUL_TEXTO} !important;
         -webkit-text-fill-color: {AZUL_TEXTO} !important;
     }}
@@ -386,15 +375,12 @@ custom_style = f"""
         border-bottom: 2px solid {AZUL_TEXTO} !important;
     }}
 
-    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] p,
-    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] span,
-    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] div,
-    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] p,
-    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] span,
-    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] div,
-    .stTabs [aria-selected="true"] p,
-    .stTabs [aria-selected="true"] span,
-    .stTabs [aria-selected="true"] div {{
+    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"],
+    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] *,
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] *,
+    .stTabs [aria-selected="true"],
+    .stTabs [aria-selected="true"] * {{
         color: {AZUL_TEXTO} !important;
         -webkit-text-fill-color: {AZUL_TEXTO} !important;
         font-weight: 700 !important;
