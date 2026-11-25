@@ -400,21 +400,11 @@ custom_style = f"""
         font-weight: 700 !important;
     }}
 
-    /* Etiquetas específicas adaptadas a ambos temas */
-    .marcador-azul-electrico {{
-        display: none !important;
-    }}
-
-    div[data-testid="stTextInput"]:has(.marcador-azul-electrico) label,
-    div[data-testid="stTextInput"]:has(.marcador-azul-electrico) label *,
-    div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) + div[data-testid="stTextInput"] label,
-    div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) + div[data-testid="stTextInput"] label *,
-    div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) ~ div[data-testid="stTextInput"] label,
-    div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) ~ div[data-testid="stTextInput"] label *,
-    div[data-testid="stSelectbox"]:has(.marcador-azul-electrico) label,
-    div[data-testid="stSelectbox"]:has(.marcador-azul-electrico) label *,
-    div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) + div[data-testid="stSelectbox"] label,
-    div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) + div[data-testid="stSelectbox"] label * {{
+    /* Etiquetas específicas con clase en su contenedor padre */
+    .etiqueta-azul-tema div[data-testid="stTextInput"] label,
+    .etiqueta-azul-tema div[data-testid="stTextInput"] label *,
+    .etiqueta-azul-tema div[data-testid="stSelectbox"] label,
+    .etiqueta-azul-tema div[data-testid="stSelectbox"] label * {{
         color: {AZUL_TEXTO} !important;
         -webkit-text-fill-color: {AZUL_TEXTO} !important;
         font-weight: 700 !important;
@@ -1657,10 +1647,14 @@ with tab_principal:
             unsafe_allow_html=True,
         )
 
-        st.markdown('<span class="marcador-azul-electrico"></span>', unsafe_allow_html=True)
+        st.markdown(
+            f'<p style="color: {AZUL_TEXTO}; -webkit-text-fill-color: {AZUL_TEXTO}; font-weight: 700; font-size: 14px; margin-bottom: 4px;">Buscar en cualquier registro (Predio, Cliente, Serie, Domicilio, etc.)</p>',
+            unsafe_allow_html=True,
+        )
         busqueda_global_inst = st.text_input(
             "Buscar en cualquier registro (Predio, Cliente, Serie, Domicilio, etc.)",
             placeholder="Ej. 502934-1, VAZQUEZ, 222608...",
+            label_visibility="collapsed",
             key="filtro_texto_global_inst",
         )
 
@@ -1969,11 +1963,15 @@ with tab_principal:
 
             col_pag1, col_pag2 = st.columns([2, 1])
             with col_pag1:
-                st.markdown('<span class="marcador-azul-electrico"></span>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<p style="color: {AZUL_TEXTO}; -webkit-text-fill-color: {AZUL_TEXTO}; font-weight: 700; font-size: 14px; margin-bottom: 4px;">Seleccionar Hoja / Página (Total registros: {total_registros_filtrados:,})</p>',
+                    unsafe_allow_html=True,
+                )
                 pagina_actual = st.selectbox(
                     f"Seleccionar Hoja / Página (Total registros: {total_registros_filtrados:,})",
                     options=list(range(1, total_paginas + 1)),
                     format_func=lambda x: f"Hoja {x} de {total_paginas} (Registros {(x-1)*TAMANO_PAGINA + 1} al {min(x*TAMANO_PAGINA, total_registros_filtrados)})",
+                    label_visibility="collapsed",
                     key="select_pagina_registros",
                 )
             with col_pag2:
