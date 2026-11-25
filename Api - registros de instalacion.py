@@ -16,6 +16,7 @@ from shapely.geometry import Point, Polygon
 from sqlalchemy import create_engine
 import streamlit as st
 from streamlit_folium import st_folium
+import streamlit.components.v1 as components
 
 # ==============================================================================
 # SECCIÓN 1: CONFIGURACIÓN GENERAL, ESTADO DE TEMA Y ESTILOS CSS DINÁMICOS
@@ -489,6 +490,37 @@ custom_style = f"""
     </style>
 """
 st.markdown(custom_style, unsafe_allow_html=True)
+
+components.html(
+    f"""
+    <script>
+    (function() {{
+        const parentDoc = window.parent.document;
+        const styleId = "miaa-tabs-azul-forzado";
+        let styleEl = parentDoc.getElementById(styleId);
+        if (!styleEl) {{
+            styleEl = parentDoc.createElement("style");
+            styleEl.id = styleId;
+            parentDoc.head.appendChild(styleEl);
+        }}
+        styleEl.textContent = `
+            button[data-baseweb="tab"],
+            button[data-baseweb="tab"] *,
+            button[role="tab"],
+            button[role="tab"] *,
+            [data-testid="stTab"] button,
+            [data-testid="stTab"] button * {{
+                color: {AZUL_TEXTO} !important;
+                -webkit-text-fill-color: {AZUL_TEXTO} !important;
+                opacity: 1 !important;
+            }}
+        `;
+    }})();
+    </script>
+    """,
+    height=0,
+    width=0,
+)
 
 
 def aplicar_estilo_plotly(fig, **kwargs):
