@@ -31,6 +31,7 @@ if "tema_oscuro" not in st.session_state:
     st.session_state["tema_oscuro"] = False
 
 ES_OSCURO = bool(st.session_state["tema_oscuro"])
+AZUL_TEXTO = "#60a5fa" if ES_OSCURO else "#0256d0"
 
 THEME = (
     {
@@ -43,20 +44,20 @@ THEME = (
         "btn_bg": "#0b1a29",
         "btn_border": "#1e3a5f",
         "btn_hover_bg": "#102840",
-        "btn_hover_border": "#00d4ff",
-        "btn_hover_text": "#00d4ff",
+        "btn_hover_border": AZUL_TEXTO,
+        "btn_hover_text": AZUL_TEXTO,
         "border": "#1e293b",
         "border_soft": "#162232",
-        "border_hover": "#00d4ff",
+        "border_hover": AZUL_TEXTO,
         "tab_bg": "#081421",
-        "tab_text": "#00d4ff",
+        "tab_text": AZUL_TEXTO,
         "tab_active_bg": "#0b1a29",
-        "tab_active_text": "#00d4ff",
-        "tab_active_border": "#00d4ff",
+        "tab_active_text": AZUL_TEXTO,
+        "tab_active_border": AZUL_TEXTO,
         "card_bg": "#0b1a29",
         "card_shadow": "0 4px 12px rgba(0, 0, 0, 0.45)",
-        "card_hover_shadow": "0 8px 18px rgba(0, 212, 255, 0.14)",
-        "card_shine": "rgba(0, 212, 255, 0.07)",
+        "card_hover_shadow": "0 8px 18px rgba(96, 165, 250, 0.14)",
+        "card_shine": "rgba(96, 165, 250, 0.07)",
         "table_bg": "#0b1a29",
         "input_bg": "#0b1a29",
         "input_border": "#1e3a5f",
@@ -76,9 +77,9 @@ THEME = (
         "legend_box_bg": "rgba(11, 26, 41, 0.95)",
         "legend_text_sec": "#cbd5e1",
         "bar_even": "#0284c7",
-        "bar_odd": "#00d4ff",
+        "bar_odd": "#60a5fa",
         "pol_line": "#e2e8f0",
-        "pol_hi_line": "#00d4ff",
+        "pol_hi_line": "#60a5fa",
         "pol_hi_fill": "#0284c7",
     }
     if ES_OSCURO
@@ -92,20 +93,20 @@ THEME = (
         "btn_bg": "#ffffff",
         "btn_border": "#cbd5e1",
         "btn_hover_bg": "#eff6ff",
-        "btn_hover_border": "#2563eb",
-        "btn_hover_text": "#1d4ed8",
+        "btn_hover_border": "#0256d0",
+        "btn_hover_text": "#0256d0",
         "border": "#e2e8f0",
         "border_soft": "#f1f5f9",
         "border_hover": "#93c5fd",
         "tab_bg": "#f8fafc",
-        "tab_text": "#00d4ff",
+        "tab_text": AZUL_TEXTO,
         "tab_active_bg": "#ffffff",
-        "tab_active_text": "#00d4ff",
-        "tab_active_border": "#00d4ff",
+        "tab_active_text": AZUL_TEXTO,
+        "tab_active_border": AZUL_TEXTO,
         "card_bg": "#ffffff",
         "card_shadow": "0 2px 6px rgba(15, 23, 42, 0.05)",
-        "card_hover_shadow": "0 6px 12px rgba(59, 130, 246, 0.12)",
-        "card_shine": "rgba(59, 130, 246, 0.06)",
+        "card_hover_shadow": "0 6px 12px rgba(2, 86, 208, 0.12)",
+        "card_shine": "rgba(2, 86, 208, 0.06)",
         "table_bg": "#ffffff",
         "input_bg": "#ffffff",
         "input_border": "#cbd5e1",
@@ -125,10 +126,10 @@ THEME = (
         "legend_box_bg": "rgba(255, 255, 255, 0.95)",
         "legend_text_sec": "#334155",
         "bar_even": "#1e40af",
-        "bar_odd": "#3b82f6",
+        "bar_odd": "#0256d0",
         "pol_line": "#0f172a",
         "pol_hi_line": "#0f172a",
-        "pol_hi_fill": "#3b82f6",
+        "pol_hi_fill": "#0256d0",
     }
 )
 
@@ -148,8 +149,8 @@ custom_style = f"""
     @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
 
     :root {{
-        --tab-text-color: #00d4ff;
-        --tab-text-active: #00d4ff;
+        --tab-text-color: {AZUL_TEXTO};
+        --tab-text-active: {AZUL_TEXTO};
         --tab-bg-color: {"#081421" if ES_OSCURO else "#f8fafc"};
         --tab-bg-active: {"#0b1a29" if ES_OSCURO else "#ffffff"};
         --tab-bg-hover: {"#102840" if ES_OSCURO else "#eff6ff"};
@@ -330,8 +331,8 @@ custom_style = f"""
     div[data-testid="stTabs"] [data-testid="stTab"] button,
     .stTabs [data-baseweb="tab"] {{
         background-color: var(--tab-bg-color) !important;
-        color: #00d4ff !important;
-        -webkit-text-fill-color: #00d4ff !important;
+        color: {AZUL_TEXTO} !important;
+        -webkit-text-fill-color: {AZUL_TEXTO} !important;
         border: 1px solid {THEME["border"]} !important;
         border-bottom: none !important;
         border-radius: 8px 8px 0 0 !important;
@@ -349,8 +350,8 @@ custom_style = f"""
     .stTabs [data-baseweb="tab"] p,
     .stTabs [data-baseweb="tab"] span,
     .stTabs [data-baseweb="tab"] div {{
-        color: #00d4ff !important;
-        -webkit-text-fill-color: #00d4ff !important;
+        color: {AZUL_TEXTO} !important;
+        -webkit-text-fill-color: {AZUL_TEXTO} !important;
         opacity: 1 !important;
     }}
 
@@ -358,8 +359,8 @@ custom_style = f"""
     div[data-testid="stTabs"] button[role="tab"]:hover,
     .stTabs [data-baseweb="tab"]:hover {{
         background-color: var(--tab-bg-hover) !important;
-        color: #00d4ff !important;
-        -webkit-text-fill-color: #00d4ff !important;
+        color: {AZUL_TEXTO} !important;
+        -webkit-text-fill-color: {AZUL_TEXTO} !important;
     }}
 
     div[data-testid="stTabs"] button[data-baseweb="tab"]:hover p,
@@ -371,18 +372,18 @@ custom_style = f"""
     .stTabs [data-baseweb="tab"]:hover p,
     .stTabs [data-baseweb="tab"]:hover span,
     .stTabs [data-baseweb="tab"]:hover div {{
-        color: #00d4ff !important;
-        -webkit-text-fill-color: #00d4ff !important;
+        color: {AZUL_TEXTO} !important;
+        -webkit-text-fill-color: {AZUL_TEXTO} !important;
     }}
 
     div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"],
     div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
     .stTabs [aria-selected="true"] {{
         background-color: var(--tab-bg-active) !important;
-        color: #00d4ff !important;
-        -webkit-text-fill-color: #00d4ff !important;
+        color: {AZUL_TEXTO} !important;
+        -webkit-text-fill-color: {AZUL_TEXTO} !important;
         border-color: {THEME["tab_active_border"]} !important;
-        border-bottom: 2px solid #00d4ff !important;
+        border-bottom: 2px solid {AZUL_TEXTO} !important;
     }}
 
     div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] p,
@@ -394,12 +395,12 @@ custom_style = f"""
     .stTabs [aria-selected="true"] p,
     .stTabs [aria-selected="true"] span,
     .stTabs [aria-selected="true"] div {{
-        color: #00d4ff !important;
-        -webkit-text-fill-color: #00d4ff !important;
+        color: {AZUL_TEXTO} !important;
+        -webkit-text-fill-color: {AZUL_TEXTO} !important;
         font-weight: 700 !important;
     }}
 
-    /* Etiquetas específicas en azul eléctrico (#00d4ff) */
+    /* Etiquetas específicas adaptadas a ambos temas */
     .marcador-azul-electrico {{
         display: none !important;
     }}
@@ -411,8 +412,8 @@ custom_style = f"""
     .marcador-azul-electrico + div[data-testid="stTextInput"] label *,
     .marcador-azul-electrico + div[data-testid="stSelectbox"] label,
     .marcador-azul-electrico + div[data-testid="stSelectbox"] label * {{
-        color: #00d4ff !important;
-        -webkit-text-fill-color: #00d4ff !important;
+        color: {AZUL_TEXTO} !important;
+        -webkit-text-fill-color: {AZUL_TEXTO} !important;
         font-weight: 700 !important;
     }}
 
@@ -1476,7 +1477,7 @@ with tab_principal:
                     x="fecha_dia",
                     y="size",
                     text="size",
-                    color_discrete_sequence=["#00d4ff" if ES_OSCURO else "#2563eb"],
+                    color_discrete_sequence=[AZUL_TEXTO],
                 )
                 del df_dia
             else:
@@ -1485,7 +1486,7 @@ with tab_principal:
                     x="Aviso",
                     y="Valor",
                     text="Valor",
-                    color_discrete_sequence=["#00d4ff" if ES_OSCURO else "#2563eb"],
+                    color_discrete_sequence=[AZUL_TEXTO],
                 )
 
             fig_dia.update_traces(
@@ -1521,7 +1522,7 @@ with tab_principal:
                     .rename_axis("Tipo")
                     .reset_index(name="Cantidad")
                 )
-                colores_pie = ["#00d4ff", "#22c55e", "#f59e0b", "#d400ff", "#f43f5e", "#94a3b8"]
+                colores_pie = [AZUL_TEXTO, "#22c55e", "#f59e0b", "#d400ff", "#f43f5e", "#94a3b8"]
                 fig_pie = go.Figure(
                     go.Pie(
                         labels=df_tipo_inst["Tipo"],
@@ -1591,7 +1592,7 @@ with tab_principal:
                             textfont=dict(color=THEME["plotly_font"], size=10),
                             marker=dict(
                                 colors=[
-                                    "#00d4ff" if ES_OSCURO else "#1d4ed8",
+                                    AZUL_TEXTO,
                                     "#f43f5e" if ES_OSCURO else "#db2777",
                                 ]
                             ),
@@ -1740,8 +1741,8 @@ with tab_principal:
                         gdf_colonias,
                         name="Polígonos de Colonias",
                         style_function=lambda x: {
-                            "fillColor": "#00d4ff" if ES_OSCURO else "#2563eb",
-                            "color": "#00d4ff" if ES_OSCURO else "#1d4ed8",
+                            "fillColor": AZUL_TEXTO,
+                            "color": AZUL_TEXTO,
                             "weight": 1.2,
                             "fillOpacity": 0.08,
                         },
@@ -2190,8 +2191,8 @@ with tab_rutas_diarias:
                     gdf_colonias,
                     name="Polígonos de Colonias",
                     style_function=lambda x: {
-                        "fillColor": "#00d4ff" if ES_OSCURO else "#2563eb",
-                        "color": "#00d4ff" if ES_OSCURO else "#1d4ed8",
+                        "fillColor": AZUL_TEXTO,
+                        "color": AZUL_TEXTO,
                         "weight": 1.2,
                         "fillOpacity": 0.08,
                     },
@@ -2213,7 +2214,7 @@ with tab_rutas_diarias:
                 ).add_to(mapa_rutas)
 
             paleta_colores_ext = [
-                "#00d4ff", "#22c55e", "#f59e0b", "#d400ff", "#f43f5e",
+                AZUL_TEXTO, "#22c55e", "#f59e0b", "#d400ff", "#f43f5e",
                 "#06b6d4", "#84cc16", "#ec4899", "#6366f1", "#14b8a6",
                 "#fb923c", "#a855f7", "#10b981", "#eab308", "#e879f9",
                 "#94a3b8", "#f97316", "#38bdf8", "#4ade80", "#facc15",
@@ -2354,7 +2355,7 @@ with tab_rutas_diarias:
                         <span><b>Meta / Fin</b></span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 4px;">
-                        <div style="background-color: #00d4ff; width: 8px; height: 8px; border-radius: 50%; border: 1px solid {THEME['text']};"></div>
+                        <div style="background-color: {AZUL_TEXTO}; width: 8px; height: 8px; border-radius: 50%; border: 1px solid {THEME['text']};"></div>
                         <span><b>Secuencia numérica</b></span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 4px;">
@@ -2657,7 +2658,7 @@ with tab_anomalias:
                     color="Estado",
                     color_discrete_map={
                         "Con Anomalía": "#f43f5e" if ES_OSCURO else "#e11d48",
-                        "Regular / Sin Anomalía": "#00d4ff" if ES_OSCURO else "#2563eb",
+                        "Regular / Sin Anomalía": AZUL_TEXTO,
                     },
                 )
                 fig_prop_pie.update_traces(
@@ -2784,7 +2785,7 @@ with tab_poligonos:
                     "medidores_db": int(datos["medidores_db"]),
                 })
 
-            line_rgba = [0, 212, 255, 200] if ES_OSCURO else [15, 23, 42, 160]
+            line_rgba = [96, 165, 250, 200] if ES_OSCURO else [2, 86, 208, 180]
             layer = pdk.Layer(
                 "PolygonLayer",
                 pydeck_data,
@@ -3500,8 +3501,8 @@ with tab_tabla:
                 gdf_colonias,
                 name="Polígonos de Colonias",
                 style_function=lambda x: {
-                    "fillColor": "#00d4ff" if ES_OSCURO else "#2563eb",
-                    "color": "#00d4ff" if ES_OSCURO else "#1d4ed8",
+                    "fillColor": AZUL_TEXTO,
+                    "color": AZUL_TEXTO,
                     "weight": 1.2,
                     "fillOpacity": 0.08,
                 },
@@ -3684,7 +3685,7 @@ with tab_sheets_interno:
                     x=col_fecha_sheets,
                     y=col_inst_sheets,
                     text=col_inst_sheets,
-                    color_discrete_sequence=["#00d4ff" if ES_OSCURO else "#2563eb"],
+                    color_discrete_sequence=[AZUL_TEXTO],
                 )
                 fig_bar_inst.update_traces(
                     textposition="outside",
@@ -3800,7 +3801,7 @@ with tab_sheets_interno:
                         hole=0.5,
                         color="Tipo",
                         color_discrete_map={
-                            "Cuadro": "#00d4ff" if ES_OSCURO else "#1d4ed8",
+                            "Cuadro": AZUL_TEXTO,
                             "Registro": "#f43f5e" if ES_OSCURO else "#db2777",
                         },
                     )
