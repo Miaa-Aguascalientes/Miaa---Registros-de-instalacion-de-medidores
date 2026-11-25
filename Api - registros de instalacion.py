@@ -396,6 +396,22 @@ custom_style = f"""
         font-weight: 700 !important;
     }}
 
+    /* Etiquetas específicas en azul eléctrico (#00d4ff) */
+    .st-key-filtro_texto_global_inst [data-testid="stWidgetLabel"],
+    .st-key-filtro_texto_global_inst [data-testid="stWidgetLabel"] p,
+    .st-key-filtro_texto_global_inst [data-testid="stWidgetLabel"] span,
+    .st-key-filtro_texto_global_inst [data-testid="stWidgetLabel"] div,
+    .st-key-filtro_texto_global_inst label,
+    .st-key-select_pagina_registros [data-testid="stWidgetLabel"],
+    .st-key-select_pagina_registros [data-testid="stWidgetLabel"] p,
+    .st-key-select_pagina_registros [data-testid="stWidgetLabel"] span,
+    .st-key-select_pagina_registros [data-testid="stWidgetLabel"] div,
+    .st-key-select_pagina_registros label {{
+        color: #00d4ff !important;
+        -webkit-text-fill-color: #00d4ff !important;
+        font-weight: 700 !important;
+    }}
+
     .metric-card {{
         background: {THEME["card_bg"]};
         border: 1px solid {THEME["border"]};
