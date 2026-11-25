@@ -32,6 +32,9 @@ if "tema_oscuro" not in st.session_state:
 
 ES_OSCURO = bool(st.session_state["tema_oscuro"])
 AZUL_TEXTO = "#60a5fa" if ES_OSCURO else "#0256d0"
+COLOR_TAB_INACTIVA = "#93c5fd" if ES_OSCURO else "#0256d0"
+COLOR_TAB_ACTIVA = "#60a5fa" if ES_OSCURO else "#023e8a"
+COLOR_TAB_HOVER = "#bfdbfe" if ES_OSCURO else "#0256d0"
 
 THEME = (
     {
@@ -50,10 +53,10 @@ THEME = (
         "border_soft": "#162232",
         "border_hover": AZUL_TEXTO,
         "tab_bg": "#081421",
-        "tab_text": AZUL_TEXTO,
+        "tab_text": COLOR_TAB_INACTIVA,
         "tab_active_bg": "#0b1a29",
-        "tab_active_text": AZUL_TEXTO,
-        "tab_active_border": AZUL_TEXTO,
+        "tab_active_text": COLOR_TAB_ACTIVA,
+        "tab_active_border": COLOR_TAB_ACTIVA,
         "card_bg": "#0b1a29",
         "card_shadow": "0 4px 12px rgba(0, 0, 0, 0.45)",
         "card_hover_shadow": "0 8px 18px rgba(96, 165, 250, 0.14)",
@@ -99,10 +102,10 @@ THEME = (
         "border_soft": "#f1f5f9",
         "border_hover": "#93c5fd",
         "tab_bg": "#f8fafc",
-        "tab_text": AZUL_TEXTO,
+        "tab_text": COLOR_TAB_INACTIVA,
         "tab_active_bg": "#ffffff",
-        "tab_active_text": AZUL_TEXTO,
-        "tab_active_border": AZUL_TEXTO,
+        "tab_active_text": COLOR_TAB_ACTIVA,
+        "tab_active_border": COLOR_TAB_ACTIVA,
         "card_bg": "#ffffff",
         "card_shadow": "0 2px 6px rgba(15, 23, 42, 0.05)",
         "card_hover_shadow": "0 6px 12px rgba(2, 86, 208, 0.12)",
@@ -149,11 +152,11 @@ custom_style = f"""
     @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
 
     :root {{
-        --tab-text-color: {AZUL_TEXTO};
-        --tab-text-active: {AZUL_TEXTO};
-        --tab-bg-color: {"#081421" if ES_OSCURO else "#f8fafc"};
-        --tab-bg-active: {"#0b1a29" if ES_OSCURO else "#ffffff"};
-        --tab-bg-hover: {"#102840" if ES_OSCURO else "#eff6ff"};
+        --tab-text-color: {COLOR_TAB_INACTIVA};
+        --tab-text-active: {COLOR_TAB_ACTIVA};
+        --tab-bg-color: {"#0b1a29" if ES_OSCURO else "#f8fafc"};
+        --tab-bg-active: {"#102840" if ES_OSCURO else "#ffffff"};
+        --tab-bg-hover: {"#163452" if ES_OSCURO else "#eff6ff"};
     }}
 
     header[data-testid="stHeader"] {{visibility: hidden;}}
@@ -424,7 +427,7 @@ custom_style = f"""
         background: transparent !important;
     }}
 
-    /* Texto de todas las pestañas st.tabs en color azul */
+    /* Texto y tono de todas las pestañas st.tabs (principales y sub-pestañas) */
     div[data-testid="stTabs"],
     .stTabs {{
         margin-top: 5px;
@@ -434,48 +437,69 @@ custom_style = f"""
     div[data-testid="stTabs"] [role="tablist"],
     .stTabs [data-baseweb="tab-list"] {{
         gap: 6px;
-        border-bottom: 1px solid {THEME["border"]} !important;
+        border-bottom: 1px solid {"#334155" if ES_OSCURO else "#cbd5e1"} !important;
         background-color: transparent !important;
     }}
 
+    div[data-testid="stTabs"] [data-testid="stTab"],
     div[data-testid="stTabs"] button[data-baseweb="tab"],
     div[data-testid="stTabs"] button[role="tab"],
-    div[data-testid="stTabs"] [data-testid="stTab"] > button,
     .stTabs [data-baseweb="tab"] {{
         background-color: var(--tab-bg-color) !important;
-        border: 1px solid {THEME["border"]} !important;
+        border: 1px solid {"#1e3a5f" if ES_OSCURO else "#93c5fd"} !important;
         border-bottom: none !important;
         border-radius: 8px 8px 0 0 !important;
         padding: 8px 14px !important;
-        font-weight: 600 !important;
+        opacity: 1 !important;
     }}
 
+    div[data-testid="stTabs"] [data-testid="stTab"],
+    div[data-testid="stTabs"] [data-testid="stTab"] *,
     div[data-testid="stTabs"] button[data-baseweb="tab"],
     div[data-testid="stTabs"] button[data-baseweb="tab"] *,
     div[data-testid="stTabs"] button[role="tab"],
     div[data-testid="stTabs"] button[role="tab"] *,
-    div[data-testid="stTabs"] [data-testid="stTab"] > button,
-    div[data-testid="stTabs"] [data-testid="stTab"] > button *,
     .stTabs [data-baseweb="tab"],
     .stTabs [data-baseweb="tab"] * {{
-        color: {AZUL_TEXTO} !important;
-        -webkit-text-fill-color: {AZUL_TEXTO} !important;
+        color: {COLOR_TAB_INACTIVA} !important;
+        -webkit-text-fill-color: {COLOR_TAB_INACTIVA} !important;
         opacity: 1 !important;
+        font-weight: 600 !important;
     }}
 
+    div[data-testid="stTabs"] [data-testid="stTab"]:has(button[aria-selected="true"]),
     div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"],
     div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
     .stTabs [data-baseweb="tab"][aria-selected="true"] {{
         background-color: var(--tab-bg-active) !important;
-        border-color: {THEME["tab_active_border"]} !important;
-        border-bottom: 2px solid {AZUL_TEXTO} !important;
+        border-color: {COLOR_TAB_ACTIVA} !important;
+        border-bottom: 2px solid {COLOR_TAB_ACTIVA} !important;
+    }}
+
+    div[data-testid="stTabs"] [data-testid="stTab"]:has(button[aria-selected="true"]) *,
+    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] *,
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] *,
+    .stTabs [data-baseweb="tab"][aria-selected="true"] * {{
+        color: {COLOR_TAB_ACTIVA} !important;
+        -webkit-text-fill-color: {COLOR_TAB_ACTIVA} !important;
+        opacity: 1 !important;
         font-weight: 700 !important;
     }}
 
+    div[data-testid="stTabs"] [data-testid="stTab"]:hover,
     div[data-testid="stTabs"] button[data-baseweb="tab"]:hover,
     div[data-testid="stTabs"] button[role="tab"]:hover,
     .stTabs [data-baseweb="tab"]:hover {{
         background-color: var(--tab-bg-hover) !important;
+    }}
+
+    div[data-testid="stTabs"] [data-testid="stTab"]:hover *,
+    div[data-testid="stTabs"] button[data-baseweb="tab"]:hover *,
+    div[data-testid="stTabs"] button[role="tab"]:hover *,
+    .stTabs [data-baseweb="tab"]:hover * {{
+        color: {COLOR_TAB_HOVER} !important;
+        -webkit-text-fill-color: {COLOR_TAB_HOVER} !important;
+        opacity: 1 !important;
     }}
     </style>
 """
