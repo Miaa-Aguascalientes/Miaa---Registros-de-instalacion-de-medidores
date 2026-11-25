@@ -1127,6 +1127,7 @@ else:
         unsafe_allow_html=True,
     )
 
+st.sidebar.markdown("---")
 st.sidebar.subheader("Periodo de Fechas")
 opcion_periodo = st.sidebar.selectbox(
     "Seleccionar Rango",
