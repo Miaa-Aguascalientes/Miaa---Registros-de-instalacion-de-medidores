@@ -1038,7 +1038,7 @@ st.markdown(
     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 15px; padding-bottom: 8px; border-bottom: 1px solid {THEME["border"]};">
         <div style="width: 180px;"></div>
         <div style="flex-grow: 1; text-align: center;">
-            <h1 style="color: {THEME["text"]}; font-size: 26px; margin: 0; font-weight: 800;">DASHBOARD INSTALACIÓN MEDIDORES INTELIGENTES</h1>
+            <h1 style="color: {THEME["text"]}; font-size: 26px; margin: 0; font-weight: 800;">Dashboard instalación de medidores inteligentes</h1>
         </div>
         <div style="width: 180px; text-align: right; color: {THEME["text_muted"]}; font-size: 14px; font-weight: 500;">
             Actualizado al: {fecha_actual_str}
@@ -1054,8 +1054,6 @@ st.markdown(
 
 logo_url = "https://raw.githubusercontent.com/Miaa-Aguascalientes/Logos/38504978c8f77a4dac38ad476f74dbdee6af2cad/LogoMIAA.svg"
 st.sidebar.image(logo_url, use_container_width=True)
-st.sidebar.markdown("---")
-
 
 def alternar_tema():
     st.session_state["tema_oscuro"] = not st.session_state.get("tema_oscuro", False)
@@ -1069,7 +1067,6 @@ st.sidebar.button(
     on_click=alternar_tema,
 )
 
-st.sidebar.markdown("---")
 st.sidebar.subheader("Estado de Conexión API")
 
 if st.sidebar.button("🔄 Reconectar API", use_container_width=True):
@@ -1130,7 +1127,6 @@ else:
         unsafe_allow_html=True,
     )
 
-st.sidebar.markdown("---")
 st.sidebar.subheader("Periodo de Fechas")
 opcion_periodo = st.sidebar.selectbox(
     "Seleccionar Rango",
@@ -1165,7 +1161,6 @@ elif opcion_periodo == "El año pasado":
     fecha_inicio = hoy.replace(year=hoy.year - 1, month=1, day=1)
     fecha_fin = hoy.replace(year=hoy.year - 1, month=12, day=31)
 
-st.sidebar.markdown("---")
 st.sidebar.subheader("Polígonos")
 
 lista_poligonos = []
