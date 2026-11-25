@@ -49,7 +49,7 @@ THEME = (
         "border_soft": "#162232",
         "border_hover": "#00d4ff",
         "tab_bg": "#081421",
-        "tab_text": "#ffffff",
+        "tab_text": "#00d4ff",
         "tab_active_bg": "#0b1a29",
         "tab_active_text": "#00d4ff",
         "tab_active_border": "#00d4ff",
@@ -98,10 +98,10 @@ THEME = (
         "border_soft": "#f1f5f9",
         "border_hover": "#93c5fd",
         "tab_bg": "#f8fafc",
-        "tab_text": "#0f172a",
+        "tab_text": "#00d4ff",
         "tab_active_bg": "#ffffff",
-        "tab_active_text": "#0284c7",
-        "tab_active_border": "#0284c7",
+        "tab_active_text": "#00d4ff",
+        "tab_active_border": "#00d4ff",
         "card_bg": "#ffffff",
         "card_shadow": "0 2px 6px rgba(15, 23, 42, 0.05)",
         "card_hover_shadow": "0 6px 12px rgba(59, 130, 246, 0.12)",
@@ -148,8 +148,8 @@ custom_style = f"""
     @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
 
     :root {{
-        --tab-text-color: {"#ffffff" if ES_OSCURO else "#0f172a"};
-        --tab-text-active: {"#00d4ff" if ES_OSCURO else "#0284c7"};
+        --tab-text-color: #00d4ff;
+        --tab-text-active: #00d4ff;
         --tab-bg-color: {"#081421" if ES_OSCURO else "#f8fafc"};
         --tab-bg-active: {"#0b1a29" if ES_OSCURO else "#ffffff"};
         --tab-bg-hover: {"#102840" if ES_OSCURO else "#eff6ff"};
@@ -330,7 +330,8 @@ custom_style = f"""
     div[data-testid="stTabs"] [data-testid="stTab"] button,
     .stTabs [data-baseweb="tab"] {{
         background-color: var(--tab-bg-color) !important;
-        color: var(--tab-text-color) !important;
+        color: #00d4ff !important;
+        -webkit-text-fill-color: #00d4ff !important;
         border: 1px solid {THEME["border"]} !important;
         border-bottom: none !important;
         border-radius: 8px 8px 0 0 !important;
@@ -348,8 +349,8 @@ custom_style = f"""
     .stTabs [data-baseweb="tab"] p,
     .stTabs [data-baseweb="tab"] span,
     .stTabs [data-baseweb="tab"] div {{
-        color: var(--tab-text-color) !important;
-        -webkit-text-fill-color: var(--tab-text-color) !important;
+        color: #00d4ff !important;
+        -webkit-text-fill-color: #00d4ff !important;
         opacity: 1 !important;
     }}
 
@@ -357,7 +358,8 @@ custom_style = f"""
     div[data-testid="stTabs"] button[role="tab"]:hover,
     .stTabs [data-baseweb="tab"]:hover {{
         background-color: var(--tab-bg-hover) !important;
-        color: var(--tab-text-active) !important;
+        color: #00d4ff !important;
+        -webkit-text-fill-color: #00d4ff !important;
     }}
 
     div[data-testid="stTabs"] button[data-baseweb="tab"]:hover p,
@@ -369,17 +371,18 @@ custom_style = f"""
     .stTabs [data-baseweb="tab"]:hover p,
     .stTabs [data-baseweb="tab"]:hover span,
     .stTabs [data-baseweb="tab"]:hover div {{
-        color: var(--tab-text-active) !important;
-        -webkit-text-fill-color: var(--tab-text-active) !important;
+        color: #00d4ff !important;
+        -webkit-text-fill-color: #00d4ff !important;
     }}
 
     div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"],
     div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
     .stTabs [aria-selected="true"] {{
         background-color: var(--tab-bg-active) !important;
-        color: var(--tab-text-active) !important;
+        color: #00d4ff !important;
+        -webkit-text-fill-color: #00d4ff !important;
         border-color: {THEME["tab_active_border"]} !important;
-        border-bottom: 2px solid var(--tab-text-active) !important;
+        border-bottom: 2px solid #00d4ff !important;
     }}
 
     div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] p,
@@ -391,22 +394,23 @@ custom_style = f"""
     .stTabs [aria-selected="true"] p,
     .stTabs [aria-selected="true"] span,
     .stTabs [aria-selected="true"] div {{
-        color: var(--tab-text-active) !important;
-        -webkit-text-fill-color: var(--tab-text-active) !important;
+        color: #00d4ff !important;
+        -webkit-text-fill-color: #00d4ff !important;
         font-weight: 700 !important;
     }}
 
     /* Etiquetas específicas en azul eléctrico (#00d4ff) */
-    .st-key-filtro_texto_global_inst [data-testid="stWidgetLabel"],
-    .st-key-filtro_texto_global_inst [data-testid="stWidgetLabel"] p,
-    .st-key-filtro_texto_global_inst [data-testid="stWidgetLabel"] span,
-    .st-key-filtro_texto_global_inst [data-testid="stWidgetLabel"] div,
-    .st-key-filtro_texto_global_inst label,
-    .st-key-select_pagina_registros [data-testid="stWidgetLabel"],
-    .st-key-select_pagina_registros [data-testid="stWidgetLabel"] p,
-    .st-key-select_pagina_registros [data-testid="stWidgetLabel"] span,
-    .st-key-select_pagina_registros [data-testid="stWidgetLabel"] div,
-    .st-key-select_pagina_registros label {{
+    .marcador-azul-electrico {{
+        display: none !important;
+    }}
+    div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) + div[data-testid="stTextInput"] label,
+    div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) + div[data-testid="stTextInput"] label *,
+    div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) + div[data-testid="stSelectbox"] label,
+    div[data-testid="stMarkdown"]:has(.marcador-azul-electrico) + div[data-testid="stSelectbox"] label *,
+    .marcador-azul-electrico + div[data-testid="stTextInput"] label,
+    .marcador-azul-electrico + div[data-testid="stTextInput"] label *,
+    .marcador-azul-electrico + div[data-testid="stSelectbox"] label,
+    .marcador-azul-electrico + div[data-testid="stSelectbox"] label * {{
         color: #00d4ff !important;
         -webkit-text-fill-color: #00d4ff !important;
         font-weight: 700 !important;
@@ -1649,6 +1653,7 @@ with tab_principal:
             unsafe_allow_html=True,
         )
 
+        st.markdown('<span class="marcador-azul-electrico"></span>', unsafe_allow_html=True)
         busqueda_global_inst = st.text_input(
             "Buscar en cualquier registro (Predio, Cliente, Serie, Domicilio, etc.)",
             placeholder="Ej. 502934-1, VAZQUEZ, 222608...",
@@ -1960,6 +1965,7 @@ with tab_principal:
 
             col_pag1, col_pag2 = st.columns([2, 1])
             with col_pag1:
+                st.markdown('<span class="marcador-azul-electrico"></span>', unsafe_allow_html=True)
                 pagina_actual = st.selectbox(
                     f"Seleccionar Hoja / Página (Total registros: {total_registros_filtrados:,})",
                     options=list(range(1, total_paginas + 1)),
