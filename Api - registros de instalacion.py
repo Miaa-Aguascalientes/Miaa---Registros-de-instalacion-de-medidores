@@ -313,79 +313,6 @@ custom_style = f"""
         color: {THEME["text"]};
     }}
 
-    div[data-testid="stTabs"],
-    .stTabs {{
-        margin-top: 5px;
-    }}
-
-    div[data-testid="stTabs"] div[data-baseweb="tab-list"],
-    div[data-testid="stTabs"] [role="tablist"],
-    .stTabs [data-baseweb="tab-list"] {{
-        gap: 6px;
-        border-bottom: 1px solid {THEME["border"]} !important;
-        background-color: transparent !important;
-    }}
-
-    div[data-testid="stTabs"] button[data-baseweb="tab"],
-    div[data-testid="stTabs"] button[role="tab"],
-    div[data-testid="stTabs"] [data-testid="stTab"] > button,
-    .stTabs [data-baseweb="tab"] {{
-        background-color: var(--tab-bg-color) !important;
-        color: {AZUL_TEXTO} !important;
-        -webkit-text-fill-color: {AZUL_TEXTO} !important;
-        border: 1px solid {THEME["border"]} !important;
-        border-bottom: none !important;
-        border-radius: 8px 8px 0 0 !important;
-        padding: 8px 14px !important;
-        font-weight: 600 !important;
-        opacity: 1 !important;
-    }}
-
-    div[data-testid="stTabs"] button[data-baseweb="tab"],
-    div[data-testid="stTabs"] button[data-baseweb="tab"] *,
-    div[data-testid="stTabs"] button[role="tab"],
-    div[data-testid="stTabs"] button[role="tab"] *,
-    div[data-testid="stTabs"] [data-testid="stTab"] button,
-    div[data-testid="stTabs"] [data-testid="stTab"] button *,
-    .stTabs [data-baseweb="tab"],
-    .stTabs [data-baseweb="tab"] * {{
-        color: {AZUL_TEXTO} !important;
-        -webkit-text-fill-color: {AZUL_TEXTO} !important;
-        opacity: 1 !important;
-    }}
-
-    div[data-testid="stTabs"] button[data-baseweb="tab"]:hover,
-    div[data-testid="stTabs"] button[data-baseweb="tab"]:hover *,
-    div[data-testid="stTabs"] button[role="tab"]:hover,
-    div[data-testid="stTabs"] button[role="tab"]:hover *,
-    .stTabs [data-baseweb="tab"]:hover,
-    .stTabs [data-baseweb="tab"]:hover * {{
-        background-color: var(--tab-bg-hover) !important;
-        color: {AZUL_TEXTO} !important;
-        -webkit-text-fill-color: {AZUL_TEXTO} !important;
-    }}
-
-    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"],
-    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
-    .stTabs [aria-selected="true"] {{
-        background-color: var(--tab-bg-active) !important;
-        color: {AZUL_TEXTO} !important;
-        -webkit-text-fill-color: {AZUL_TEXTO} !important;
-        border-color: {THEME["tab_active_border"]} !important;
-        border-bottom: 2px solid {AZUL_TEXTO} !important;
-    }}
-
-    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"],
-    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] *,
-    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
-    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] *,
-    .stTabs [aria-selected="true"],
-    .stTabs [aria-selected="true"] * {{
-        color: {AZUL_TEXTO} !important;
-        -webkit-text-fill-color: {AZUL_TEXTO} !important;
-        font-weight: 700 !important;
-    }}
-
     /* Etiquetas específicas con clase en su contenedor padre */
     .etiqueta-azul-tema div[data-testid="stTextInput"] label,
     .etiqueta-azul-tema div[data-testid="stTextInput"] label *,
@@ -495,6 +422,67 @@ custom_style = f"""
 
     .js-plotly-plot .plotly .main-svg {{
         background: transparent !important;
+    }}
+
+    /* Pestañas: estructura, bordes, hover, activa y forzado de color en todos los estados */
+    div[data-testid="stTabs"],
+    .stTabs {{
+        margin-top: 5px;
+    }}
+
+    div[data-testid="stTabs"] div[data-baseweb="tab-list"],
+    div[data-testid="stTabs"] [role="tablist"],
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 6px;
+        border-bottom: 1px solid {THEME["border"]} !important;
+        background-color: transparent !important;
+    }}
+
+    div[data-testid="stTabs"] button[data-baseweb="tab"],
+    div[data-testid="stTabs"] button[role="tab"],
+    div[data-testid="stTabs"] [data-testid="stTab"] > button,
+    .stTabs [data-baseweb="tab"] {{
+        background-color: var(--tab-bg-color) !important;
+        border: 1px solid {THEME["border"]} !important;
+        border-bottom: none !important;
+        border-radius: 8px 8px 0 0 !important;
+        padding: 8px 14px !important;
+        font-weight: 600 !important;
+    }}
+
+    div[data-testid="stTabs"] button[data-baseweb="tab"]:hover,
+    div[data-testid="stTabs"] button[role="tab"]:hover,
+    .stTabs [data-baseweb="tab"]:hover {{
+        background-color: var(--tab-bg-hover) !important;
+    }}
+
+    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"],
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
+    .stTabs [aria-selected="true"] {{
+        background-color: var(--tab-bg-active) !important;
+        border-color: {THEME["tab_active_border"]} !important;
+        border-bottom: 2px solid {AZUL_TEXTO} !important;
+    }}
+
+    .stApp [data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"],
+    .stApp [data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"] *,
+    .stApp [data-testid="stTabs"] [data-testid="stTab"] button,
+    .stApp [data-testid="stTabs"] [data-testid="stTab"] button *,
+    .stApp .stTabs [data-baseweb="tab"],
+    .stApp .stTabs [data-baseweb="tab"] *,
+    .stApp [data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"][aria-selected="false"],
+    .stApp [data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"][aria-selected="false"] * {{
+        color: {AZUL_TEXTO} !important;
+        -webkit-text-fill-color: {AZUL_TEXTO} !important;
+        opacity: 1 !important;
+    }}
+
+    .stApp [data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"][aria-selected="true"],
+    .stApp [data-testid="stTabs"] [role="tablist"] button[data-baseweb="tab"][aria-selected="true"] * {{
+        color: {AZUL_TEXTO} !important;
+        -webkit-text-fill-color: {AZUL_TEXTO} !important;
+        font-weight: 700 !important;
+        opacity: 1 !important;
     }}
     </style>
 """
