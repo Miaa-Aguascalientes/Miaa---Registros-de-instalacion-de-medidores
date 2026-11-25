@@ -495,26 +495,41 @@ components.html(
     f"""
     <script>
     (function() {{
-        const parentDoc = window.parent.document;
-        const styleId = "miaa-tabs-azul-forzado";
-        let styleEl = parentDoc.getElementById(styleId);
-        if (!styleEl) {{
-            styleEl = parentDoc.createElement("style");
-            styleEl.id = styleId;
-            parentDoc.head.appendChild(styleEl);
+        const colorAzul = "{AZUL_TEXTO}";
+        let doc = null;
+        try {{
+            doc = window.parent && window.parent.document ? window.parent.document : document;
+            // Prueba rápida de acceso al DOM padre
+            void doc.body;
+        }} catch (e) {{
+            doc = document;
         }}
-        styleEl.textContent = `
-            button[data-baseweb="tab"],
-            button[data-baseweb="tab"] *,
-            button[role="tab"],
-            button[role="tab"] *,
-            [data-testid="stTab"] button,
-            [data-testid="stTab"] button * {{
-                color: {AZUL_TEXTO} !important;
-                -webkit-text-fill-color: {AZUL_TEXTO} !important;
-                opacity: 1 !important;
-            }}
-        `;
+
+        function aplicarAzulPestanas() {{
+            if (!doc) return;
+            const tabs = doc.querySelectorAll('button[data-baseweb="tab"], button[role="tab"], [data-testid="stTab"] button');
+            tabs.forEach((tab) => {{
+                tab.style.setProperty("color", colorAzul, "important");
+                tab.style.setProperty("-webkit-text-fill-color", colorAzul, "important");
+                tab.style.setProperty("opacity", "1", "important");
+
+                const hijos = tab.querySelectorAll("*");
+                hijos.forEach((el) => {{
+                    el.style.setProperty("color", colorAzul, "important");
+                    el.style.setProperty("-webkit-text-fill-color", colorAzul, "important");
+                    el.style.setProperty("opacity", "1", "important");
+                }});
+            }});
+        }}
+
+        aplicarAzulPestanas();
+
+        if (doc && doc.body) {{
+            const observer = new MutationObserver(() => {{
+                aplicarAzulPestanas();
+            }});
+            observer.observe(doc.body, {{ childList: true, subtree: true, attributes: true }});
+        }}
     }})();
     </script>
     """,
